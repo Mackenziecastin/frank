@@ -6,92 +6,205 @@ from io import BytesIO
 
 st.set_page_config(page_title="Partner Optimization Report Generator", layout="wide")
 
-def extract_pid_subid(url):
-    """Extract PID and SUBID from URL."""
+def extract_values_after_3d(url):
+    """Extract all values after %3D in the URL."""
     try:
-        # Find all numbers after %3D
-        matches = re.findall(r'%3D(\d+)_?([0-9]+)?', url)
-        if matches:
-            pid = matches[0][0]
-            # Check if SUBID exists and contains only numbers
-            subid = matches[0][1] if matches[0][1] and matches[0][1].isdigit() else ''
-            return pid, subid
-        return None, None
+        if pd.isna(url):
+            return ""
+        
+        # Find the part after %3D
+        match = re.search(r'%3D(.*?)(?:$|&)', url)
+        if match:
+            return match.group(1)
+        return ""
     except:
-        return None, None
+        return ""
 
-def process_dataframe(df, is_affiliate_file=True):
+def extract_pid_subid(after_3d_value):
+    """Extract PID and SUBID from the string after %3D."""
+    try:
+        if not after_3d_value:
+            return "", ""
+        
+        # Split by underscore
+        parts = after_3d_value.split('_')
+        
+        # First part is PID
+        pid = parts[0] if parts and parts[0].isdigit() else ""
+        
+        # Second part is SUBID (if it exists and contains only digits)
+        subid = parts[1] if len(parts) > 1 and parts[1].isdigit() else ""
+        
+        return pid, subid
+    except:
+        return "", ""
+
+def process_dataframe(df, url_column):
     """Process dataframe to add PID, SUBID, and partnerID columns."""
     # Create new columns
-    df['PID'] = ''
-    df['SUBID'] = ''
-    df['partnerID'] = ''
+    df['After_3D'] = df[url_column].apply(extract_values_after_3d)
+    df['PID'] = ""
+    df['SUBID'] = ""
+    df['partnerID'] = ""
     
     # Process each row
-    url_column = 'Click URL' if is_affiliate_file else 'Landing Page URL'
-    
     for idx, row in df.iterrows():
-        if url_column in df.columns and pd.notna(row[url_column]):
-            pid, subid = extract_pid_subid(row[url_column])
-            df.at[idx, 'PID'] = pid if pid else ''
-            df.at[idx, 'SUBID'] = subid if subid else ''
-            # Create partnerID
-            if pid:
-                df.at[idx, 'partnerID'] = f"{pid}_{subid}" if subid else f"{pid}_"
+        pid, subid = extract_pid_subid(row['After_3D'])
+        df.at[idx, 'PID'] = pid
+        df.at[idx, 'SUBID'] = subid
+        
+        # Create partnerID
+        if pid:
+            if subid:
+                df.at[idx, 'partnerID'] = f"{pid}_{subid}"
+            else:
+                df.at[idx, 'partnerID'] = f"{pid}_"
+        else:
+            df.at[idx, 'partnerID'] = "Unattributed"
+    
+    # Replace any partnerID that is just "_" with "Unattributed"
+    df.loc[df['partnerID'] == "_", 'partnerID'] = "Unattributed"
+    
+    # Drop the temporary column
+    df = df.drop('After_3D', axis=1)
     
     return df
 
-def analyze_data(affiliate_df, advanced_df):
-    """Perform analysis on the processed dataframes."""
-    # Group by partnerID for affiliate data
-    affiliate_grouped = affiliate_df.groupby('partnerID').agg({
-        'Unique Leads': 'sum',  # Leads
-        'Net Sales Amount': 'sum'  # Spend
-    }).reset_index()
+def create_affiliate_pivot(df):
+    """Create pivot table for Affiliate Leads QA data."""
+    pivot = pd.pivot_table(
+        df,
+        index='partnerID',
+        values=['Booked Count', 'Transaction Count', 'Net Sales Amount'],
+        aggfunc='sum'
+    ).reset_index()
     
-    # Group by partnerID for advanced action data
-    advanced_grouped = advanced_df.groupby('partnerID').agg({
-        'Sale Amount': 'sum',  # Revenue
-        'Action Id': 'count'  # Sales count
-    }).reset_index()
+    return pivot
+
+def create_advanced_pivot(df):
+    """Create pivot table for Advanced Action data."""
+    # Filter for Lead Submissions
+    lead_submissions = df[df['Event Type'] == 'Lead Submission']
     
-    # Merge the dataframes
-    merged_df = pd.merge(affiliate_grouped, advanced_grouped, 
-                        on='partnerID', how='outer').fillna(0)
+    pivot = pd.pivot_table(
+        lead_submissions,
+        index='partnerID',
+        values=['Action Id', 'Action Earnings'],
+        aggfunc={'Action Id': 'count', 'Action Earnings': 'sum'}
+    ).reset_index()
     
     # Rename columns for clarity
-    merged_df.columns = ['partnerID', 'Leads', 'Spend', 'Revenue', 'Sales']
+    pivot.columns = ['partnerID', 'Leads', 'Spend']
     
-    # Calculate analysis metrics
-    analysis_df = pd.DataFrame()
-    analysis_df['partnerID'] = merged_df['partnerID']
-    analysis_df['Leads to Sale'] = merged_df['Sales'] / merged_df['Leads'].replace(0, np.inf)
-    analysis_df['ROAS'] = merged_df['Revenue'] / merged_df['Spend'].replace(0, np.inf)
-    analysis_df['Current Rate'] = merged_df['Spend'] / merged_df['Leads'].replace(0, np.inf)
-    analysis_df['ECPL at $1.50'] = 1.50 * merged_df['Leads']
+    return pivot
+
+def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=None):
+    """Create the final optimization report by combining pivot tables."""
+    # Merge the pivot tables
+    merged_df = pd.merge(
+        advanced_pivot,
+        affiliate_pivot,
+        on='partnerID',
+        how='outer'
+    ).fillna(0)
+    
+    # Rename columns for clarity
+    merged_df.columns = [
+        'partnerID', 'Leads', 'Spend', 
+        'Bookings', 'Sales', 'Revenue'
+    ]
+    
+    # Remove rows with all zeros
+    merged_df = merged_df[~((merged_df['Leads'] == 0) & 
+                           (merged_df['Spend'] == 0) & 
+                           (merged_df['Bookings'] == 0) & 
+                           (merged_df['Sales'] == 0) & 
+                           (merged_df['Revenue'] == 0))]
+    
+    # Calculate additional metrics
+    merged_df['Lead to Sale'] = merged_df['Sales'] / merged_df['Leads'].replace(0, np.inf)
+    merged_df['ROAS'] = merged_df['Revenue'] / merged_df['Spend'].replace(0, np.inf)
+    merged_df['eCPL at $1.50'] = (merged_df['Revenue'] / merged_df['Leads'].replace(0, np.inf)) / 1.5
     
     # Clean up infinity values
-    analysis_df = analysis_df.replace([np.inf, -np.inf], 0)
+    merged_df = merged_df.replace([np.inf, -np.inf], 0)
     
-    return merged_df, analysis_df
+    # Add VLOOKUP data if partner list is provided
+    if partner_list is not None:
+        # Extract affiliate ID from partnerID (part before underscore)
+        merged_df['Affiliate ID'] = merged_df['partnerID'].apply(
+            lambda x: x.split('_')[0] if x != "Unattributed" else "")
+        
+        # Create a dictionary for faster lookups
+        affiliate_dict = dict(zip(partner_list['Affiliate ID'].astype(str), 
+                                 partner_list['Affiliate Name']))
+        manager_dict = dict(zip(partner_list['Affiliate ID'].astype(str), 
+                               partner_list['Account Manager']))
+        
+        # Apply the lookups
+        merged_df['Affiliate Name'] = merged_df['Affiliate ID'].map(affiliate_dict).fillna("")
+        merged_df['Account Manager'] = merged_df['Affiliate ID'].map(manager_dict).fillna("")
+        
+        # Reorder columns to put VLOOKUP data first
+        cols = ['Affiliate ID', 'Affiliate Name', 'Account Manager', 'partnerID'] + \
+               [col for col in merged_df.columns if col not in 
+                ['Affiliate ID', 'Affiliate Name', 'Account Manager', 'partnerID']]
+        merged_df = merged_df[cols]
+    
+    return merged_df
 
-def to_excel_download(df1, df2):
+def format_excel(writer, df):
+    """Apply formatting to the Excel file."""
+    workbook = writer.book
+    worksheet = writer.sheets['Optimization Report']
+    
+    # Define formats
+    money_format = workbook.add_format({'num_format': '$#,##0.00'})
+    integer_format = workbook.add_format({'num_format': '0'})
+    percent_format = workbook.add_format({'num_format': '0.0%'})
+    
+    # Apply formats to specific columns
+    start_row = 1  # Skip header row
+    
+    # Format money columns
+    for col_idx, col_name in enumerate(df.columns):
+        if col_name in ['Spend', 'Revenue', 'ROAS', 'eCPL at $1.50']:
+            worksheet.set_column(col_idx, col_idx, None, money_format)
+    
+    # Format integer columns
+    for col_idx, col_name in enumerate(df.columns):
+        if col_name in ['Leads', 'Bookings', 'Sales']:
+            worksheet.set_column(col_idx, col_idx, None, integer_format)
+    
+    # Format percentage columns
+    for col_idx, col_name in enumerate(df.columns):
+        if col_name in ['Lead to Sale']:
+            worksheet.set_column(col_idx, col_idx, None, percent_format)
+    
+    # Auto-fit columns
+    for col_idx, _ in enumerate(df.columns):
+        worksheet.set_column(col_idx, col_idx, 15)  # Set width to 15 for all columns
+
+def to_excel_download(df_affiliate, df_advanced, df_optimization):
     """Convert dataframes to Excel file for download."""
     output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df1.to_excel(writer, sheet_name='Main Metrics', index=False)
-        df2.to_excel(writer, sheet_name='Analysis', index=False)
+        df_affiliate.to_excel(writer, sheet_name='Cleaned Affiliate Data', index=False)
+        df_advanced.to_excel(writer, sheet_name='Cleaned Advanced Action Data', index=False)
+        df_optimization.to_excel(writer, sheet_name='Optimization Report', index=False)
+        format_excel(writer, df_optimization)
+    
     return output.getvalue()
 
 # Main app
 st.title("Partner Optimization Report Generator")
 
 st.write("""
-This tool processes your marketing data files and generates a comprehensive analysis report.
-Please upload both required files below.
+This tool processes your marketing data files and generates a comprehensive optimization report.
+Please upload the required files below.
 """)
 
-col1, col2 = st.columns(2)
+col1, col2, col3 = st.columns(3)
 
 with col1:
     affiliate_file = st.file_uploader("Upload Affiliate Leads QA File (CSV)", type=['csv'])
@@ -99,15 +212,23 @@ with col1:
 with col2:
     advanced_file = st.file_uploader("Upload Advanced Action Sheet (CSV)", type=['csv'])
 
+with col3:
+    partner_list_file = st.file_uploader("Upload Partner List (CSV, Optional)", type=['csv'])
+
 if affiliate_file and advanced_file:
     try:
-        # Read and process files
+        # Read files
         affiliate_df = pd.read_csv(affiliate_file)
         advanced_df = pd.read_csv(advanced_file)
         
         # Process both dataframes
-        affiliate_df_processed = process_dataframe(affiliate_df, is_affiliate_file=True)
-        advanced_df_processed = process_dataframe(advanced_df, is_affiliate_file=False)
+        affiliate_df_processed = process_dataframe(affiliate_df, 'Click URL')
+        advanced_df_processed = process_dataframe(advanced_df, 'Landing Page URL')
+        
+        # Read partner list if provided
+        partner_list_df = None
+        if partner_list_file:
+            partner_list_df = pd.read_csv(partner_list_file)
         
         # Show preview of processed data
         st.subheader("Preview of Processed Affiliate Data")
@@ -116,18 +237,19 @@ if affiliate_file and advanced_file:
         st.subheader("Preview of Processed Advanced Action Data")
         st.dataframe(advanced_df_processed[['Landing Page URL', 'PID', 'SUBID', 'partnerID']].head())
         
-        # Perform analysis
-        main_metrics_df, analysis_df = analyze_data(affiliate_df_processed, advanced_df_processed)
+        # Create pivot tables
+        affiliate_pivot = create_affiliate_pivot(affiliate_df_processed)
+        advanced_pivot = create_advanced_pivot(advanced_df_processed)
+        
+        # Create optimization report
+        optimization_report = create_optimization_report(affiliate_pivot, advanced_pivot, partner_list_df)
         
         # Show preview of results
-        st.subheader("Preview of Main Metrics")
-        st.dataframe(main_metrics_df)
-        
-        st.subheader("Preview of Analysis")
-        st.dataframe(analysis_df)
+        st.subheader("Preview of Optimization Report")
+        st.dataframe(optimization_report)
         
         # Create download button
-        excel_data = to_excel_download(main_metrics_df, analysis_df)
+        excel_data = to_excel_download(affiliate_df_processed, advanced_df_processed, optimization_report)
         st.download_button(
             label="Download Full Report",
             data=excel_data,
@@ -139,4 +261,4 @@ if affiliate_file and advanced_file:
         st.error(f"An error occurred while processing the files: {str(e)}")
         st.error("Please ensure your files contain all required columns and are in the correct format.")
 else:
-    st.info("Please upload both files to generate the report.") 
+    st.info("Please upload both required files to generate the report.") 
