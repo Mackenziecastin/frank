@@ -118,21 +118,31 @@ def create_advanced_pivot(df):
 
 def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=None):
     """Create the final optimization report by combining pivot tables."""
+    # First, rename the affiliate pivot columns for clarity
+    renamed_affiliate = affiliate_pivot.copy()
+    if 'Transaction Count' in renamed_affiliate.columns:
+        renamed_affiliate = renamed_affiliate.rename(columns={
+            'Booked Count': 'Bookings',
+            'Transaction Count': 'Sales',
+            'Net Sales Amount': 'Revenue'
+        })
+    else:
+        st.warning("Expected columns not found in affiliate data. Using default column names.")
+        renamed_affiliate = renamed_affiliate.rename(columns={
+            renamed_affiliate.columns[1]: 'Bookings',
+            renamed_affiliate.columns[2]: 'Sales',
+            renamed_affiliate.columns[3]: 'Revenue'
+        })
+    
     # Merge the pivot tables
     merged_df = pd.merge(
         advanced_pivot,
-        affiliate_pivot,
+        renamed_affiliate,
         on='partnerID',
         how='outer'
     ).fillna(0)
     
-    # Rename columns for clarity
-    merged_df.columns = [
-        'partnerID', 'Leads', 'Spend', 
-        'Bookings', 'Sales', 'Revenue'
-    ]
-    
-    # Ensure all columns are numeric
+    # Ensure all numeric columns are properly converted
     for col in ['Leads', 'Spend', 'Bookings', 'Sales', 'Revenue']:
         merged_df[col] = pd.to_numeric(merged_df[col], errors='coerce').fillna(0)
     
@@ -275,7 +285,12 @@ if affiliate_file and advanced_file:
         
         # Create pivot tables
         affiliate_pivot = create_affiliate_pivot(affiliate_df_processed)
+        st.subheader("Preview of Affiliate Pivot")
+        st.dataframe(affiliate_pivot.head())
+        
         advanced_pivot = create_advanced_pivot(advanced_df_processed)
+        st.subheader("Preview of Advanced Action Pivot")
+        st.dataframe(advanced_pivot.head())
         
         # Create optimization report
         optimization_report = create_optimization_report(affiliate_pivot, advanced_pivot, partner_list_df)
