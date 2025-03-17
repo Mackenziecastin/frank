@@ -41,6 +41,14 @@ def extract_pid_subid(after_3d_value):
 
 def process_dataframe(df, url_column):
     """Process dataframe to add PID, SUBID, and partnerID columns."""
+    # Make a copy to avoid modifying the original
+    df = df.copy()
+    
+    # Ensure URL column exists
+    if url_column not in df.columns:
+        st.error(f"Column '{url_column}' not found in the uploaded file. Please check your file format.")
+        return None
+    
     # Create new columns
     df['After_3D'] = df[url_column].apply(extract_values_after_3d)
     df['PID'] = ""
@@ -72,10 +80,16 @@ def process_dataframe(df, url_column):
 
 def create_affiliate_pivot(df):
     """Create pivot table for Affiliate Leads QA data."""
+    # Ensure numeric columns are properly converted
+    numeric_cols = ['Booked Count', 'Transaction Count', 'Net Sales Amount']
+    for col in numeric_cols:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+    
     pivot = pd.pivot_table(
         df,
         index='partnerID',
-        values=['Booked Count', 'Transaction Count', 'Net Sales Amount'],
+        values=numeric_cols,
         aggfunc='sum'
     ).reset_index()
     
@@ -83,6 +97,10 @@ def create_affiliate_pivot(df):
 
 def create_advanced_pivot(df):
     """Create pivot table for Advanced Action data."""
+    # Ensure numeric columns are properly converted
+    df['Action Id'] = pd.to_numeric(df['Action Id'], errors='coerce').fillna(0)
+    df['Action Earnings'] = pd.to_numeric(df['Action Earnings'], errors='coerce').fillna(0)
+    
     # Filter for Lead Submissions
     lead_submissions = df[df['Event Type'] == 'Lead Submission']
     
@@ -114,6 +132,10 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
         'Bookings', 'Sales', 'Revenue'
     ]
     
+    # Ensure all columns are numeric
+    for col in ['Leads', 'Spend', 'Bookings', 'Sales', 'Revenue']:
+        merged_df[col] = pd.to_numeric(merged_df[col], errors='coerce').fillna(0)
+    
     # Remove rows with all zeros
     merged_df = merged_df[~((merged_df['Leads'] == 0) & 
                            (merged_df['Spend'] == 0) & 
@@ -131,25 +153,37 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
     
     # Add VLOOKUP data if partner list is provided
     if partner_list is not None:
-        # Extract affiliate ID from partnerID (part before underscore)
-        merged_df['Affiliate ID'] = merged_df['partnerID'].apply(
-            lambda x: x.split('_')[0] if x != "Unattributed" else "")
-        
-        # Create a dictionary for faster lookups
-        affiliate_dict = dict(zip(partner_list['Affiliate ID'].astype(str), 
-                                 partner_list['Affiliate Name']))
-        manager_dict = dict(zip(partner_list['Affiliate ID'].astype(str), 
-                               partner_list['Account Manager']))
-        
-        # Apply the lookups
-        merged_df['Affiliate Name'] = merged_df['Affiliate ID'].map(affiliate_dict).fillna("")
-        merged_df['Account Manager'] = merged_df['Affiliate ID'].map(manager_dict).fillna("")
-        
-        # Reorder columns to put VLOOKUP data first
-        cols = ['Affiliate ID', 'Affiliate Name', 'Account Manager', 'partnerID'] + \
-               [col for col in merged_df.columns if col not in 
-                ['Affiliate ID', 'Affiliate Name', 'Account Manager', 'partnerID']]
-        merged_df = merged_df[cols]
+        try:
+            # Extract affiliate ID from partnerID (part before underscore)
+            merged_df['Affiliate ID'] = merged_df['partnerID'].apply(
+                lambda x: x.split('_')[0] if x != "Unattributed" else "")
+            
+            # Ensure Affiliate ID column exists in partner list
+            if 'Affiliate ID' not in partner_list.columns:
+                st.warning("Partner list file does not contain 'Affiliate ID' column. VLOOKUP functionality disabled.")
+            elif 'Affiliate Name' not in partner_list.columns or 'Account Manager' not in partner_list.columns:
+                st.warning("Partner list file missing required columns. VLOOKUP functionality limited.")
+            else:
+                # Convert Affiliate ID to string in both dataframes
+                partner_list['Affiliate ID'] = partner_list['Affiliate ID'].astype(str)
+                
+                # Create a dictionary for faster lookups
+                affiliate_dict = dict(zip(partner_list['Affiliate ID'], 
+                                        partner_list['Affiliate Name']))
+                manager_dict = dict(zip(partner_list['Affiliate ID'], 
+                                        partner_list['Account Manager']))
+                
+                # Apply the lookups
+                merged_df['Affiliate Name'] = merged_df['Affiliate ID'].map(affiliate_dict).fillna("")
+                merged_df['Account Manager'] = merged_df['Affiliate ID'].map(manager_dict).fillna("")
+                
+                # Reorder columns to put VLOOKUP data first
+                cols = ['Affiliate ID', 'Affiliate Name', 'Account Manager', 'partnerID'] + \
+                    [col for col in merged_df.columns if col not in 
+                        ['Affiliate ID', 'Affiliate Name', 'Account Manager', 'partnerID']]
+                merged_df = merged_df[cols]
+        except Exception as e:
+            st.warning(f"Error in VLOOKUP processing: {str(e)}. Continuing without VLOOKUP data.")
     
     return merged_df
 
@@ -221,14 +255,26 @@ if affiliate_file and advanced_file:
         affiliate_df = pd.read_csv(affiliate_file)
         advanced_df = pd.read_csv(advanced_file)
         
+        # Display column names for debugging
+        st.write("Affiliate file columns:", affiliate_df.columns.tolist())
+        st.write("Advanced file columns:", advanced_df.columns.tolist())
+        
         # Process both dataframes
         affiliate_df_processed = process_dataframe(affiliate_df, 'Click URL')
+        if affiliate_df_processed is None:
+            st.error("Failed to process Affiliate file. Please check if it contains a 'Click URL' column.")
+            st.stop()
+            
         advanced_df_processed = process_dataframe(advanced_df, 'Landing Page URL')
+        if advanced_df_processed is None:
+            st.error("Failed to process Advanced Action file. Please check if it contains a 'Landing Page URL' column.")
+            st.stop()
         
         # Read partner list if provided
         partner_list_df = None
         if partner_list_file:
             partner_list_df = pd.read_csv(partner_list_file)
+            st.write("Partner list columns:", partner_list_df.columns.tolist())
         
         # Show preview of processed data
         st.subheader("Preview of Processed Affiliate Data")
@@ -260,5 +306,8 @@ if affiliate_file and advanced_file:
     except Exception as e:
         st.error(f"An error occurred while processing the files: {str(e)}")
         st.error("Please ensure your files contain all required columns and are in the correct format.")
+        # Add more detailed error information
+        import traceback
+        st.code(traceback.format_exc())
 else:
     st.info("Please upload both required files to generate the report.") 
