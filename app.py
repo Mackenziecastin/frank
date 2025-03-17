@@ -187,46 +187,36 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
     
     return merged_df
 
-def format_excel(writer, df):
-    """Apply formatting to the Excel file."""
-    workbook = writer.book
-    worksheet = writer.sheets['Optimization Report']
-    
-    # Define formats
-    money_format = workbook.add_format({'num_format': '$#,##0.00'})
-    integer_format = workbook.add_format({'num_format': '0'})
-    percent_format = workbook.add_format({'num_format': '0.0%'})
-    
-    # Apply formats to specific columns
-    start_row = 1  # Skip header row
-    
-    # Format money columns
-    for col_idx, col_name in enumerate(df.columns):
-        if col_name in ['Spend', 'Revenue', 'ROAS', 'eCPL at $1.50']:
-            worksheet.set_column(col_idx, col_idx, None, money_format)
-    
-    # Format integer columns
-    for col_idx, col_name in enumerate(df.columns):
-        if col_name in ['Leads', 'Bookings', 'Sales']:
-            worksheet.set_column(col_idx, col_idx, None, integer_format)
-    
-    # Format percentage columns
-    for col_idx, col_name in enumerate(df.columns):
-        if col_name in ['Lead to Sale']:
-            worksheet.set_column(col_idx, col_idx, None, percent_format)
-    
-    # Auto-fit columns
-    for col_idx, _ in enumerate(df.columns):
-        worksheet.set_column(col_idx, col_idx, 15)  # Set width to 15 for all columns
-
 def to_excel_download(df_affiliate, df_advanced, df_optimization):
     """Convert dataframes to Excel file for download."""
     output = BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+    
+    # Use xlsxwriter engine instead of openpyxl for formatting support
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        # Write each dataframe to a different sheet
         df_affiliate.to_excel(writer, sheet_name='Cleaned Affiliate Data', index=False)
         df_advanced.to_excel(writer, sheet_name='Cleaned Advanced Action Data', index=False)
         df_optimization.to_excel(writer, sheet_name='Optimization Report', index=False)
-        format_excel(writer, df_optimization)
+        
+        # Get the xlsxwriter workbook and worksheet objects
+        workbook = writer.book
+        worksheet = writer.sheets['Optimization Report']
+        
+        # Define formats
+        money_format = workbook.add_format({'num_format': '$#,##0.00'})
+        integer_format = workbook.add_format({'num_format': '0'})
+        percent_format = workbook.add_format({'num_format': '0.0%'})
+        
+        # Apply formats to specific columns
+        for col_idx, col_name in enumerate(df_optimization.columns):
+            if col_name in ['Spend', 'Revenue', 'ROAS', 'eCPL at $1.50']:
+                worksheet.set_column(col_idx, col_idx, 15, money_format)
+            elif col_name in ['Leads', 'Bookings', 'Sales']:
+                worksheet.set_column(col_idx, col_idx, 15, integer_format)
+            elif col_name in ['Lead to Sale']:
+                worksheet.set_column(col_idx, col_idx, 15, percent_format)
+            else:
+                worksheet.set_column(col_idx, col_idx, 15)  # Default width
     
     return output.getvalue()
 
