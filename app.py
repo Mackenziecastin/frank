@@ -79,7 +79,12 @@ def process_dataframe(df, url_column):
     return df
 
 def create_affiliate_pivot(df):
-    """Create pivot table for Affiliate Leads QA data."""
+    """Create pivot table for Affiliate Leads QA data.
+    
+    As per instructions:
+    1. Pull in the ClickURL_partnerID into the rows (index='partnerID')
+    2. In the values, pull in Sum of Booked Count, Sum of Transaction Count & Sum of Net Sales Amount
+    """
     # Ensure numeric columns are properly converted
     numeric_cols = ['Booked Count', 'Transaction Count', 'Net Sales Amount']
     for col in numeric_cols:
@@ -96,7 +101,13 @@ def create_affiliate_pivot(df):
     return pivot
 
 def create_advanced_pivot(df):
-    """Create pivot table for Advanced Action data."""
+    """Create pivot table for Advanced Action data.
+    
+    As per instructions:
+    1. Pull in the Landing Page URL_PartnerID into the rows (index='partnerID')
+    2. In the values, pull in Count of Event Type but filter for ONLY the Lead Submissions
+    3. Also pull in the Sum of Action Earnings
+    """
     # Ensure numeric columns are properly converted
     df['Action Id'] = pd.to_numeric(df['Action Id'], errors='coerce').fillna(0)
     df['Action Earnings'] = pd.to_numeric(df['Action Earnings'], errors='coerce').fillna(0)
@@ -111,13 +122,24 @@ def create_advanced_pivot(df):
         aggfunc={'Action Id': 'count', 'Action Earnings': 'sum'}
     ).reset_index()
     
-    # Rename columns for clarity
+    # Rename columns for clarity per instructions:
+    # - Count of Event Type (Lead Submissions) = Leads
+    # - Sum of Action Earnings = Spend
     pivot.columns = ['partnerID', 'Leads', 'Spend']
     
     return pivot
 
 def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=None):
-    """Create the final optimization report by combining pivot tables."""
+    """Create the final optimization report by combining pivot tables.
+    
+    As per instructions, columns should be:
+    1. PartnerID = landing page URL_partnerID and clickURL_partnerID values
+    2. Leads = count of event type from Cleaned_Advance_Action pivot table
+    3. Spend = sum of action earnings from Cleaned_Advance_Action pivot table 
+    4. Bookings = sum of booked count from Cleaned_Affliate_Leads_QA pivot table
+    5. Sales = sum of transaction count from Cleaned_Affliate_Leads_QA pivot table
+    6. Revenue = sum of net sales amount from Cleaned_Affliate_Leads_QA pivot table
+    """
     # First, rename the affiliate pivot columns for clarity
     renamed_affiliate = affiliate_pivot.copy()
     if 'Transaction Count' in renamed_affiliate.columns:
