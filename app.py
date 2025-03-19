@@ -284,10 +284,6 @@ if affiliate_file and advanced_file:
         affiliate_df = pd.read_csv(affiliate_file)
         advanced_df = pd.read_csv(advanced_file)
         
-        # Display column names for debugging
-        st.write("Affiliate file columns:", affiliate_df.columns.tolist())
-        st.write("Advanced file columns:", advanced_df.columns.tolist())
-        
         # Process both dataframes
         affiliate_df_processed = process_dataframe(affiliate_df, 'Click URL')
         if affiliate_df_processed is None:
@@ -303,7 +299,6 @@ if affiliate_file and advanced_file:
         partner_list_df = None
         if partner_list_file:
             partner_list_df = pd.read_csv(partner_list_file)
-            st.write("Partner list columns:", partner_list_df.columns.tolist())
         
         # Show preview of processed data
         st.subheader("Preview of Processed Affiliate Data")
