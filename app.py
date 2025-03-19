@@ -49,6 +49,13 @@ def process_dataframe(df, url_column):
         st.error(f"Column '{url_column}' not found in the uploaded file. Please check your file format.")
         return None
     
+    # Filter out rows where URL contains "coolsculpting"
+    coolsculpting_count = df[df[url_column].str.contains('coolsculpting', case=False, na=False)].shape[0]
+    if coolsculpting_count > 0:
+        st.info(f"Filtered out {coolsculpting_count} rows containing 'coolsculpting' in the URL.")
+    
+    df = df[~df[url_column].str.contains('coolsculpting', case=False, na=False)]
+    
     # Create new columns
     df['After_3D'] = df[url_column].apply(extract_values_after_3d)
     df['PID'] = ""
@@ -115,16 +122,16 @@ def create_advanced_pivot(df):
     # Filter for Lead Submissions
     lead_submissions = df[df['Event Type'] == 'Lead Submission']
     
-    pivot = pd.pivot_table(
-        lead_submissions,
-        index='partnerID',
-        values=['Action Id', 'Action Earnings'],
-        aggfunc={'Action Id': 'count', 'Action Earnings': 'sum'}
-    ).reset_index()
+    # Count the number of rows with Lead Submission per partnerID
+    lead_counts = lead_submissions.groupby('partnerID').size().reset_index(name='Leads')
     
-    # Rename columns for clarity per instructions:
-    # - Count of Event Type (Lead Submissions) = Leads
-    # - Sum of Action Earnings = Spend
+    # Sum the Action Earnings per partnerID
+    earnings_sums = lead_submissions.groupby('partnerID')['Action Earnings'].sum().reset_index()
+    
+    # Merge the two dataframes
+    pivot = pd.merge(lead_counts, earnings_sums, on='partnerID')
+    
+    # Rename columns for clarity
     pivot.columns = ['partnerID', 'Leads', 'Spend']
     
     return pivot
