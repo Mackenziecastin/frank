@@ -195,32 +195,38 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
         try:
             # Extract affiliate ID from partnerID (part before underscore)
             merged_df['Affiliate ID'] = merged_df['partnerID'].apply(
-                lambda x: x.split('_')[0] if x != "Unattributed" else "")
+                lambda x: x.split('_')[0] if x != "Unattributed" and '_' in x else x)
             
-            # Ensure Affiliate ID column exists in partner list
-            if 'Affiliate ID' not in partner_list.columns:
-                st.warning("Partner list file does not contain 'Affiliate ID' column. VLOOKUP functionality disabled.")
-            elif 'Affiliate Name' not in partner_list.columns or 'Account Manager' not in partner_list.columns:
-                st.warning("Partner list file missing required columns. VLOOKUP functionality limited.")
+            # Ensure required columns exist in partner list
+            required_cols = ['Affiliate ID', 'Affiliate Name', 'Account Manager Name']
+            if not all(col in partner_list.columns for col in required_cols):
+                st.warning("Partner list file missing required columns. Required columns are: Affiliate ID, Affiliate Name, Account Manager Name")
             else:
                 # Convert Affiliate ID to string in both dataframes
                 partner_list['Affiliate ID'] = partner_list['Affiliate ID'].astype(str)
+                merged_df['Affiliate ID'] = merged_df['Affiliate ID'].astype(str)
                 
-                # Create a dictionary for faster lookups
-                affiliate_dict = dict(zip(partner_list['Affiliate ID'], 
-                                        partner_list['Affiliate Name']))
-                manager_dict = dict(zip(partner_list['Affiliate ID'], 
-                                        partner_list['Account Manager']))
+                # Merge with partner list to get affiliate name and account manager
+                merged_df = pd.merge(
+                    merged_df,
+                    partner_list[['Affiliate ID', 'Affiliate Name', 'Account Manager Name']],
+                    on='Affiliate ID',
+                    how='left'
+                )
                 
-                # Apply the lookups
-                merged_df['Affiliate Name'] = merged_df['Affiliate ID'].map(affiliate_dict).fillna("")
-                merged_df['Account Manager'] = merged_df['Affiliate ID'].map(manager_dict).fillna("")
+                # Fill NaN values with empty strings
+                merged_df['Affiliate Name'] = merged_df['Affiliate Name'].fillna("")
+                merged_df['Account Manager Name'] = merged_df['Account Manager Name'].fillna("")
                 
                 # Reorder columns to put VLOOKUP data first
-                cols = ['Affiliate ID', 'Affiliate Name', 'Account Manager', 'partnerID'] + \
+                cols = ['partnerID', 'Affiliate Name', 'Account Manager Name'] + \
                     [col for col in merged_df.columns if col not in 
-                        ['Affiliate ID', 'Affiliate Name', 'Account Manager', 'partnerID']]
+                        ['partnerID', 'Affiliate Name', 'Account Manager Name', 'Affiliate ID']]
                 merged_df = merged_df[cols]
+                
+                # Drop the temporary Affiliate ID column
+                merged_df = merged_df.drop('Affiliate ID', axis=1)
+                
         except Exception as e:
             st.warning(f"Error in VLOOKUP processing: {str(e)}. Continuing without VLOOKUP data.")
     
