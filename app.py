@@ -267,7 +267,7 @@ This tool processes your marketing data files and generates a comprehensive opti
 Please upload the required files below.
 """)
 
-col1, col2, col3 = st.columns(3)
+col1, col2 = st.columns(2)
 
 with col1:
     affiliate_file = st.file_uploader("Upload Affiliate Leads QA File (CSV)", type=['csv'])
@@ -275,14 +275,18 @@ with col1:
 with col2:
     advanced_file = st.file_uploader("Upload Advanced Action Sheet (CSV)", type=['csv'])
 
-with col3:
-    partner_list_file = st.file_uploader("Upload Partner List (CSV, Optional)", type=['csv'])
-
 if affiliate_file and advanced_file:
     try:
         # Read files
         affiliate_df = pd.read_csv(affiliate_file)
         advanced_df = pd.read_csv(advanced_file)
+        
+        # Read partner list automatically
+        try:
+            partner_list_df = pd.read_csv('Full DA Performance Marketing Team Partner List - Sheet1.csv')
+        except Exception as e:
+            st.warning(f"Could not read partner list file: {str(e)}. VLOOKUP functionality will be disabled.")
+            partner_list_df = None
         
         # Process both dataframes
         affiliate_df_processed = process_dataframe(affiliate_df, 'Click URL')
@@ -294,11 +298,6 @@ if affiliate_file and advanced_file:
         if advanced_df_processed is None:
             st.error("Failed to process Advanced Action file. Please check if it contains a 'Landing Page URL' column.")
             st.stop()
-        
-        # Read partner list if provided
-        partner_list_df = None
-        if partner_list_file:
-            partner_list_df = pd.read_csv(partner_list_file)
         
         # Show preview of processed data
         st.subheader("Preview of Processed Affiliate Data")

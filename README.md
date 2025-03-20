@@ -44,7 +44,7 @@ To deploy this application so it's accessible online:
 1. Open the application URL
 2. Upload your Affiliate Leads QA file
 3. Upload your Advanced Action Sheet
-4. The application will automatically process the files
+4. The application will automatically process the files and perform VLOOKUP using the built-in partner list
 5. Preview the results in the browser
 6. Download the complete report using the "Download Full Report" button
 
@@ -52,4 +52,9 @@ To deploy this application so it's accessible online:
 
 Your input files should be CSV files containing:
 - A URL column with tracking parameters
-- Required metrics columns (Leads, Spend, Net Sales Amount, Order ID) 
+- Required metrics columns (Leads, Spend, Net Sales Amount, Order ID)
+
+The application uses a built-in partner list file for VLOOKUP operations. This file contains:
+- Affiliate ID
+- Affiliate Name
+- Account Manager Name 
