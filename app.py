@@ -6,6 +6,87 @@ from io import BytesIO
 
 st.set_page_config(page_title="Partner Optimization Report Generator", layout="wide")
 
+def show_main_page():
+    st.title("Partner Optimization Report Generator")
+
+    st.write("""
+    This tool processes your marketing data files and generates a comprehensive optimization report.
+    Please upload the required files below.
+    """)
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        affiliate_file = st.file_uploader("Upload Affiliate Leads QA File (CSV)", type=['csv'])
+    
+    with col2:
+        advanced_file = st.file_uploader("Upload Advanced Action Sheet (CSV)", type=['csv'])
+
+    if affiliate_file and advanced_file:
+        try:
+            # Read files
+            affiliate_df = pd.read_csv(affiliate_file)
+            advanced_df = pd.read_csv(advanced_file)
+            
+            # Read partner list automatically
+            try:
+                partner_list_df = pd.read_csv('Full DA Performance Marketing Team Partner List - Sheet1.csv')
+            except Exception as e:
+                st.warning(f"Could not read partner list file: {str(e)}. VLOOKUP functionality will be disabled.")
+                partner_list_df = None
+            
+            # Process both dataframes
+            affiliate_df_processed = process_dataframe(affiliate_df, 'Click URL')
+            if affiliate_df_processed is None:
+                st.error("Failed to process Affiliate file. Please check if it contains a 'Click URL' column.")
+                st.stop()
+                
+            advanced_df_processed = process_dataframe(advanced_df, 'Landing Page URL')
+            if advanced_df_processed is None:
+                st.error("Failed to process Advanced Action file. Please check if it contains a 'Landing Page URL' column.")
+                st.stop()
+            
+            # Show preview of processed data
+            st.subheader("Preview of Processed Affiliate Data")
+            st.dataframe(affiliate_df_processed[['Click URL', 'PID', 'SUBID', 'partnerID']].head())
+            
+            st.subheader("Preview of Processed Advanced Action Data")
+            st.dataframe(advanced_df_processed[['Landing Page URL', 'PID', 'SUBID', 'partnerID']].head())
+            
+            # Create pivot tables
+            affiliate_pivot = create_affiliate_pivot(affiliate_df_processed)
+            st.subheader("Preview of Affiliate Pivot")
+            st.dataframe(affiliate_pivot.head())
+            
+            advanced_pivot = create_advanced_pivot(advanced_df_processed)
+            st.subheader("Preview of Advanced Action Pivot")
+            st.dataframe(advanced_pivot.head())
+            
+            # Create optimization report
+            optimization_report = create_optimization_report(affiliate_pivot, advanced_pivot, partner_list_df)
+            
+            # Show preview of results
+            st.subheader("Preview of Optimization Report")
+            st.dataframe(optimization_report)
+            
+            # Create download button
+            excel_data = to_excel_download(affiliate_df_processed, advanced_df_processed, optimization_report)
+            st.download_button(
+                label="Download Full Report",
+                data=excel_data,
+                file_name="partner_optimization_report.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+            
+        except Exception as e:
+            st.error(f"An error occurred while processing the files: {str(e)}")
+            st.error("Please ensure your files contain all required columns and are in the correct format.")
+            # Add more detailed error information
+            import traceback
+            st.code(traceback.format_exc())
+    else:
+        st.info("Please upload both required files to generate the report.")
+
 def extract_values_after_3d(url):
     """Extract all values after %3D in the URL."""
     try:
@@ -265,83 +346,18 @@ def to_excel_download(df_affiliate, df_advanced, df_optimization):
     
     return output.getvalue()
 
-# Main app
-st.title("Partner Optimization Report Generator")
-
-st.write("""
-This tool processes your marketing data files and generates a comprehensive optimization report.
-Please upload the required files below.
-""")
-
-col1, col2 = st.columns(2)
-
-with col1:
-    affiliate_file = st.file_uploader("Upload Affiliate Leads QA File (CSV)", type=['csv'])
+# At the bottom of the file, add the main execution logic
+def main():
+    # Create the navigation
+    st.sidebar.title("Navigation")
+    page = st.sidebar.radio("Go to", ["Main Report", "Bob's Analysis"])
     
-with col2:
-    advanced_file = st.file_uploader("Upload Advanced Action Sheet (CSV)", type=['csv'])
+    if page == "Main Report":
+        show_main_page()
+    elif page == "Bob's Analysis":
+        # Import and show Bob's analysis page
+        from pages.bob_analysis import show_bob_analysis
+        show_bob_analysis()
 
-if affiliate_file and advanced_file:
-    try:
-        # Read files
-        affiliate_df = pd.read_csv(affiliate_file)
-        advanced_df = pd.read_csv(advanced_file)
-        
-        # Read partner list automatically
-        try:
-            partner_list_df = pd.read_csv('Full DA Performance Marketing Team Partner List - Sheet1.csv')
-        except Exception as e:
-            st.warning(f"Could not read partner list file: {str(e)}. VLOOKUP functionality will be disabled.")
-            partner_list_df = None
-        
-        # Process both dataframes
-        affiliate_df_processed = process_dataframe(affiliate_df, 'Click URL')
-        if affiliate_df_processed is None:
-            st.error("Failed to process Affiliate file. Please check if it contains a 'Click URL' column.")
-            st.stop()
-            
-        advanced_df_processed = process_dataframe(advanced_df, 'Landing Page URL')
-        if advanced_df_processed is None:
-            st.error("Failed to process Advanced Action file. Please check if it contains a 'Landing Page URL' column.")
-            st.stop()
-        
-        # Show preview of processed data
-        st.subheader("Preview of Processed Affiliate Data")
-        st.dataframe(affiliate_df_processed[['Click URL', 'PID', 'SUBID', 'partnerID']].head())
-        
-        st.subheader("Preview of Processed Advanced Action Data")
-        st.dataframe(advanced_df_processed[['Landing Page URL', 'PID', 'SUBID', 'partnerID']].head())
-        
-        # Create pivot tables
-        affiliate_pivot = create_affiliate_pivot(affiliate_df_processed)
-        st.subheader("Preview of Affiliate Pivot")
-        st.dataframe(affiliate_pivot.head())
-        
-        advanced_pivot = create_advanced_pivot(advanced_df_processed)
-        st.subheader("Preview of Advanced Action Pivot")
-        st.dataframe(advanced_pivot.head())
-        
-        # Create optimization report
-        optimization_report = create_optimization_report(affiliate_pivot, advanced_pivot, partner_list_df)
-        
-        # Show preview of results
-        st.subheader("Preview of Optimization Report")
-        st.dataframe(optimization_report)
-        
-        # Create download button
-        excel_data = to_excel_download(affiliate_df_processed, advanced_df_processed, optimization_report)
-        st.download_button(
-            label="Download Full Report",
-            data=excel_data,
-            file_name="partner_optimization_report.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-        
-    except Exception as e:
-        st.error(f"An error occurred while processing the files: {str(e)}")
-        st.error("Please ensure your files contain all required columns and are in the correct format.")
-        # Add more detailed error information
-        import traceback
-        st.code(traceback.format_exc())
-else:
-    st.info("Please upload both required files to generate the report.") 
+if __name__ == "__main__":
+    main() 
