@@ -187,20 +187,35 @@ def process_dataframe(df, url_column):
     if 'Date' in df.columns:
         df['Date'] = pd.to_datetime(df['Date'])
     
-    # Ensure URL column exists
-    if url_column not in df.columns:
-        st.error(f"Column '{url_column}' not found in the uploaded file. Please check your file format.")
+    # Check for variations of URL column names
+    url_column_variations = {
+        'Click URL': ['Click URL', 'ClickURL', 'Click_URL', 'click url', 'click_url'],
+        'Landing Page URL': ['Landing Page URL', 'LandingPageURL', 'Landing_Page_URL', 'landing page url', 'landing_page_url', 'URL']
+    }
+    
+    # Find the actual column name in the dataframe
+    actual_column = None
+    expected_type = 'Click URL' if url_column == 'Click URL' else 'Landing Page URL'
+    
+    for col in df.columns:
+        if col in url_column_variations[expected_type]:
+            actual_column = col
+            break
+    
+    if actual_column is None:
+        available_columns = ", ".join(df.columns)
+        st.error(f"Could not find {expected_type} column. Available columns are: {available_columns}")
         return None
     
     # Filter out rows where URL contains "coolsculpting"
-    coolsculpting_count = df[df[url_column].str.contains('coolsculpting', case=False, na=False)].shape[0]
+    coolsculpting_count = df[df[actual_column].str.contains('coolsculpting', case=False, na=False)].shape[0]
     if coolsculpting_count > 0:
         st.info(f"Filtered out {coolsculpting_count} rows containing 'coolsculpting' in the URL.")
     
-    df = df[~df[url_column].str.contains('coolsculpting', case=False, na=False)]
+    df = df[~df[actual_column].str.contains('coolsculpting', case=False, na=False)]
     
     # Create new columns
-    df['After_3D'] = df[url_column].apply(extract_values_after_3d)
+    df['After_3D'] = df[actual_column].apply(extract_values_after_3d)
     df['PID'] = ""
     df['SUBID'] = ""
     df['partnerID'] = ""
