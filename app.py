@@ -280,19 +280,29 @@ def create_affiliate_pivot(df):
     1. Pull in the ClickURL_partnerID into the rows (index='partnerID')
     2. In the values, pull in Sum of Booked Count, Sum of Transaction Count & Sum of Net Sales Amount
     """
-    # Ensure numeric columns are properly converted
-    numeric_cols = ['Booked Count', 'Transaction Count', 'Net Sales Amount']
-    for col in numeric_cols:
+    # First verify Transaction Count column exists
+    if 'Transaction Count' not in df.columns:
+        st.error("Transaction Count column not found in affiliate data")
+        return None
+        
+    # Convert Transaction Count to numeric, treating any non-numeric values as 0
+    df['Transaction Count'] = pd.to_numeric(df['Transaction Count'], errors='coerce').fillna(0)
+    
+    # Ensure other numeric columns are properly converted if they exist
+    other_cols = ['Booked Count', 'Net Sales Amount']
+    for col in other_cols:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
     
-    # Create pivot table
-    pivot = pd.pivot_table(
-        df,
-        index='partnerID',
-        values=['Booked Count', 'Transaction Count', 'Net Sales Amount'],
-        aggfunc='sum'
-    ).reset_index()
+    # Create pivot table with explicit column handling
+    agg_dict = {'Transaction Count': 'sum'}
+    if 'Booked Count' in df.columns:
+        agg_dict['Booked Count'] = 'sum'
+    if 'Net Sales Amount' in df.columns:
+        agg_dict['Net Sales Amount'] = 'sum'
+    
+    # Create pivot table with specific aggregation methods
+    pivot = df.groupby('partnerID').agg(agg_dict).reset_index()
     
     return pivot
 
