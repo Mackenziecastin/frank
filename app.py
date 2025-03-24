@@ -59,18 +59,31 @@ def show_main_page():
                 affiliate_df_processed['Created Date'] = pd.to_datetime(affiliate_df_processed['Created Date'])
                 advanced_df_processed['Action Date'] = pd.to_datetime(advanced_df_processed['Action Date'])
                 
-                # Get the last date in the affiliate dataset (we only mature this one)
-                affiliate_last_date = affiliate_df_processed['Created Date'].max()
+                # Set the date ranges for both reports
+                full_start_date = pd.to_datetime('2025-03-01')
+                full_end_date = pd.to_datetime('2025-03-23')
+                matured_start_date = pd.to_datetime('2025-03-01')
+                matured_end_date = pd.to_datetime('2025-03-16')
                 
-                # Create full report dataframes
-                affiliate_df_full = affiliate_df_processed.copy()
-                advanced_df_full = advanced_df_processed.copy()
-                
-                # Create matured report dataframes (only subtract 8 days from affiliate data)
-                affiliate_df_matured = affiliate_df_processed[
-                    affiliate_df_processed['Created Date'] <= (affiliate_last_date - pd.Timedelta(days=8))
+                # Create full report dataframes with date filtering
+                affiliate_df_full = affiliate_df_processed[
+                    (affiliate_df_processed['Created Date'] >= full_start_date) &
+                    (affiliate_df_processed['Created Date'] <= full_end_date)
                 ]
-                advanced_df_matured = advanced_df_processed.copy()  # Use full range for advanced data
+                advanced_df_full = advanced_df_processed[
+                    (advanced_df_processed['Action Date'] >= full_start_date) &
+                    (advanced_df_processed['Action Date'] <= full_end_date)
+                ]
+                
+                # Create matured report dataframes with date filtering
+                affiliate_df_matured = affiliate_df_processed[
+                    (affiliate_df_processed['Created Date'] >= matured_start_date) &
+                    (affiliate_df_processed['Created Date'] <= matured_end_date)
+                ]
+                advanced_df_matured = advanced_df_processed[
+                    (advanced_df_processed['Action Date'] >= matured_start_date) &
+                    (advanced_df_processed['Action Date'] <= matured_end_date)
+                ]
                 
                 # Create pivot tables and reports
                 # Full report
@@ -90,12 +103,12 @@ def show_main_page():
                 # Show date ranges for both reports
                 st.subheader("Date Ranges")
                 st.write(f"Full Report Dates:")
-                st.write(f"- Affiliate Data: {affiliate_df_full['Created Date'].min().strftime('%Y-%m-%d')} to {affiliate_df_full['Created Date'].max().strftime('%Y-%m-%d')}")
-                st.write(f"- Advanced Action Data: {advanced_df_full['Action Date'].min().strftime('%Y-%m-%d')} to {advanced_df_full['Action Date'].max().strftime('%Y-%m-%d')}")
+                st.write(f"- Affiliate Data: {full_start_date.strftime('%Y-%m-%d')} to {full_end_date.strftime('%Y-%m-%d')}")
+                st.write(f"- Advanced Action Data: {full_start_date.strftime('%Y-%m-%d')} to {full_end_date.strftime('%Y-%m-%d')}")
                 
                 st.write(f"Matured Report Dates:")
-                st.write(f"- Affiliate Data (excluding last 8 days): {affiliate_df_matured['Created Date'].min().strftime('%Y-%m-%d')} to {affiliate_df_matured['Created Date'].max().strftime('%Y-%m-%d')}")
-                st.write(f"- Advanced Action Data: {advanced_df_matured['Action Date'].min().strftime('%Y-%m-%d')} to {advanced_df_matured['Action Date'].max().strftime('%Y-%m-%d')}")
+                st.write(f"- Affiliate Data: {matured_start_date.strftime('%Y-%m-%d')} to {matured_end_date.strftime('%Y-%m-%d')}")
+                st.write(f"- Advanced Action Data: {matured_start_date.strftime('%Y-%m-%d')} to {matured_end_date.strftime('%Y-%m-%d')}")
                 
                 # Show preview of both reports
                 st.subheader("Preview of Full Optimization Report")
