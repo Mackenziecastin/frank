@@ -61,17 +61,21 @@ def show_main_page():
             optimization_report = create_optimization_report(affiliate_pivot, advanced_pivot, partner_list_df)
             
             # Create maturation-adjusted dataframes (excluding last 7 days)
-            if 'Date' in affiliate_df_processed.columns and 'Date' in advanced_df_processed.columns:
+            if 'Created Date' in affiliate_df_processed.columns and 'Action Date' in advanced_df_processed.columns:
+                # Convert dates to datetime
+                affiliate_df_processed['Created Date'] = pd.to_datetime(affiliate_df_processed['Created Date'])
+                advanced_df_processed['Action Date'] = pd.to_datetime(advanced_df_processed['Action Date'])
+                
                 # Get the last date in each dataset
-                affiliate_last_date = pd.to_datetime(affiliate_df_processed['Date']).max()
-                advanced_last_date = pd.to_datetime(advanced_df_processed['Date']).max()
+                affiliate_last_date = affiliate_df_processed['Created Date'].max()
+                advanced_last_date = advanced_df_processed['Action Date'].max()
                 
                 # Filter out last 7 days from both datasets
                 affiliate_df_matured = affiliate_df_processed[
-                    pd.to_datetime(affiliate_df_processed['Date']) <= (affiliate_last_date - pd.Timedelta(days=7))
+                    affiliate_df_processed['Created Date'] <= (affiliate_last_date - pd.Timedelta(days=7))
                 ]
                 advanced_df_matured = advanced_df_processed[
-                    pd.to_datetime(advanced_df_processed['Date']) <= (advanced_last_date - pd.Timedelta(days=7))
+                    advanced_df_processed['Action Date'] <= (advanced_last_date - pd.Timedelta(days=7))
                 ]
                 
                 # Create pivot tables for matured data
@@ -85,8 +89,13 @@ def show_main_page():
                 
                 # Show date ranges for both reports
                 st.subheader("Date Ranges")
-                st.write(f"Full Report: {affiliate_df_processed['Date'].min()} to {affiliate_df_processed['Date'].max()}")
-                st.write(f"Matured Report (excluding last 7 days): {affiliate_df_matured['Date'].min()} to {affiliate_df_matured['Date'].max()}")
+                st.write(f"Full Report Dates:")
+                st.write(f"- Affiliate Data: {affiliate_df_processed['Created Date'].min().strftime('%Y-%m-%d')} to {affiliate_df_processed['Created Date'].max().strftime('%Y-%m-%d')}")
+                st.write(f"- Advanced Action Data: {advanced_df_processed['Action Date'].min().strftime('%Y-%m-%d')} to {advanced_df_processed['Action Date'].max().strftime('%Y-%m-%d')}")
+                
+                st.write(f"Matured Report Dates (excluding last 7 days):")
+                st.write(f"- Affiliate Data: {affiliate_df_matured['Created Date'].min().strftime('%Y-%m-%d')} to {affiliate_df_matured['Created Date'].max().strftime('%Y-%m-%d')}")
+                st.write(f"- Advanced Action Data: {advanced_df_matured['Action Date'].min().strftime('%Y-%m-%d')} to {advanced_df_matured['Action Date'].max().strftime('%Y-%m-%d')}")
                 
                 # Show preview of both reports
                 st.subheader("Preview of Full Optimization Report")
@@ -120,10 +129,18 @@ def show_main_page():
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
             else:
-                st.error("Date column not found in one or both files. Please ensure both files have a 'Date' column.")
+                missing_columns = []
+                if 'Created Date' not in affiliate_df_processed.columns:
+                    missing_columns.append("'Created Date' in Affiliate Leads file")
+                if 'Action Date' not in advanced_df_processed.columns:
+                    missing_columns.append("'Action Date' in Advanced Action file")
+                    
+                st.error(f"Required date columns not found: {', '.join(missing_columns)}. Available columns are:")
+                st.write("Affiliate Leads columns:", ", ".join(affiliate_df_processed.columns))
+                st.write("Advanced Action columns:", ", ".join(advanced_df_processed.columns))
                 
                 # Show only the full report if date columns are missing
-                st.subheader("Preview of Full Optimization Report")
+                st.subheader("Preview of Full Optimization Report (without date filtering)")
                 st.dataframe(optimization_report)
                 
                 excel_data = to_excel_download(
