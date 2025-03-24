@@ -53,30 +53,88 @@ def show_main_page():
             st.subheader("Preview of Processed Advanced Action Data")
             st.dataframe(advanced_df_processed[['Landing Page URL', 'PID', 'SUBID', 'partnerID']].head())
             
-            # Create pivot tables
+            # Create pivot tables for full date range
             affiliate_pivot = create_affiliate_pivot(affiliate_df_processed)
-            st.subheader("Preview of Affiliate Pivot")
-            st.dataframe(affiliate_pivot.head())
-            
             advanced_pivot = create_advanced_pivot(advanced_df_processed)
-            st.subheader("Preview of Advanced Action Pivot")
-            st.dataframe(advanced_pivot.head())
             
-            # Create optimization report
+            # Create optimization report for full date range
             optimization_report = create_optimization_report(affiliate_pivot, advanced_pivot, partner_list_df)
             
-            # Show preview of results
-            st.subheader("Preview of Optimization Report")
-            st.dataframe(optimization_report)
-            
-            # Create download button
-            excel_data = to_excel_download(affiliate_df_processed, advanced_df_processed, optimization_report)
-            st.download_button(
-                label="Download Full Report",
-                data=excel_data,
-                file_name="partner_optimization_report.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
+            # Create maturation-adjusted dataframes (excluding last 7 days)
+            if 'Date' in affiliate_df_processed.columns and 'Date' in advanced_df_processed.columns:
+                # Get the last date in each dataset
+                affiliate_last_date = pd.to_datetime(affiliate_df_processed['Date']).max()
+                advanced_last_date = pd.to_datetime(advanced_df_processed['Date']).max()
+                
+                # Filter out last 7 days from both datasets
+                affiliate_df_matured = affiliate_df_processed[
+                    pd.to_datetime(affiliate_df_processed['Date']) <= (affiliate_last_date - pd.Timedelta(days=7))
+                ]
+                advanced_df_matured = advanced_df_processed[
+                    pd.to_datetime(advanced_df_processed['Date']) <= (advanced_last_date - pd.Timedelta(days=7))
+                ]
+                
+                # Create pivot tables for matured data
+                affiliate_pivot_matured = create_affiliate_pivot(affiliate_df_matured)
+                advanced_pivot_matured = create_advanced_pivot(advanced_df_matured)
+                
+                # Create optimization report for matured data
+                optimization_report_matured = create_optimization_report(
+                    affiliate_pivot_matured, advanced_pivot_matured, partner_list_df
+                )
+                
+                # Show date ranges for both reports
+                st.subheader("Date Ranges")
+                st.write(f"Full Report: {affiliate_df_processed['Date'].min()} to {affiliate_df_processed['Date'].max()}")
+                st.write(f"Matured Report (excluding last 7 days): {affiliate_df_matured['Date'].min()} to {affiliate_df_matured['Date'].max()}")
+                
+                # Show preview of both reports
+                st.subheader("Preview of Full Optimization Report")
+                st.dataframe(optimization_report)
+                
+                st.subheader("Preview of Matured Optimization Report (Excluding Last 7 Days)")
+                st.dataframe(optimization_report_matured)
+                
+                # Create download buttons for both reports
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    excel_data = to_excel_download(
+                        affiliate_df_processed, advanced_df_processed, optimization_report
+                    )
+                    st.download_button(
+                        label="Download Full Report",
+                        data=excel_data,
+                        file_name="partner_optimization_report_full.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+                
+                with col2:
+                    excel_data_matured = to_excel_download(
+                        affiliate_df_matured, advanced_df_matured, optimization_report_matured
+                    )
+                    st.download_button(
+                        label="Download Matured Report (Excluding Last 7 Days)",
+                        data=excel_data_matured,
+                        file_name="partner_optimization_report_matured.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+            else:
+                st.error("Date column not found in one or both files. Please ensure both files have a 'Date' column.")
+                
+                # Show only the full report if date columns are missing
+                st.subheader("Preview of Full Optimization Report")
+                st.dataframe(optimization_report)
+                
+                excel_data = to_excel_download(
+                    affiliate_df_processed, advanced_df_processed, optimization_report
+                )
+                st.download_button(
+                    label="Download Full Report",
+                    data=excel_data,
+                    file_name="partner_optimization_report.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
             
         except Exception as e:
             st.error(f"An error occurred while processing the files: {str(e)}")
@@ -124,6 +182,10 @@ def process_dataframe(df, url_column):
     """Process dataframe to add PID, SUBID, and partnerID columns."""
     # Make a copy to avoid modifying the original
     df = df.copy()
+    
+    # Convert date column to datetime if it exists
+    if 'Date' in df.columns:
+        df['Date'] = pd.to_datetime(df['Date'])
     
     # Ensure URL column exists
     if url_column not in df.columns:
