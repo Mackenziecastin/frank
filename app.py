@@ -53,36 +53,36 @@ def show_main_page():
             st.subheader("Preview of Processed Advanced Action Data")
             st.dataframe(advanced_df_processed[['Landing Page URL', 'PID', 'SUBID', 'partnerID']].head())
             
-            # Create pivot tables for full date range
-            affiliate_pivot = create_affiliate_pivot(affiliate_df_processed)
-            advanced_pivot = create_advanced_pivot(advanced_df_processed)
-            
-            # Create optimization report for full date range
-            optimization_report = create_optimization_report(affiliate_pivot, advanced_pivot, partner_list_df)
-            
-            # Create maturation-adjusted dataframes (excluding last 7 days)
+            # Create maturation-adjusted dataframes
             if 'Created Date' in affiliate_df_processed.columns and 'Action Date' in advanced_df_processed.columns:
                 # Convert dates to datetime
                 affiliate_df_processed['Created Date'] = pd.to_datetime(affiliate_df_processed['Created Date'])
                 advanced_df_processed['Action Date'] = pd.to_datetime(advanced_df_processed['Action Date'])
                 
-                # Get the last date in each dataset
+                # Get the last date in the affiliate dataset (we only mature this one)
                 affiliate_last_date = affiliate_df_processed['Created Date'].max()
-                advanced_last_date = advanced_df_processed['Action Date'].max()
                 
-                # Filter out last 7 days from both datasets
+                # Create full report dataframes
+                affiliate_df_full = affiliate_df_processed.copy()
+                advanced_df_full = advanced_df_processed.copy()
+                
+                # Create matured report dataframes (only subtract 8 days from affiliate data)
                 affiliate_df_matured = affiliate_df_processed[
-                    affiliate_df_processed['Created Date'] <= (affiliate_last_date - pd.Timedelta(days=7))
+                    affiliate_df_processed['Created Date'] <= (affiliate_last_date - pd.Timedelta(days=8))
                 ]
-                advanced_df_matured = advanced_df_processed[
-                    advanced_df_processed['Action Date'] <= (advanced_last_date - pd.Timedelta(days=7))
-                ]
+                advanced_df_matured = advanced_df_processed.copy()  # Use full range for advanced data
                 
-                # Create pivot tables for matured data
+                # Create pivot tables and reports
+                # Full report
+                affiliate_pivot_full = create_affiliate_pivot(affiliate_df_full)
+                advanced_pivot_full = create_advanced_pivot(advanced_df_full)
+                optimization_report_full = create_optimization_report(
+                    affiliate_pivot_full, advanced_pivot_full, partner_list_df
+                )
+                
+                # Matured report
                 affiliate_pivot_matured = create_affiliate_pivot(affiliate_df_matured)
                 advanced_pivot_matured = create_advanced_pivot(advanced_df_matured)
-                
-                # Create optimization report for matured data
                 optimization_report_matured = create_optimization_report(
                     affiliate_pivot_matured, advanced_pivot_matured, partner_list_df
                 )
@@ -90,18 +90,18 @@ def show_main_page():
                 # Show date ranges for both reports
                 st.subheader("Date Ranges")
                 st.write(f"Full Report Dates:")
-                st.write(f"- Affiliate Data: {affiliate_df_processed['Created Date'].min().strftime('%Y-%m-%d')} to {affiliate_df_processed['Created Date'].max().strftime('%Y-%m-%d')}")
-                st.write(f"- Advanced Action Data: {advanced_df_processed['Action Date'].min().strftime('%Y-%m-%d')} to {advanced_df_processed['Action Date'].max().strftime('%Y-%m-%d')}")
+                st.write(f"- Affiliate Data: {affiliate_df_full['Created Date'].min().strftime('%Y-%m-%d')} to {affiliate_df_full['Created Date'].max().strftime('%Y-%m-%d')}")
+                st.write(f"- Advanced Action Data: {advanced_df_full['Action Date'].min().strftime('%Y-%m-%d')} to {advanced_df_full['Action Date'].max().strftime('%Y-%m-%d')}")
                 
-                st.write(f"Matured Report Dates (excluding last 7 days):")
-                st.write(f"- Affiliate Data: {affiliate_df_matured['Created Date'].min().strftime('%Y-%m-%d')} to {affiliate_df_matured['Created Date'].max().strftime('%Y-%m-%d')}")
+                st.write(f"Matured Report Dates:")
+                st.write(f"- Affiliate Data (excluding last 8 days): {affiliate_df_matured['Created Date'].min().strftime('%Y-%m-%d')} to {affiliate_df_matured['Created Date'].max().strftime('%Y-%m-%d')}")
                 st.write(f"- Advanced Action Data: {advanced_df_matured['Action Date'].min().strftime('%Y-%m-%d')} to {advanced_df_matured['Action Date'].max().strftime('%Y-%m-%d')}")
                 
                 # Show preview of both reports
                 st.subheader("Preview of Full Optimization Report")
-                st.dataframe(optimization_report)
+                st.dataframe(optimization_report_full)
                 
-                st.subheader("Preview of Matured Optimization Report (Excluding Last 7 Days)")
+                st.subheader("Preview of Matured Optimization Report (Excluding Last 8 Days from Affiliate Data)")
                 st.dataframe(optimization_report_matured)
                 
                 # Create download buttons for both reports
@@ -109,7 +109,7 @@ def show_main_page():
                 
                 with col1:
                     excel_data = to_excel_download(
-                        affiliate_df_processed, advanced_df_processed, optimization_report
+                        affiliate_df_full, advanced_df_full, optimization_report_full
                     )
                     st.download_button(
                         label="Download Full Report",
@@ -123,7 +123,7 @@ def show_main_page():
                         affiliate_df_matured, advanced_df_matured, optimization_report_matured
                     )
                     st.download_button(
-                        label="Download Matured Report (Excluding Last 7 Days)",
+                        label="Download Matured Report",
                         data=excel_data_matured,
                         file_name="partner_optimization_report_matured.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -141,10 +141,10 @@ def show_main_page():
                 
                 # Show only the full report if date columns are missing
                 st.subheader("Preview of Full Optimization Report (without date filtering)")
-                st.dataframe(optimization_report)
+                st.dataframe(optimization_report_full)
                 
                 excel_data = to_excel_download(
-                    affiliate_df_processed, advanced_df_processed, optimization_report
+                    affiliate_df_full, advanced_df_full, optimization_report_full
                 )
                 st.download_button(
                     label="Download Full Report",
@@ -273,10 +273,11 @@ def create_affiliate_pivot(df):
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
     
+    # Create pivot table
     pivot = pd.pivot_table(
         df,
         index='partnerID',
-        values=numeric_cols,
+        values=['Booked Count', 'Transaction Count', 'Net Sales Amount'],
         aggfunc='sum'
     ).reset_index()
     
