@@ -1,60 +1,56 @@
-# Partner Optimization Report Generator
+# ADT Pixel Firing
 
-This Streamlit application processes marketing data files to generate partner optimization reports. It extracts PID and SUBID information from URLs and performs various analyses on the data.
+This script processes ADT Athena daily lead call data and fires tracking pixels for qualifying sales.
 
-## Features
+## Requirements
 
-- Upload and process two CSV files (Affiliate Leads QA and Advanced Action Sheet)
-- Automatic extraction of PID and SUBID from URLs
-- Generation of comprehensive analysis including:
-  - Leads, Spend, Sales, and Revenue metrics
-  - Leads to Sale ratio
-  - ROAS (Return on Ad Spend)
-  - Current Rate
-  - ECPL at $1.50
-- Download results as Excel file with multiple sheets
+- Python 3.7+
+- pandas
+- requests
 
-## Setup
+## Installation
 
-1. Install Python 3.8 or higher
+1. Clone this repository
 2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-## Running Locally
-
-To run the application locally:
 ```bash
-streamlit run app.py
+pip install -r requirements.txt
 ```
-
-## Deployment on Streamlit Cloud
-
-To deploy this application so it's accessible online:
-
-1. Create a GitHub repository and push this code to it
-2. Go to [share.streamlit.io](https://share.streamlit.io)
-3. Sign in with your GitHub account
-4. Deploy the application by connecting it to your repository
-5. Share the provided URL with others
 
 ## Usage
 
-1. Open the application URL
-2. Upload your Affiliate Leads QA file
-3. Upload your Advanced Action Sheet
-4. The application will automatically process the files and perform VLOOKUP using the built-in partner list
-5. Preview the results in the browser
-6. Download the complete report using the "Download Full Report" button
+Run the script with the path to your ADT Athena report:
 
-## File Requirements
+```bash
+python adt_pixel_firing.py path/to/ADT_Athena_DLY_Lead_CallData_Direct_Agnts_[date].csv
+```
 
-Your input files should be CSV files containing:
-- A URL column with tracking parameters
-- Required metrics columns (Leads, Spend, Net Sales Amount, Order ID)
+## Data Processing Steps
 
-The application uses a built-in partner list file for VLOOKUP operations. This file contains:
-- Affiliate ID
-- Affiliate Name
-- Account Manager Name 
+1. Data Cleaning:
+   - Filters out "Health" rows from Ln_of_Busn column
+   - Filters out "US: Health" rows from DNIS_BUSN_SEG_CD column
+   - Filters for yesterday's date in Sale_Date column
+   - Filters for "WEB0021011" in Lead_DNIS column
+   - Filters for "NEW" and "RESALE" values in Ordr_Type column
+
+2. Pixel Firing:
+   - Fires a pixel for each qualifying sale
+   - Uses unique transaction IDs
+   - Logs all activities and results
+
+## Logging
+
+The script creates a daily log file named `adt_pixel_firing_YYYYMMDD.log` that contains:
+- Data processing information
+- Number of qualifying sales
+- Pixel firing results
+- Any errors or issues encountered
+
+## Error Handling
+
+The script includes comprehensive error handling and logging for:
+- File reading issues
+- Data processing errors
+- Pixel firing failures
+
+All errors are logged to the daily log file. 
