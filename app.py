@@ -59,11 +59,20 @@ def show_main_page():
                 affiliate_df_processed['Created Date'] = pd.to_datetime(affiliate_df_processed['Created Date'])
                 advanced_df_processed['Action Date'] = pd.to_datetime(advanced_df_processed['Action Date'])
                 
-                # Set the date ranges for both reports
-                full_start_date = pd.to_datetime('2025-03-01')
-                full_end_date = pd.to_datetime('2025-03-23')
-                matured_start_date = pd.to_datetime('2025-03-01')
-                matured_end_date = pd.to_datetime('2025-03-16')
+                # Calculate date ranges dynamically
+                # For full report: use all data up to the most recent date
+                full_end_date = max(
+                    affiliate_df_processed['Created Date'].max(),
+                    advanced_df_processed['Action Date'].max()
+                )
+                full_start_date = min(
+                    affiliate_df_processed['Created Date'].min(),
+                    advanced_df_processed['Action Date'].min()
+                )
+                
+                # For matured report: exclude the last 7 days
+                matured_end_date = full_end_date - pd.Timedelta(days=7)
+                matured_start_date = full_start_date
                 
                 # Create full report dataframes with date filtering
                 affiliate_df_full = affiliate_df_processed[
@@ -102,19 +111,19 @@ def show_main_page():
                 
                 # Show date ranges for both reports
                 st.subheader("Date Ranges")
-                st.write(f"Full Report Dates:")
-                st.write(f"- Affiliate Data: {full_start_date.strftime('%Y-%m-%d')} to {full_end_date.strftime('%Y-%m-%d')}")
-                st.write(f"- Advanced Action Data: {full_start_date.strftime('%Y-%m-%d')} to {full_end_date.strftime('%Y-%m-%d')}")
+                st.write("Full Report Dates:")
+                st.write(f"- Start Date: {full_start_date.strftime('%Y-%m-%d')}")
+                st.write(f"- End Date: {full_end_date.strftime('%Y-%m-%d')}")
                 
-                st.write(f"Matured Report Dates:")
-                st.write(f"- Affiliate Data: {matured_start_date.strftime('%Y-%m-%d')} to {matured_end_date.strftime('%Y-%m-%d')}")
-                st.write(f"- Advanced Action Data: {matured_start_date.strftime('%Y-%m-%d')} to {matured_end_date.strftime('%Y-%m-%d')}")
+                st.write("\nMatured Report Dates (excluding last 7 days):")
+                st.write(f"- Start Date: {matured_start_date.strftime('%Y-%m-%d')}")
+                st.write(f"- End Date: {matured_end_date.strftime('%Y-%m-%d')}")
                 
                 # Show preview of both reports
                 st.subheader("Preview of Full Optimization Report")
                 st.dataframe(optimization_report_full)
                 
-                st.subheader("Preview of Matured Optimization Report (Excluding Last 8 Days from Affiliate Data)")
+                st.subheader("Preview of Matured Optimization Report (Excluding Last 7 Days)")
                 st.dataframe(optimization_report_matured)
                 
                 # Create download buttons for both reports
@@ -127,7 +136,7 @@ def show_main_page():
                     st.download_button(
                         label="Download Full Report",
                         data=excel_data,
-                        file_name="partner_optimization_report_full.xlsx",
+                        file_name=f"partner_optimization_report_full_{full_end_date.strftime('%Y%m%d')}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
                 
@@ -138,7 +147,7 @@ def show_main_page():
                     st.download_button(
                         label="Download Matured Report",
                         data=excel_data_matured,
-                        file_name="partner_optimization_report_matured.xlsx",
+                        file_name=f"partner_optimization_report_matured_{matured_end_date.strftime('%Y%m%d')}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
             else:

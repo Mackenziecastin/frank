@@ -1,0 +1,174 @@
+2025-03-26 16:38:12,872 - INFO - Reading file: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20250326.csv
+2025-03-26 16:38:12,872 - ERROR - Error processing ADT report: [Errno 2] No such file or directory: 'ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20250326.csv'
+2025-03-26 16:38:41,915 - INFO - Reading file: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20250326.csv
+2025-03-26 16:38:42,623 - INFO - Most recent sale date in data: 2025-03-26
+2025-03-26 16:38:42,658 - INFO - Data cleaned successfully. Found 0 qualifying sales for 2025-03-26.
+2025-03-26 16:38:42,659 - ERROR - Error processing ADT report: single positional indexer is out-of-bounds
+2025-03-26 16:41:43,132 - INFO - Reading file: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20250326.csv
+2025-03-26 16:41:43,842 - INFO - Most recent sale date in data: 2025-03-26
+2025-03-26 16:41:43,973 - INFO - Data cleaned successfully. Found 0 qualifying sales for 2025-03-26.
+2025-03-26 16:41:43,973 - ERROR - Error processing ADT report: single positional indexer is out-of-bounds
+2025-03-26 16:43:52,894 - INFO - Reading file: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20250326.csv
+2025-03-26 16:43:53,580 - INFO - Most recent sale date in data: 2025-03-26
+2025-03-26 16:43:53,820 - INFO - Data cleaned successfully. Found 0 qualifying sales for 2025-03-26.
+2025-03-26 16:43:53,866 - ERROR - Error processing ADT report: single positional indexer is out-of-bounds
+2025-03-26 16:48:38,914 - INFO - Reading file: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20250326.csv
+2025-03-26 16:48:39,666 - INFO - Most recent sale date in data: 2025-03-26
+2025-03-26 16:48:39,773 - INFO - Data cleaned successfully. Found 0 qualifying sales for 2025-03-26.
+2025-03-26 16:48:39,802 - ERROR - Error processing ADT report: single positional indexer is out-of-bounds
+2025-03-26 16:52:37,409 - INFO - Reading file: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20250326.csv
+2025-03-26 16:52:38,115 - ERROR - Error cleaning data: Cannot compare NaT with datetime.date object
+2025-03-26 16:52:38,115 - ERROR - Error processing ADT report: Cannot compare NaT with datetime.date object
+2025-03-26 16:53:45,243 - INFO - Reading file: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20250326.csv
+2025-03-26 16:53:45,941 - INFO - Found yesterday's date in data: 2025-03-25
+2025-03-26 16:53:45,952 - INFO - Data cleaned successfully. Found 40 qualifying sales for 2025-03-25.
+2025-03-26 16:53:45,958 - INFO - Found 40 sales to process
+2025-03-26 16:53:46,997 - INFO - Pixel fired successfully for transaction ADT_20250326_eb3939d1
+2025-03-26 16:53:47,728 - INFO - Pixel fired successfully for transaction ADT_20250326_94e365ab
+2025-03-26 16:53:48,633 - INFO - Pixel fired successfully for transaction ADT_20250326_f638a6f2
+2025-03-26 16:53:49,555 - INFO - Pixel fired successfully for transaction ADT_20250326_184c8c93
+2025-03-26 16:53:50,313 - INFO - Pixel fired successfully for transaction ADT_20250326_d5b0ba55
+2025-03-26 16:53:51,319 - INFO - Pixel fired successfully for transaction ADT_20250326_aa203eff
+2025-03-26 16:53:52,066 - INFO - Pixel fired successfully for transaction ADT_20250326_c2faa313
+2025-03-26 16:53:52,969 - INFO - Pixel fired successfully for transaction ADT_20250326_cd3312ca
+2025-03-26 16:53:53,647 - INFO - Pixel fired successfully for transaction ADT_20250326_a310c543
+2025-03-26 16:53:54,279 - INFO - Pixel fired successfully for transaction ADT_20250326_1e2e2b27
+2025-03-26 16:53:55,081 - INFO - Pixel fired successfully for transaction ADT_20250326_cf00766a
+2025-03-26 16:53:55,703 - INFO - Pixel fired successfully for transaction ADT_20250326_c73fd0cc
+2025-03-26 16:53:56,422 - INFO - Pixel fired successfully for transaction ADT_20250326_63aba27c
+2025-03-26 16:53:57,402 - INFO - Pixel fired successfully for transaction ADT_20250326_0a4cfc24
+2025-03-26 16:53:58,093 - INFO - Pixel fired successfully for transaction ADT_20250326_776bda43
+2025-03-26 16:53:58,765 - INFO - Pixel fired successfully for transaction ADT_20250326_b99a07db
+2025-03-26 16:54:00,125 - INFO - Pixel fired successfully for transaction ADT_20250326_811ff2e0
+2025-03-26 16:54:01,018 - INFO - Pixel fired successfully for transaction ADT_20250326_6647c1fd
+2025-03-26 16:54:02,009 - INFO - Pixel fired successfully for transaction ADT_20250326_36d1f957
+2025-03-26 16:54:03,023 - INFO - Pixel fired successfully for transaction ADT_20250326_b4bf0d62
+2025-03-26 16:54:04,190 - INFO - Pixel fired successfully for transaction ADT_20250326_c11c37ec
+2025-03-26 16:54:05,112 - INFO - Pixel fired successfully for transaction ADT_20250326_1d2dda7c
+2025-03-26 16:54:05,909 - INFO - Pixel fired successfully for transaction ADT_20250326_c206b17b
+2025-03-26 16:54:06,751 - INFO - Pixel fired successfully for transaction ADT_20250326_ef53ac8e
+2025-03-26 16:54:07,978 - INFO - Pixel fired successfully for transaction ADT_20250326_b46b8132
+2025-03-26 16:54:08,798 - INFO - Pixel fired successfully for transaction ADT_20250326_01b537d7
+2025-03-26 16:54:09,821 - INFO - Pixel fired successfully for transaction ADT_20250326_83191727
+2025-03-26 16:54:10,948 - INFO - Pixel fired successfully for transaction ADT_20250326_29ccd498
+2025-03-26 16:54:11,714 - INFO - Pixel fired successfully for transaction ADT_20250326_f78c9887
+2025-03-26 16:54:12,483 - INFO - Pixel fired successfully for transaction ADT_20250326_a0a3d4e8
+2025-03-26 16:54:13,234 - INFO - Pixel fired successfully for transaction ADT_20250326_e3fb9813
+2025-03-26 16:54:13,952 - INFO - Pixel fired successfully for transaction ADT_20250326_8873d082
+2025-03-26 16:54:14,736 - INFO - Pixel fired successfully for transaction ADT_20250326_60ec1058
+2025-03-26 16:54:15,658 - INFO - Pixel fired successfully for transaction ADT_20250326_c6bdbab3
+2025-03-26 16:54:16,579 - INFO - Pixel fired successfully for transaction ADT_20250326_3ad2949e
+2025-03-26 16:54:17,623 - INFO - Pixel fired successfully for transaction ADT_20250326_c139d5ee
+2025-03-26 16:54:18,628 - INFO - Pixel fired successfully for transaction ADT_20250326_68e8ce93
+2025-03-26 16:54:19,754 - INFO - Pixel fired successfully for transaction ADT_20250326_8b786c26
+2025-03-26 16:54:20,446 - INFO - Pixel fired successfully for transaction ADT_20250326_fffba2b6
+2025-03-26 16:54:21,173 - INFO - Pixel fired successfully for transaction ADT_20250326_b2d1422d
+2025-03-26 16:54:21,174 - INFO - 
+Processing complete!
+Date processed: 2025-03-25
+Successfully fired: 40 out of 40 pixels
+Check the log file for detailed information: adt_pixel_firing_20250326.log
+2025-03-26 17:00:48,523 - INFO - Reading file: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20250326.csv
+2025-03-26 17:00:49,249 - INFO - Found yesterday's date in data: 2025-03-25
+2025-03-26 17:00:49,261 - INFO - Data cleaned successfully. Found 40 qualifying sales for 2025-03-25.
+2025-03-26 17:00:49,265 - INFO - Found 40 sales to process
+2025-03-26 17:00:50,197 - INFO - Pixel fired successfully for transaction ADT_20250326_5d1a51d3
+2025-03-26 17:00:51,538 - INFO - Pixel fired successfully for transaction ADT_20250326_ada4a986
+2025-03-26 17:00:52,339 - INFO - Pixel fired successfully for transaction ADT_20250326_b793f548
+2025-03-26 17:00:53,132 - INFO - Pixel fired successfully for transaction ADT_20250326_44bb4e90
+2025-03-26 17:00:53,893 - INFO - Pixel fired successfully for transaction ADT_20250326_cc52ae39
+2025-03-26 17:00:54,646 - INFO - Pixel fired successfully for transaction ADT_20250326_d25ba524
+2025-03-26 17:00:56,325 - INFO - Pixel fired successfully for transaction ADT_20250326_98211e58
+2025-03-26 17:00:57,681 - INFO - Pixel fired successfully for transaction ADT_20250326_0eef14e3
+2025-03-26 17:00:58,910 - INFO - Pixel fired successfully for transaction ADT_20250326_bf6687ee
+2025-03-26 17:01:00,274 - INFO - Pixel fired successfully for transaction ADT_20250326_d02ac25d
+2025-03-26 17:01:02,699 - INFO - Pixel fired successfully for transaction ADT_20250326_14dba505
+2025-03-26 17:01:03,723 - INFO - Pixel fired successfully for transaction ADT_20250326_5d62a5fc
+2025-03-26 17:01:05,873 - INFO - Pixel fired successfully for transaction ADT_20250326_0970471c
+2025-03-26 17:01:06,795 - INFO - Pixel fired successfully for transaction ADT_20250326_818e70f0
+2025-03-26 17:01:07,816 - INFO - Pixel fired successfully for transaction ADT_20250326_ed5ba5f0
+2025-03-26 17:01:08,778 - INFO - Pixel fired successfully for transaction ADT_20250326_792afd84
+2025-03-26 17:01:09,764 - INFO - Pixel fired successfully for transaction ADT_20250326_3864e3d1
+2025-03-26 17:01:11,110 - INFO - Pixel fired successfully for transaction ADT_20250326_7d794b75
+2025-03-26 17:01:12,428 - INFO - Pixel fired successfully for transaction ADT_20250326_47b5205d
+2025-03-26 17:01:13,392 - INFO - Pixel fired successfully for transaction ADT_20250326_8c5ee45e
+2025-03-26 17:01:14,232 - INFO - Pixel fired successfully for transaction ADT_20250326_b4b915ee
+2025-03-26 17:01:15,192 - INFO - Pixel fired successfully for transaction ADT_20250326_ef55ab27
+2025-03-26 17:01:15,911 - INFO - Pixel fired successfully for transaction ADT_20250326_1dae4255
+2025-03-26 17:01:17,008 - INFO - Pixel fired successfully for transaction ADT_20250326_92ba6705
+2025-03-26 17:01:18,673 - INFO - Pixel fired successfully for transaction ADT_20250326_7a3f2399
+2025-03-26 17:01:19,397 - INFO - Pixel fired successfully for transaction ADT_20250326_8b9e3bfd
+2025-03-26 17:01:20,239 - INFO - Pixel fired successfully for transaction ADT_20250326_da7095cc
+2025-03-26 17:01:21,173 - INFO - Pixel fired successfully for transaction ADT_20250326_788c24d7
+2025-03-26 17:01:22,410 - INFO - Pixel fired successfully for transaction ADT_20250326_550f2dca
+2025-03-26 17:01:23,589 - INFO - Pixel fired successfully for transaction ADT_20250326_79dc6937
+2025-03-26 17:01:24,510 - INFO - Pixel fired successfully for transaction ADT_20250326_cfc63244
+2025-03-26 17:01:25,433 - INFO - Pixel fired successfully for transaction ADT_20250326_0b41bfc2
+2025-03-26 17:01:26,202 - INFO - Pixel fired successfully for transaction ADT_20250326_0fa885e5
+2025-03-26 17:01:26,956 - INFO - Pixel fired successfully for transaction ADT_20250326_55c3f516
+2025-03-26 17:01:27,951 - INFO - Pixel fired successfully for transaction ADT_20250326_242a6825
+2025-03-26 17:01:28,693 - INFO - Pixel fired successfully for transaction ADT_20250326_1f0ae109
+2025-03-26 17:01:29,631 - INFO - Pixel fired successfully for transaction ADT_20250326_6aa767d5
+2025-03-26 17:01:30,395 - INFO - Pixel fired successfully for transaction ADT_20250326_1cbcd8b0
+2025-03-26 17:01:31,225 - INFO - Pixel fired successfully for transaction ADT_20250326_57d4bebf
+2025-03-26 17:01:31,985 - INFO - Pixel fired successfully for transaction ADT_20250326_4731284e
+2025-03-26 17:01:31,986 - INFO - 
+Processing complete!
+Date processed: 2025-03-25
+Successfully fired: 40 out of 40 pixels
+Check the log file for detailed information: adt_pixel_firing_20250326.log
+2025-03-26 17:59:15,424 - INFO - Reading file: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20250326.csv
+2025-03-26 17:59:16,142 - INFO - Found yesterday's date in data: 2025-03-25
+2025-03-26 17:59:16,167 - INFO - Data cleaned successfully. Found 40 qualifying sales for 2025-03-25.
+2025-03-26 17:59:16,170 - ERROR - Error processing ADT report: 'Install_Method'
+2025-03-26 18:00:13,183 - INFO - Reading file: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20250326.csv
+2025-03-26 18:00:13,897 - INFO - Found yesterday's date in data: 2025-03-25
+2025-03-26 18:00:13,921 - INFO - Data cleaned successfully. Found 40 qualifying sales for 2025-03-25.
+2025-03-26 18:00:13,925 - INFO - Found 40 sales to process (DIFM: 37, DIY: 3)
+2025-03-26 18:00:16,067 - INFO - Pixel fired successfully for transaction ADT_20250325_b6074b09 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:18,114 - INFO - Pixel fired successfully for transaction ADT_20250325_30d3e57a (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:19,723 - INFO - Pixel fired successfully for transaction ADT_20250325_e0cbbd81 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:22,282 - INFO - Pixel fired successfully for transaction ADT_20250325_c9be0e9e (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:23,526 - INFO - Pixel fired successfully for transaction ADT_20250325_d187c28c (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:24,691 - INFO - Pixel fired successfully for transaction ADT_20250325_db716249 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:25,766 - INFO - Pixel fired successfully for transaction ADT_20250325_6e9ff978 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:27,002 - INFO - Pixel fired successfully for transaction ADT_20250325_f9735e96 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:28,324 - INFO - Pixel fired successfully for transaction ADT_20250325_10aef5ba (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:29,133 - INFO - Pixel fired successfully for transaction ADT_20250325_c8fb1bc1 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:30,001 - INFO - Pixel fired successfully for transaction ADT_20250325_780b3704 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:31,154 - INFO - Pixel fired successfully for transaction ADT_20250325_cbb64b71 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:32,083 - INFO - Pixel fired successfully for transaction ADT_20250325_cc69e85e (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:33,056 - INFO - Pixel fired successfully for transaction ADT_20250325_1da9ce20 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:34,057 - INFO - Pixel fired successfully for transaction ADT_20250325_03f0a04c (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:34,980 - INFO - Pixel fired successfully for transaction ADT_20250325_17efa20d (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:37,500 - INFO - Pixel fired successfully for transaction ADT_20250325_db8c2833 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:38,769 - INFO - Pixel fired successfully for transaction ADT_20250325_a8630c9f (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:40,149 - INFO - Pixel fired successfully for transaction ADT_20250325_baad0dc2 (Install Method: DIY, Campaign: 91162, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:42,661 - INFO - Pixel fired successfully for transaction ADT_20250325_ac5c29da (Install Method: DIY, Campaign: 91162, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:43,773 - INFO - Pixel fired successfully for transaction ADT_20250325_a86f53af (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:45,054 - INFO - Pixel fired successfully for transaction ADT_20250325_941afbde (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:47,052 - INFO - Pixel fired successfully for transaction ADT_20250325_ffa6310f (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:48,701 - INFO - Pixel fired successfully for transaction ADT_20250325_02dd24f7 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:49,730 - INFO - Pixel fired successfully for transaction ADT_20250325_47e4bb2d (Install Method: DIY, Campaign: 91162, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:50,648 - INFO - Pixel fired successfully for transaction ADT_20250325_29d9bf30 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:51,740 - INFO - Pixel fired successfully for transaction ADT_20250325_0ba01027 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:52,594 - INFO - Pixel fired successfully for transaction ADT_20250325_f08546bc (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:54,217 - INFO - Pixel fired successfully for transaction ADT_20250325_b8eb581b (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:55,563 - INFO - Pixel fired successfully for transaction ADT_20250325_4fcda92e (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:56,241 - INFO - Pixel fired successfully for transaction ADT_20250325_fdfdc87c (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:57,208 - INFO - Pixel fired successfully for transaction ADT_20250325_99669c9f (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:58,533 - INFO - Pixel fired successfully for transaction ADT_20250325_d50f11f5 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:00:59,644 - INFO - Pixel fired successfully for transaction ADT_20250325_5c66a89e (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:01:00,991 - INFO - Pixel fired successfully for transaction ADT_20250325_9c2960ed (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:01:02,170 - INFO - Pixel fired successfully for transaction ADT_20250325_4f876667 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:01:03,640 - INFO - Pixel fired successfully for transaction ADT_20250325_dbc95d73 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:01:04,880 - INFO - Pixel fired successfully for transaction ADT_20250325_d72ed81c (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:01:06,195 - INFO - Pixel fired successfully for transaction ADT_20250325_4ee78b4f (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:01:07,461 - INFO - Pixel fired successfully for transaction ADT_20250325_9d67ec72 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-03-25 12:00:00)
+2025-03-26 18:01:07,462 - INFO - 
+Processing complete!
+Date processed: 20250325
+Successfully fired DIFM pixels: 37 out of 37
+Successfully fired DIY pixels: 3 out of 3
+Total pixels fired: 40 out of 40
+Check the log file for detailed information: adt_pixel_firing_20250326.log
