@@ -59,22 +59,17 @@ def show_main_page():
                 affiliate_df_processed['Created Date'] = pd.to_datetime(affiliate_df_processed['Created Date'])
                 advanced_df_processed['Action Date'] = pd.to_datetime(advanced_df_processed['Action Date'])
                 
-                # Calculate date ranges dynamically
-                # For full report: use all data up to the most recent date
-                full_end_date = max(
-                    affiliate_df_processed['Created Date'].max(),
-                    advanced_df_processed['Action Date'].max()
-                )
-                full_start_date = min(
-                    affiliate_df_processed['Created Date'].min(),
-                    advanced_df_processed['Action Date'].min()
-                )
+                # Calculate date ranges based on Advanced Action report
+                # Get the first and last dates from Advanced Action report
+                full_end_date = advanced_df_processed['Action Date'].max()
+                full_start_date = advanced_df_processed['Action Date'].dt.to_period('M').min().to_timestamp()  # First day of the month
                 
                 # For matured report: exclude the last 7 days
                 matured_end_date = full_end_date - pd.Timedelta(days=7)
                 matured_start_date = full_start_date
                 
                 # Create full report dataframes with date filtering
+                # Filter Affiliate data to match Advanced Action date range exactly
                 affiliate_df_full = affiliate_df_processed[
                     (affiliate_df_processed['Created Date'] >= full_start_date) &
                     (affiliate_df_processed['Created Date'] <= full_end_date)
@@ -94,6 +89,19 @@ def show_main_page():
                     (advanced_df_processed['Action Date'] <= matured_end_date)
                 ]
                 
+                # Show date ranges for both reports
+                st.subheader("Date Ranges")
+                st.write("Full Report Dates (based on Advanced Action report):")
+                st.write(f"- Month to Date: {full_start_date.strftime('%Y-%m-%d')} to {full_end_date.strftime('%Y-%m-%d')}")
+                
+                st.write("\nMatured Report Dates (excluding last 7 days):")
+                st.write(f"- Date Range: {matured_start_date.strftime('%Y-%m-%d')} to {matured_end_date.strftime('%Y-%m-%d')}")
+                
+                # Add date range validation and warning
+                if affiliate_df_processed['Created Date'].max() > full_end_date:
+                    extra_days = (affiliate_df_processed['Created Date'].max() - full_end_date).days
+                    st.warning(f"Note: Affiliate data contains {extra_days} additional days beyond the Advanced Action report's end date. These dates have been excluded for consistency.")
+                
                 # Create pivot tables and reports
                 # Full report
                 affiliate_pivot_full = create_affiliate_pivot(affiliate_df_full)
@@ -108,16 +116,6 @@ def show_main_page():
                 optimization_report_matured = create_optimization_report(
                     affiliate_pivot_matured, advanced_pivot_matured, partner_list_df
                 )
-                
-                # Show date ranges for both reports
-                st.subheader("Date Ranges")
-                st.write("Full Report Dates:")
-                st.write(f"- Start Date: {full_start_date.strftime('%Y-%m-%d')}")
-                st.write(f"- End Date: {full_end_date.strftime('%Y-%m-%d')}")
-                
-                st.write("\nMatured Report Dates (excluding last 7 days):")
-                st.write(f"- Start Date: {matured_start_date.strftime('%Y-%m-%d')}")
-                st.write(f"- End Date: {matured_end_date.strftime('%Y-%m-%d')}")
                 
                 # Show preview of both reports
                 st.subheader("Preview of Full Optimization Report")
