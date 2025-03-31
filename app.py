@@ -69,26 +69,43 @@ def show_main_page():
                 matured_end_date = full_end_date - pd.Timedelta(days=7)
                 matured_start_date = full_start_date  # Same as full report start date
                 
+                # Debug information before filtering
+                st.write("Debug - Before filtering:")
+                st.write(f"Total records in affiliate data: {len(affiliate_df_processed)}")
+                st.write(f"Total Transaction Count: {affiliate_df_processed['Transaction Count'].sum()}")
+                
                 # Create full report dataframes with date filtering
                 # Filter both datasets to match exactly
                 affiliate_df_full = affiliate_df_processed[
-                    (affiliate_df_processed['Created Date'] >= full_start_date) &
-                    (affiliate_df_processed['Created Date'] <= full_end_date)  # Use Advanced Action end date
+                    (affiliate_df_processed['Created Date'].dt.date >= full_start_date.date()) &
+                    (affiliate_df_processed['Created Date'].dt.date <= full_end_date.date())
                 ]
                 advanced_df_full = advanced_df_processed[
-                    (advanced_df_processed['Action Date'] >= full_start_date) &
-                    (advanced_df_processed['Action Date'] <= full_end_date)
+                    (advanced_df_processed['Action Date'].dt.date >= full_start_date.date()) &
+                    (advanced_df_processed['Action Date'].dt.date <= full_end_date.date())
                 ]
+                
+                # Debug information after full report filtering
+                st.write("\nDebug - After full report filtering:")
+                st.write(f"Records in affiliate data: {len(affiliate_df_full)}")
+                st.write(f"Transaction Count: {affiliate_df_full['Transaction Count'].sum()}")
+                st.write(f"Date range: {affiliate_df_full['Created Date'].min()} to {affiliate_df_full['Created Date'].max()}")
                 
                 # Create matured report dataframes with date filtering
                 affiliate_df_matured = affiliate_df_processed[
-                    (affiliate_df_processed['Created Date'] >= matured_start_date) &
-                    (affiliate_df_processed['Created Date'] <= matured_end_date)
+                    (affiliate_df_processed['Created Date'].dt.date >= matured_start_date.date()) &
+                    (affiliate_df_processed['Created Date'].dt.date <= matured_end_date.date())
                 ]
                 advanced_df_matured = advanced_df_processed[
-                    (advanced_df_processed['Action Date'] >= matured_start_date) &
-                    (advanced_df_processed['Action Date'] <= matured_end_date)
+                    (advanced_df_processed['Action Date'].dt.date >= matured_start_date.date()) &
+                    (advanced_df_processed['Action Date'].dt.date <= matured_end_date.date())
                 ]
+                
+                # Debug information after matured report filtering
+                st.write("\nDebug - After matured report filtering:")
+                st.write(f"Records in affiliate data: {len(affiliate_df_matured)}")
+                st.write(f"Transaction Count: {affiliate_df_matured['Transaction Count'].sum()}")
+                st.write(f"Date range: {affiliate_df_matured['Created Date'].min()} to {affiliate_df_matured['Created Date'].max()}")
                 
                 # Show date ranges for both reports
                 st.subheader("Date Ranges")
@@ -299,20 +316,24 @@ def create_affiliate_pivot(df):
     df['Transaction Count'] = pd.to_numeric(df['Transaction Count'], errors='coerce').fillna(0)
     
     # Ensure other numeric columns are properly converted if they exist
-    other_cols = ['Booked Count', 'Net Sales Amount']
-    for col in other_cols:
+    numeric_cols = ['Booked Count', 'Net Sales Amount']
+    for col in numeric_cols:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
     
-    # Create pivot table with explicit column handling
-    agg_dict = {'Transaction Count': 'sum'}
-    if 'Booked Count' in df.columns:
-        agg_dict['Booked Count'] = 'sum'
-    if 'Net Sales Amount' in df.columns:
-        agg_dict['Net Sales Amount'] = 'sum'
+    # Log data for debugging
+    st.write(f"Debug - Total Transaction Count before pivot: {df['Transaction Count'].sum()}")
+    st.write(f"Debug - Date range in data: {df['Created Date'].min()} to {df['Created Date'].max()}")
     
     # Create pivot table with specific aggregation methods
-    pivot = df.groupby('partnerID').agg(agg_dict).reset_index()
+    pivot = df.groupby('partnerID').agg({
+        'Transaction Count': 'sum',
+        'Booked Count': 'sum',
+        'Net Sales Amount': 'sum'
+    }).reset_index()
+    
+    # Log pivot results for debugging
+    st.write(f"Debug - Total Transaction Count after pivot: {pivot['Transaction Count'].sum()}")
     
     return pivot
 
