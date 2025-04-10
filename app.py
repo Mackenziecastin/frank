@@ -497,11 +497,11 @@ def to_excel_download(df_affiliate, df_advanced, df_optimization):
 def main():
     # Create the navigation
     st.sidebar.title("Navigation")
-    page = st.sidebar.radio("Go to", ["Main Report", "Bob's Analysis"])
+    page = st.sidebar.radio("Go to", ["Frank (LaserAway)", "Bob (ADT)"])
     
-    if page == "Main Report":
+    if page == "Frank (LaserAway)":
         show_main_page()
-    elif page == "Bob's Analysis":
+    elif page == "Bob (ADT)":
         # Import and show Bob's analysis page
         from pages.bob_analysis import show_bob_analysis
         show_bob_analysis()
