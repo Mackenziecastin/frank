@@ -59,11 +59,9 @@ def show_main_page():
                 affiliate_df_processed['Created Date'] = pd.to_datetime(affiliate_df_processed['Created Date'])
                 advanced_df_processed['Action Date'] = pd.to_datetime(advanced_df_processed['Action Date'])
                 
-                # Get the end date from Advanced Action report
+                # Get the date range from Advanced Action report
                 full_end_date = advanced_df_processed['Action Date'].max()
-                
-                # Set start date to first day of the same month
-                full_start_date = full_end_date.replace(day=1)
+                full_start_date = advanced_df_processed['Action Date'].min()
                 
                 # For matured report: exclude the last 7 days but keep same start date
                 matured_end_date = full_end_date - pd.Timedelta(days=7)
@@ -110,7 +108,7 @@ def show_main_page():
                 # Show date ranges for both reports
                 st.subheader("Date Ranges")
                 st.write("Full Report Dates:")
-                st.write(f"- Start Date: {full_start_date.strftime('%Y-%m-%d')} (First day of month)")
+                st.write(f"- Start Date: {full_start_date.strftime('%Y-%m-%d')} (Based on Advanced Action report)")
                 st.write(f"- End Date: {full_end_date.strftime('%Y-%m-%d')} (Based on Advanced Action report)")
                 
                 st.write("\nMatured Report Dates (excluding last 7 days):")

@@ -1,0 +1,561 @@
+2025-04-03 14:31:36,060 - INFO - Reading file: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20250403.csv
+2025-04-03 14:31:36,487 - ERROR - Error processing ADT report: 'utf-8' codec can't decode byte 0xed in position 60485: invalid continuation byte
+2025-04-03 14:31:53,582 - INFO - Reading file: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20250403.csv
+2025-04-03 14:31:54,749 - INFO - Found yesterday's date in data: 2025-04-01
+2025-04-03 14:31:54,774 - INFO - Data cleaned successfully. Found 39 qualifying sales for 2025-04-01.
+2025-04-03 14:31:54,778 - INFO - Found 39 sales to process (DIFM: 33, DIY: 6)
+2025-04-03 14:31:56,362 - INFO - Pixel fired successfully for transaction ADT_20250401_06aed9cc (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:31:57,314 - INFO - Pixel fired successfully for transaction ADT_20250401_3626d469 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:31:58,237 - INFO - Pixel fired successfully for transaction ADT_20250401_c84f3e6c (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:31:58,844 - INFO - Pixel fired successfully for transaction ADT_20250401_4532ce4a (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:31:59,772 - INFO - Pixel fired successfully for transaction ADT_20250401_083c6658 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:00,592 - INFO - Pixel fired successfully for transaction ADT_20250401_9d79fb57 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:01,921 - INFO - Pixel fired successfully for transaction ADT_20250401_749e50fc (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:03,195 - INFO - Pixel fired successfully for transaction ADT_20250401_9e5ad87b (Install Method: DIY, Campaign: 91162, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:04,174 - INFO - Pixel fired successfully for transaction ADT_20250401_bafc8950 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:06,326 - INFO - Pixel fired successfully for transaction ADT_20250401_882ddf1d (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:07,247 - INFO - Pixel fired successfully for transaction ADT_20250401_4d8a67e9 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:08,377 - INFO - Pixel fired successfully for transaction ADT_20250401_a3904b78 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:09,293 - INFO - Pixel fired successfully for transaction ADT_20250401_c8b6aa96 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:10,174 - INFO - Pixel fired successfully for transaction ADT_20250401_cd6e951e (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:10,894 - INFO - Pixel fired successfully for transaction ADT_20250401_ac797982 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:12,060 - INFO - Pixel fired successfully for transaction ADT_20250401_ba9544f1 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:12,838 - INFO - Pixel fired successfully for transaction ADT_20250401_90b130af (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:13,959 - INFO - Pixel fired successfully for transaction ADT_20250401_119b46db (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:15,131 - INFO - Pixel fired successfully for transaction ADT_20250401_0968619b (Install Method: DIY, Campaign: 91162, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:16,463 - INFO - Pixel fired successfully for transaction ADT_20250401_e3039ee2 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:17,174 - INFO - Pixel fired successfully for transaction ADT_20250401_c421fd1c (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:17,812 - INFO - Pixel fired successfully for transaction ADT_20250401_0f2ea0a9 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:18,868 - INFO - Pixel fired successfully for transaction ADT_20250401_e8684fd8 (Install Method: DIY, Campaign: 91162, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:19,988 - INFO - Pixel fired successfully for transaction ADT_20250401_71c33821 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:20,968 - INFO - Pixel fired successfully for transaction ADT_20250401_8d1d754d (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:21,992 - INFO - Pixel fired successfully for transaction ADT_20250401_2ea9848e (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:22,899 - INFO - Pixel fired successfully for transaction ADT_20250401_f68b6448 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:23,943 - INFO - Pixel fired successfully for transaction ADT_20250401_4c4e3c38 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:25,063 - INFO - Pixel fired successfully for transaction ADT_20250401_d9bcdf39 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:26,193 - INFO - Pixel fired successfully for transaction ADT_20250401_26ed6a4c (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:27,189 - INFO - Pixel fired successfully for transaction ADT_20250401_510c8594 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:27,931 - INFO - Pixel fired successfully for transaction ADT_20250401_00463da9 (Install Method: DIY, Campaign: 91162, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:28,821 - INFO - Pixel fired successfully for transaction ADT_20250401_ebffb2db (Install Method: DIY, Campaign: 91162, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:29,797 - INFO - Pixel fired successfully for transaction ADT_20250401_451a7ec8 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:30,646 - INFO - Pixel fired successfully for transaction ADT_20250401_3898ed83 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:31,309 - INFO - Pixel fired successfully for transaction ADT_20250401_cb629652 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:32,179 - INFO - Pixel fired successfully for transaction ADT_20250401_63ecd925 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:32,950 - INFO - Pixel fired successfully for transaction ADT_20250401_1ab4d027 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:33,677 - INFO - Pixel fired successfully for transaction ADT_20250401_3b11f297 (Install Method: DIY, Campaign: 91162, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:32:33,678 - INFO - 
+Processing complete!
+Date processed: 20250401
+Successfully fired DIFM pixels: 33 out of 33
+Successfully fired DIY pixels: 6 out of 6
+Total pixels fired: 39 out of 39
+Check the log file for detailed information: adt_pixel_firing_20250403.log
+2025-04-03 14:35:44,231 - INFO - Reading file: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20250403.csv
+2025-04-03 14:35:45,400 - INFO - Found yesterday's date in data: 2025-04-01
+2025-04-03 14:35:45,423 - INFO - Data cleaned successfully. Found 39 qualifying sales for 2025-04-01.
+2025-04-03 14:35:45,428 - INFO - Found 39 sales to process (DIFM: 33, DIY: 6)
+2025-04-03 14:35:46,406 - INFO - Pixel fired successfully for transaction ADT_20250401_a2a4da43 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:35:47,193 - INFO - Pixel fired successfully for transaction ADT_20250401_f24231f5 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:35:48,549 - INFO - Pixel fired successfully for transaction ADT_20250401_60bcbd2e (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:35:49,222 - INFO - Pixel fired successfully for transaction ADT_20250401_258a7411 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:35:49,974 - INFO - Pixel fired successfully for transaction ADT_20250401_771261a0 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:35:51,055 - INFO - Pixel fired successfully for transaction ADT_20250401_44c095ac (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:35:52,846 - INFO - Pixel fired successfully for transaction ADT_20250401_1ca4dd2d (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:35:53,744 - INFO - Pixel fired successfully for transaction ADT_20250401_c659be25 (Install Method: DIY, Campaign: 91162, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:35:54,872 - INFO - Pixel fired successfully for transaction ADT_20250401_c4eb8a2b (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:35:56,202 - INFO - Pixel fired successfully for transaction ADT_20250401_6abab290 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:35:57,337 - INFO - Pixel fired successfully for transaction ADT_20250401_bed9dc7a (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:35:58,149 - INFO - Pixel fired successfully for transaction ADT_20250401_12f6963e (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:35:59,171 - INFO - Pixel fired successfully for transaction ADT_20250401_fe2f5c63 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:35:59,940 - INFO - Pixel fired successfully for transaction ADT_20250401_4a757428 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:36:00,605 - INFO - Pixel fired successfully for transaction ADT_20250401_7e42280c (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:36:01,935 - INFO - Pixel fired successfully for transaction ADT_20250401_c1c1a19f (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:36:03,347 - INFO - Pixel fired successfully for transaction ADT_20250401_1bb8cc90 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:36:04,223 - INFO - Pixel fired successfully for transaction ADT_20250401_4ae6baf1 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:36:05,624 - INFO - Pixel fired successfully for transaction ADT_20250401_37d4d37c (Install Method: DIY, Campaign: 91162, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:36:06,894 - INFO - Pixel fired successfully for transaction ADT_20250401_331c1bd3 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:36:07,774 - INFO - Pixel fired successfully for transaction ADT_20250401_37e5b9e4 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:36:08,494 - INFO - Pixel fired successfully for transaction ADT_20250401_4239902f (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:36:09,278 - INFO - Pixel fired successfully for transaction ADT_20250401_5425546e (Install Method: DIY, Campaign: 91162, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:36:10,639 - INFO - Pixel fired successfully for transaction ADT_20250401_215f7799 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:36:12,177 - INFO - Pixel fired successfully for transaction ADT_20250401_70d8d215 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:36:13,098 - INFO - Pixel fired successfully for transaction ADT_20250401_643ef35b (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:36:14,428 - INFO - Pixel fired successfully for transaction ADT_20250401_83bc8190 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:36:15,272 - INFO - Pixel fired successfully for transaction ADT_20250401_a303ae2f (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:36:16,409 - INFO - Pixel fired successfully for transaction ADT_20250401_18675312 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:36:17,092 - INFO - Pixel fired successfully for transaction ADT_20250401_b3ec84fd (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:36:18,934 - INFO - Pixel fired successfully for transaction ADT_20250401_dbae8b2e (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:36:19,832 - INFO - Pixel fired successfully for transaction ADT_20250401_dc983483 (Install Method: DIY, Campaign: 91162, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:36:20,881 - INFO - Pixel fired successfully for transaction ADT_20250401_af1489f6 (Install Method: DIY, Campaign: 91162, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:36:21,702 - INFO - Pixel fired successfully for transaction ADT_20250401_7bfa4fb5 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:36:24,670 - INFO - Pixel fired successfully for transaction ADT_20250401_d4a61b97 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:36:26,000 - INFO - Pixel fired successfully for transaction ADT_20250401_8ec9cfe6 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:36:26,765 - INFO - Pixel fired successfully for transaction ADT_20250401_49a410a8 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:36:27,536 - INFO - Pixel fired successfully for transaction ADT_20250401_24a4d5d6 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:36:28,971 - INFO - Pixel fired successfully for transaction ADT_20250401_4de1be24 (Install Method: DIY, Campaign: 91162, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:36:28,971 - INFO - 
+Processing complete!
+Date processed: 20250401
+Successfully fired DIFM pixels: 33 out of 33
+Successfully fired DIY pixels: 6 out of 6
+Total pixels fired: 39 out of 39
+Check the log file for detailed information: adt_pixel_firing_20250403.log
+2025-04-03 14:37:00,727 - INFO - Reading file: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20250403.csv
+2025-04-03 14:37:01,904 - INFO - Found yesterday's date in data: 2025-04-01
+2025-04-03 14:37:01,930 - INFO - Data cleaned successfully. Found 39 qualifying sales for 2025-04-01.
+2025-04-03 14:37:01,936 - INFO - Found 39 sales to process (DIFM: 33, DIY: 4)
+2025-04-03 14:37:02,968 - INFO - Pixel fired successfully for transaction ADT_20250401_f809e0f3 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:03,826 - INFO - Pixel fired successfully for transaction ADT_20250401_3c4704ac (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:04,592 - INFO - Pixel fired successfully for transaction ADT_20250401_28643438 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:05,536 - INFO - Pixel fired successfully for transaction ADT_20250401_99de9383 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:07,166 - INFO - Pixel fired successfully for transaction ADT_20250401_10b1b8b6 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:09,113 - INFO - Pixel fired successfully for transaction ADT_20250401_9487c132 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:10,546 - INFO - Pixel fired successfully for transaction ADT_20250401_38b0b298 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:12,080 - INFO - Pixel fired successfully for transaction ADT_20250401_44cf1fc7 (Install Method: DIY, Campaign: 91162, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:13,412 - INFO - Pixel fired successfully for transaction ADT_20250401_96e5835e (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:14,232 - INFO - Pixel fired successfully for transaction ADT_20250401_e337f3bb (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:15,974 - INFO - Pixel fired successfully for transaction ADT_20250401_b6246292 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:16,691 - INFO - Pixel fired successfully for transaction ADT_20250401_f1c4af4f (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:17,470 - INFO - Pixel fired successfully for transaction ADT_20250401_95ddb0a8 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:18,227 - INFO - Pixel fired successfully for transaction ADT_20250401_40f8999c (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:18,942 - INFO - Pixel fired successfully for transaction ADT_20250401_7b30d45e (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:20,067 - INFO - Pixel fired successfully for transaction ADT_20250401_1bcf85b9 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:20,778 - INFO - Pixel fired successfully for transaction ADT_20250401_887b6cf4 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:21,573 - INFO - Pixel fired successfully for transaction ADT_20250401_27f5e771 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:22,838 - INFO - Pixel fired successfully for transaction ADT_20250401_a0dc8ceb (Install Method: DIY, Campaign: 91162, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:23,463 - INFO - Pixel fired successfully for transaction ADT_20250401_cc32f809 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:24,267 - INFO - Pixel fired successfully for transaction ADT_20250401_68b92c93 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:25,291 - INFO - Pixel fired successfully for transaction ADT_20250401_5e49a80b (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:26,110 - INFO - Pixel fired successfully for transaction ADT_20250401_7e132bfb (Install Method: DIY, Campaign: 91162, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:27,225 - INFO - Pixel fired successfully for transaction ADT_20250401_28e19361 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:28,057 - INFO - Pixel fired successfully for transaction ADT_20250401_6e59b59c (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:28,772 - INFO - Pixel fired successfully for transaction ADT_20250401_580b5b37 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:29,424 - INFO - Pixel fired successfully for transaction ADT_20250401_5760f2e5 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:32,049 - INFO - Pixel fired successfully for transaction ADT_20250401_75d95e87 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:32,663 - INFO - Pixel fired successfully for transaction ADT_20250401_8347c791 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:33,586 - INFO - Pixel fired successfully for transaction ADT_20250401_838fb61e (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:34,291 - INFO - Pixel fired successfully for transaction ADT_20250401_2aa1d3b7 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:35,326 - INFO - Pixel fired successfully for transaction ADT_20250401_6bf42188 (Install Method: DIY, Campaign: 91162, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:36,454 - INFO - Pixel fired successfully for transaction ADT_20250401_6affb787 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:37,111 - INFO - Pixel fired successfully for transaction ADT_20250401_a84a5e66 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:38,091 - INFO - Pixel fired successfully for transaction ADT_20250401_ca2de855 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:39,013 - INFO - Pixel fired successfully for transaction ADT_20250401_08770611 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:40,514 - INFO - Pixel fired successfully for transaction ADT_20250401_321943ee (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:37:40,515 - INFO - 
+Processing complete!
+Date processed: 20250401
+Successfully fired DIFM pixels: 33 out of 33
+Successfully fired DIY pixels: 4 out of 4
+Total pixels fired: 37 out of 39
+Check the log file for detailed information: adt_pixel_firing_20250403.log
+2025-04-03 14:37:58,967 - INFO - Reading file: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20250403.csv
+2025-04-03 14:38:00,157 - INFO - Found yesterday's date in data: 2025-04-01
+2025-04-03 14:38:00,182 - INFO - Data cleaned successfully. Found 39 qualifying sales for 2025-04-01.
+2025-04-03 14:38:00,193 - INFO - Found 39 sales to process (DIFM: 29, DIY: 4)
+2025-04-03 14:38:00,969 - INFO - Pixel fired successfully for transaction ADT_20250401_5bb2f8bd (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:03,219 - INFO - Pixel fired successfully for transaction ADT_20250401_22763fcc (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:04,919 - INFO - Pixel fired successfully for transaction ADT_20250401_8f981c5c (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:06,308 - INFO - Pixel fired successfully for transaction ADT_20250401_134b6ed7 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:08,197 - INFO - Pixel fired successfully for transaction ADT_20250401_47059261 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:09,118 - INFO - Pixel fired successfully for transaction ADT_20250401_cd173fab (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:11,781 - INFO - Pixel fired successfully for transaction ADT_20250401_216171ea (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:14,259 - INFO - Pixel fired successfully for transaction ADT_20250401_1cc336e5 (Install Method: DIY, Campaign: 91162, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:16,082 - INFO - Pixel fired successfully for transaction ADT_20250401_78f73214 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:17,003 - INFO - Pixel fired successfully for transaction ADT_20250401_0a17cef3 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:17,783 - INFO - Pixel fired successfully for transaction ADT_20250401_c2104314 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:18,744 - INFO - Pixel fired successfully for transaction ADT_20250401_87594fc5 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:19,586 - INFO - Pixel fired successfully for transaction ADT_20250401_f252f021 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:20,372 - INFO - Pixel fired successfully for transaction ADT_20250401_0537935d (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:21,202 - INFO - Pixel fired successfully for transaction ADT_20250401_3b221898 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:22,532 - INFO - Pixel fired successfully for transaction ADT_20250401_b11ad132 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:23,376 - INFO - Pixel fired successfully for transaction ADT_20250401_f289a9b9 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:24,171 - INFO - Pixel fired successfully for transaction ADT_20250401_6c02e34b (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:24,797 - INFO - Pixel fired successfully for transaction ADT_20250401_44d4b26f (Install Method: DIY, Campaign: 91162, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:25,502 - INFO - Pixel fired successfully for transaction ADT_20250401_7f9f496a (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:26,628 - INFO - Pixel fired successfully for transaction ADT_20250401_f9e759b2 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:27,600 - INFO - Pixel fired successfully for transaction ADT_20250401_58c0ddee (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:28,429 - INFO - Pixel fired successfully for transaction ADT_20250401_20d6e5b1 (Install Method: DIY, Campaign: 91162, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:29,219 - INFO - Pixel fired successfully for transaction ADT_20250401_7ea92d9d (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:30,296 - INFO - Pixel fired successfully for transaction ADT_20250401_54c125bc (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:31,034 - INFO - Pixel fired successfully for transaction ADT_20250401_82beccf4 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:31,927 - INFO - Pixel fired successfully for transaction ADT_20250401_27ed7d07 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:32,773 - INFO - Pixel fired successfully for transaction ADT_20250401_6b3d7c6d (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:33,695 - INFO - Pixel fired successfully for transaction ADT_20250401_e4c657d4 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:34,405 - INFO - Pixel fired successfully for transaction ADT_20250401_67ce4d1a (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:35,171 - INFO - Pixel fired successfully for transaction ADT_20250401_12cb5db2 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:35,947 - INFO - Pixel fired successfully for transaction ADT_20250401_738b7ddb (Install Method: DIY, Campaign: 91162, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:36,663 - INFO - Pixel fired successfully for transaction ADT_20250401_dedea34c (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:38:36,664 - INFO - 
+Processing complete!
+Date processed: 20250401
+Successfully fired DIFM pixels: 29 out of 29
+Successfully fired DIY pixels: 4 out of 4
+Total pixels fired: 33 out of 39
+Check the log file for detailed information: adt_pixel_firing_20250403.log
+2025-04-03 14:42:30,291 - INFO - Reading file: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20250403.csv
+2025-04-03 14:42:31,474 - INFO - Found yesterday's date in data: 2025-04-01
+2025-04-03 14:42:31,501 - INFO - Data cleaned successfully. Found 33 qualifying sales for 2025-04-01.
+2025-04-03 14:42:31,504 - INFO - Found 33 sales to process (DIFM: 29, DIY: 4)
+2025-04-03 14:42:32,394 - INFO - Pixel fired successfully for transaction ADT_20250401_09a253a6 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:42:33,377 - INFO - Pixel fired successfully for transaction ADT_20250401_c8a3ce06 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:42:34,439 - INFO - Pixel fired successfully for transaction ADT_20250401_e4212fc7 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:42:35,225 - INFO - Pixel fired successfully for transaction ADT_20250401_808b2d1a (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:42:36,359 - INFO - Pixel fired successfully for transaction ADT_20250401_bf2d91e7 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:42:37,203 - INFO - Pixel fired successfully for transaction ADT_20250401_548142e0 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:42:37,920 - INFO - Pixel fired successfully for transaction ADT_20250401_ac1df7bf (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:42:38,843 - INFO - Pixel fired successfully for transaction ADT_20250401_dce2954a (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:42:39,866 - INFO - Pixel fired successfully for transaction ADT_20250401_12b9b47d (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:42:41,442 - INFO - Pixel fired successfully for transaction ADT_20250401_61d60edf (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:42:42,222 - INFO - Pixel fired successfully for transaction ADT_20250401_d7cdec3d (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:42:43,041 - INFO - Pixel fired successfully for transaction ADT_20250401_d4da6f31 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:42:43,759 - INFO - Pixel fired successfully for transaction ADT_20250401_5ab312d8 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:42:44,577 - INFO - Pixel fired successfully for transaction ADT_20250401_7426124a (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:42:45,329 - INFO - Pixel fired successfully for transaction ADT_20250401_5c9172af (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:42:46,010 - INFO - Pixel fired successfully for transaction ADT_20250401_efb3fb0e (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:42:47,074 - INFO - Pixel fired successfully for transaction ADT_20250401_d12aa22b (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:42:48,058 - INFO - Pixel fired successfully for transaction ADT_20250401_efa5eb6c (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:42:48,783 - INFO - Pixel fired successfully for transaction ADT_20250401_25411d2a (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:42:49,672 - INFO - Pixel fired successfully for transaction ADT_20250401_f8f782c4 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:42:50,279 - INFO - Pixel fired successfully for transaction ADT_20250401_0b9b3799 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:42:52,053 - INFO - Pixel fired successfully for transaction ADT_20250401_6484aa29 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:42:52,679 - INFO - Pixel fired successfully for transaction ADT_20250401_6b731709 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:42:53,395 - INFO - Pixel fired successfully for transaction ADT_20250401_acb90b60 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:42:54,100 - INFO - Pixel fired successfully for transaction ADT_20250401_8a04cbc3 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:42:55,226 - INFO - Pixel fired successfully for transaction ADT_20250401_fab91740 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:42:56,053 - INFO - Pixel fired successfully for transaction ADT_20250401_c15ef682 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:42:57,358 - INFO - Pixel fired successfully for transaction ADT_20250401_8ffd285a (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:42:58,195 - INFO - Pixel fired successfully for transaction ADT_20250401_39d3b670 (Install Method: DIFM, Campaign: 91149, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:42:59,117 - INFO - Pixel fired successfully for transaction ADT_20250401_e929bcb8 (Install Method: DIY, Campaign: 91162, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:43:00,047 - INFO - Pixel fired successfully for transaction ADT_20250401_e82d1a52 (Install Method: DIY, Campaign: 91162, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:43:00,699 - INFO - Pixel fired successfully for transaction ADT_20250401_b8e148b7 (Install Method: DIY, Campaign: 91162, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:43:01,575 - INFO - Pixel fired successfully for transaction ADT_20250401_da4f643e (Install Method: DIY, Campaign: 91162, Timestamp: 2025-04-02 12:00:00)
+2025-04-03 14:43:01,576 - INFO - 
+Processing complete!
+Date processed: 20250401
+Successfully fired DIFM pixels: 29 out of 29
+Successfully fired DIY pixels: 4 out of 4
+Total pixels fired: 33 out of 33
+Check the log file for detailed information: adt_pixel_firing_20250403.log
+2025-04-03 14:46:30,976 - INFO - Reading file: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20250403.csv
+2025-04-03 14:46:32,154 - INFO - Found yesterday's date in data: 2025-04-01
+2025-04-03 14:46:32,180 - INFO - Data cleaned successfully. Found 39 qualifying sales for 2025-04-01.
+2025-04-03 14:46:32,184 - INFO - Found 39 sales to process (DIFM: 33, DIY: 6)
+2025-04-03 14:46:33,579 - INFO - Pixel fired successfully:
+2025-04-03 14:46:33,580 - INFO -   Transaction ID: ADT_20250401_3ac699dd
+2025-04-03 14:46:33,580 - INFO -   Install Method: DIFM
+2025-04-03 14:46:33,580 - INFO -   Campaign ID: 91149
+2025-04-03 14:46:33,581 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:46:33,581 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:46:33,581 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_3ac699dd&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:46:33,581 - INFO -   Response Status: 200
+2025-04-03 14:46:34,335 - INFO - Pixel fired successfully:
+2025-04-03 14:46:34,335 - INFO -   Transaction ID: ADT_20250401_9216aaf5
+2025-04-03 14:46:34,335 - INFO -   Install Method: DIFM
+2025-04-03 14:46:34,335 - INFO -   Campaign ID: 91149
+2025-04-03 14:46:34,335 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:46:34,336 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:46:34,336 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_9216aaf5&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:46:34,336 - INFO -   Response Status: 200
+2025-04-03 14:46:35,249 - INFO - Pixel fired successfully:
+2025-04-03 14:46:35,249 - INFO -   Transaction ID: ADT_20250401_3fb99e84
+2025-04-03 14:46:35,249 - INFO -   Install Method: DIFM
+2025-04-03 14:46:35,250 - INFO -   Campaign ID: 91149
+2025-04-03 14:46:35,250 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:46:35,250 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:46:35,250 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_3fb99e84&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:46:35,250 - INFO -   Response Status: 200
+2025-04-03 14:46:36,004 - INFO - Pixel fired successfully:
+2025-04-03 14:46:36,004 - INFO -   Transaction ID: ADT_20250401_17ddd99b
+2025-04-03 14:46:36,005 - INFO -   Install Method: DIFM
+2025-04-03 14:46:36,006 - INFO -   Campaign ID: 91149
+2025-04-03 14:46:36,006 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:46:36,007 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:46:36,007 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_17ddd99b&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:46:36,007 - INFO -   Response Status: 200
+2025-04-03 14:46:36,839 - INFO - Pixel fired successfully:
+2025-04-03 14:46:36,840 - INFO -   Transaction ID: ADT_20250401_34202563
+2025-04-03 14:46:36,840 - INFO -   Install Method: DIFM
+2025-04-03 14:46:36,840 - INFO -   Campaign ID: 91149
+2025-04-03 14:46:36,840 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:46:36,840 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:46:36,840 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_34202563&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:46:36,840 - INFO -   Response Status: 200
+2025-04-03 14:46:37,836 - INFO - Pixel fired successfully:
+2025-04-03 14:46:37,836 - INFO -   Transaction ID: ADT_20250401_6fd973b1
+2025-04-03 14:46:37,836 - INFO -   Install Method: DIFM
+2025-04-03 14:46:37,836 - INFO -   Campaign ID: 91149
+2025-04-03 14:46:37,837 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:46:37,837 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:46:37,837 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_6fd973b1&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:46:37,837 - INFO -   Response Status: 200
+2025-04-03 14:46:38,536 - INFO - Pixel fired successfully:
+2025-04-03 14:46:38,537 - INFO -   Transaction ID: ADT_20250401_01127ab5
+2025-04-03 14:46:38,537 - INFO -   Install Method: DIFM
+2025-04-03 14:46:38,537 - INFO -   Campaign ID: 91149
+2025-04-03 14:46:38,537 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:46:38,537 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:46:38,537 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_01127ab5&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:46:38,537 - INFO -   Response Status: 200
+2025-04-03 14:46:40,202 - INFO - Pixel fired successfully:
+2025-04-03 14:46:40,202 - INFO -   Transaction ID: ADT_20250401_4a021950
+2025-04-03 14:46:40,202 - INFO -   Install Method: DIY
+2025-04-03 14:46:40,202 - INFO -   Campaign ID: 91162
+2025-04-03 14:46:40,202 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:46:40,203 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:46:40,203 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_4a021950&pubid=42865&campid=91162&timestamp=1743595200
+2025-04-03 14:46:40,203 - INFO -   Response Status: 200
+2025-04-03 14:46:40,918 - INFO - Pixel fired successfully:
+2025-04-03 14:46:40,919 - INFO -   Transaction ID: ADT_20250401_f8f17066
+2025-04-03 14:46:40,919 - INFO -   Install Method: DIFM
+2025-04-03 14:46:40,919 - INFO -   Campaign ID: 91149
+2025-04-03 14:46:40,919 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:46:40,919 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:46:40,919 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_f8f17066&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:46:40,919 - INFO -   Response Status: 200
+2025-04-03 14:46:41,711 - INFO - Pixel fired successfully:
+2025-04-03 14:46:41,711 - INFO -   Transaction ID: ADT_20250401_a07cf8ec
+2025-04-03 14:46:41,711 - INFO -   Install Method: DIFM
+2025-04-03 14:46:41,711 - INFO -   Campaign ID: 91149
+2025-04-03 14:46:41,711 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:46:41,711 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:46:41,711 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_a07cf8ec&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:46:41,711 - INFO -   Response Status: 200
+2025-04-03 14:46:42,606 - INFO - Pixel fired successfully:
+2025-04-03 14:46:42,606 - INFO -   Transaction ID: ADT_20250401_0836bd23
+2025-04-03 14:46:42,606 - INFO -   Install Method: DIFM
+2025-04-03 14:46:42,607 - INFO -   Campaign ID: 91149
+2025-04-03 14:46:42,607 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:46:42,607 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:46:42,607 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_0836bd23&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:46:42,607 - INFO -   Response Status: 200
+2025-04-03 14:46:43,887 - INFO - Pixel fired successfully:
+2025-04-03 14:46:43,888 - INFO -   Transaction ID: ADT_20250401_f599f2ee
+2025-04-03 14:46:43,888 - INFO -   Install Method: DIFM
+2025-04-03 14:46:43,888 - INFO -   Campaign ID: 91149
+2025-04-03 14:46:43,888 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:46:43,888 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:46:43,888 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_f599f2ee&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:46:43,888 - INFO -   Response Status: 200
+2025-04-03 14:46:44,630 - INFO - Pixel fired successfully:
+2025-04-03 14:46:44,630 - INFO -   Transaction ID: ADT_20250401_ac0b8cf6
+2025-04-03 14:46:44,630 - INFO -   Install Method: DIFM
+2025-04-03 14:46:44,630 - INFO -   Campaign ID: 91149
+2025-04-03 14:46:44,630 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:46:44,630 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:46:44,630 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_ac0b8cf6&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:46:44,630 - INFO -   Response Status: 200
+2025-04-03 14:46:45,272 - INFO - Pixel fired successfully:
+2025-04-03 14:46:45,273 - INFO -   Transaction ID: ADT_20250401_ae3bca0b
+2025-04-03 14:46:45,273 - INFO -   Install Method: DIFM
+2025-04-03 14:46:45,273 - INFO -   Campaign ID: 91149
+2025-04-03 14:46:45,273 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:46:45,273 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:46:45,273 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_ae3bca0b&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:46:45,273 - INFO -   Response Status: 200
+2025-04-03 14:46:46,448 - INFO - Pixel fired successfully:
+2025-04-03 14:46:46,449 - INFO -   Transaction ID: ADT_20250401_7466535e
+2025-04-03 14:46:46,449 - INFO -   Install Method: DIFM
+2025-04-03 14:46:46,449 - INFO -   Campaign ID: 91149
+2025-04-03 14:46:46,449 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:46:46,449 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:46:46,449 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_7466535e&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:46:46,449 - INFO -   Response Status: 200
+2025-04-03 14:46:47,323 - INFO - Pixel fired successfully:
+2025-04-03 14:46:47,323 - INFO -   Transaction ID: ADT_20250401_e96f6307
+2025-04-03 14:46:47,323 - INFO -   Install Method: DIFM
+2025-04-03 14:46:47,323 - INFO -   Campaign ID: 91149
+2025-04-03 14:46:47,323 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:46:47,323 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:46:47,323 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_e96f6307&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:46:47,323 - INFO -   Response Status: 200
+2025-04-03 14:46:48,088 - INFO - Pixel fired successfully:
+2025-04-03 14:46:48,088 - INFO -   Transaction ID: ADT_20250401_33614e0d
+2025-04-03 14:46:48,088 - INFO -   Install Method: DIFM
+2025-04-03 14:46:48,088 - INFO -   Campaign ID: 91149
+2025-04-03 14:46:48,089 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:46:48,089 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:46:48,089 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_33614e0d&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:46:48,089 - INFO -   Response Status: 200
+2025-04-03 14:46:49,111 - INFO - Pixel fired successfully:
+2025-04-03 14:46:49,111 - INFO -   Transaction ID: ADT_20250401_157d2c0d
+2025-04-03 14:46:49,111 - INFO -   Install Method: DIFM
+2025-04-03 14:46:49,112 - INFO -   Campaign ID: 91149
+2025-04-03 14:46:49,112 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:46:49,112 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:46:49,112 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_157d2c0d&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:46:49,112 - INFO -   Response Status: 200
+2025-04-03 14:46:50,138 - INFO - Pixel fired successfully:
+2025-04-03 14:46:50,138 - INFO -   Transaction ID: ADT_20250401_98fb07a7
+2025-04-03 14:46:50,138 - INFO -   Install Method: DIY
+2025-04-03 14:46:50,138 - INFO -   Campaign ID: 91162
+2025-04-03 14:46:50,139 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:46:50,139 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:46:50,139 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_98fb07a7&pubid=42865&campid=91162&timestamp=1743595200
+2025-04-03 14:46:50,139 - INFO -   Response Status: 200
+2025-04-03 14:46:52,429 - INFO - Pixel fired successfully:
+2025-04-03 14:46:52,429 - INFO -   Transaction ID: ADT_20250401_e589d8c3
+2025-04-03 14:46:52,429 - INFO -   Install Method: DIFM
+2025-04-03 14:46:52,429 - INFO -   Campaign ID: 91149
+2025-04-03 14:46:52,430 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:46:52,430 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:46:52,431 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_e589d8c3&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:46:52,431 - INFO -   Response Status: 200
+2025-04-03 14:46:53,347 - INFO - Pixel fired successfully:
+2025-04-03 14:46:53,347 - INFO -   Transaction ID: ADT_20250401_62072d0a
+2025-04-03 14:46:53,347 - INFO -   Install Method: DIFM
+2025-04-03 14:46:53,347 - INFO -   Campaign ID: 91149
+2025-04-03 14:46:53,347 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:46:53,347 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:46:53,347 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_62072d0a&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:46:53,347 - INFO -   Response Status: 200
+2025-04-03 14:46:54,025 - INFO - Pixel fired successfully:
+2025-04-03 14:46:54,026 - INFO -   Transaction ID: ADT_20250401_47bef2a4
+2025-04-03 14:46:54,026 - INFO -   Install Method: DIFM
+2025-04-03 14:46:54,026 - INFO -   Campaign ID: 91149
+2025-04-03 14:46:54,026 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:46:54,026 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:46:54,026 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_47bef2a4&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:46:54,026 - INFO -   Response Status: 200
+2025-04-03 14:46:54,650 - INFO - Pixel fired successfully:
+2025-04-03 14:46:54,651 - INFO -   Transaction ID: ADT_20250401_2baa46e6
+2025-04-03 14:46:54,651 - INFO -   Install Method: DIY
+2025-04-03 14:46:54,652 - INFO -   Campaign ID: 91162
+2025-04-03 14:46:54,652 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:46:54,652 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:46:54,652 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_2baa46e6&pubid=42865&campid=91162&timestamp=1743595200
+2025-04-03 14:46:54,652 - INFO -   Response Status: 200
+2025-04-03 14:46:55,378 - INFO - Pixel fired successfully:
+2025-04-03 14:46:55,379 - INFO -   Transaction ID: ADT_20250401_ff3b43d6
+2025-04-03 14:46:55,379 - INFO -   Install Method: DIFM
+2025-04-03 14:46:55,379 - INFO -   Campaign ID: 91149
+2025-04-03 14:46:55,379 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:46:55,379 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:46:55,379 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_ff3b43d6&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:46:55,379 - INFO -   Response Status: 200
+2025-04-03 14:46:56,176 - INFO - Pixel fired successfully:
+2025-04-03 14:46:56,176 - INFO -   Transaction ID: ADT_20250401_c829c63b
+2025-04-03 14:46:56,176 - INFO -   Install Method: DIFM
+2025-04-03 14:46:56,176 - INFO -   Campaign ID: 91149
+2025-04-03 14:46:56,176 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:46:56,176 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:46:56,176 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_c829c63b&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:46:56,176 - INFO -   Response Status: 200
+2025-04-03 14:46:57,097 - INFO - Pixel fired successfully:
+2025-04-03 14:46:57,097 - INFO -   Transaction ID: ADT_20250401_a1a828b4
+2025-04-03 14:46:57,097 - INFO -   Install Method: DIFM
+2025-04-03 14:46:57,097 - INFO -   Campaign ID: 91149
+2025-04-03 14:46:57,097 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:46:57,097 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:46:57,097 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_a1a828b4&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:46:57,097 - INFO -   Response Status: 200
+2025-04-03 14:46:57,920 - INFO - Pixel fired successfully:
+2025-04-03 14:46:57,920 - INFO -   Transaction ID: ADT_20250401_2b8fe5c9
+2025-04-03 14:46:57,920 - INFO -   Install Method: DIFM
+2025-04-03 14:46:57,920 - INFO -   Campaign ID: 91149
+2025-04-03 14:46:57,921 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:46:57,921 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:46:57,921 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_2b8fe5c9&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:46:57,921 - INFO -   Response Status: 200
+2025-04-03 14:46:58,869 - INFO - Pixel fired successfully:
+2025-04-03 14:46:58,870 - INFO -   Transaction ID: ADT_20250401_5dbb3156
+2025-04-03 14:46:58,870 - INFO -   Install Method: DIFM
+2025-04-03 14:46:58,870 - INFO -   Campaign ID: 91149
+2025-04-03 14:46:58,870 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:46:58,870 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:46:58,870 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_5dbb3156&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:46:58,870 - INFO -   Response Status: 200
+2025-04-03 14:46:59,867 - INFO - Pixel fired successfully:
+2025-04-03 14:46:59,867 - INFO -   Transaction ID: ADT_20250401_29c343f2
+2025-04-03 14:46:59,867 - INFO -   Install Method: DIFM
+2025-04-03 14:46:59,867 - INFO -   Campaign ID: 91149
+2025-04-03 14:46:59,867 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:46:59,867 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:46:59,867 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_29c343f2&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:46:59,867 - INFO -   Response Status: 200
+2025-04-03 14:47:00,506 - INFO - Pixel fired successfully:
+2025-04-03 14:47:00,507 - INFO -   Transaction ID: ADT_20250401_c7b4ba3c
+2025-04-03 14:47:00,508 - INFO -   Install Method: DIFM
+2025-04-03 14:47:00,508 - INFO -   Campaign ID: 91149
+2025-04-03 14:47:00,508 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:47:00,508 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:47:00,508 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_c7b4ba3c&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:47:00,508 - INFO -   Response Status: 200
+2025-04-03 14:47:01,502 - INFO - Pixel fired successfully:
+2025-04-03 14:47:01,503 - INFO -   Transaction ID: ADT_20250401_44ed4b11
+2025-04-03 14:47:01,503 - INFO -   Install Method: DIFM
+2025-04-03 14:47:01,503 - INFO -   Campaign ID: 91149
+2025-04-03 14:47:01,503 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:47:01,503 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:47:01,503 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_44ed4b11&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:47:01,503 - INFO -   Response Status: 200
+2025-04-03 14:47:03,654 - INFO - Pixel fired successfully:
+2025-04-03 14:47:03,654 - INFO -   Transaction ID: ADT_20250401_cd093664
+2025-04-03 14:47:03,654 - INFO -   Install Method: DIY
+2025-04-03 14:47:03,654 - INFO -   Campaign ID: 91162
+2025-04-03 14:47:03,654 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:47:03,654 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:47:03,654 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_cd093664&pubid=42865&campid=91162&timestamp=1743595200
+2025-04-03 14:47:03,655 - INFO -   Response Status: 200
+2025-04-03 14:47:06,415 - INFO - Pixel fired successfully:
+2025-04-03 14:47:06,416 - INFO -   Transaction ID: ADT_20250401_0827062c
+2025-04-03 14:47:06,416 - INFO -   Install Method: DIY
+2025-04-03 14:47:06,417 - INFO -   Campaign ID: 91162
+2025-04-03 14:47:06,417 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:47:06,418 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:47:06,418 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_0827062c&pubid=42865&campid=91162&timestamp=1743595200
+2025-04-03 14:47:06,418 - INFO -   Response Status: 200
+2025-04-03 14:47:07,440 - INFO - Pixel fired successfully:
+2025-04-03 14:47:07,440 - INFO -   Transaction ID: ADT_20250401_ef205e83
+2025-04-03 14:47:07,440 - INFO -   Install Method: DIFM
+2025-04-03 14:47:07,440 - INFO -   Campaign ID: 91149
+2025-04-03 14:47:07,441 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:47:07,441 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:47:07,441 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_ef205e83&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:47:07,441 - INFO -   Response Status: 200
+2025-04-03 14:47:08,259 - INFO - Pixel fired successfully:
+2025-04-03 14:47:08,260 - INFO -   Transaction ID: ADT_20250401_def561a6
+2025-04-03 14:47:08,260 - INFO -   Install Method: DIFM
+2025-04-03 14:47:08,260 - INFO -   Campaign ID: 91149
+2025-04-03 14:47:08,260 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:47:08,260 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:47:08,260 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_def561a6&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:47:08,260 - INFO -   Response Status: 200
+2025-04-03 14:47:09,180 - INFO - Pixel fired successfully:
+2025-04-03 14:47:09,180 - INFO -   Transaction ID: ADT_20250401_f460bee7
+2025-04-03 14:47:09,180 - INFO -   Install Method: DIFM
+2025-04-03 14:47:09,180 - INFO -   Campaign ID: 91149
+2025-04-03 14:47:09,180 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:47:09,181 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:47:09,181 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_f460bee7&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:47:09,181 - INFO -   Response Status: 200
+2025-04-03 14:47:10,103 - INFO - Pixel fired successfully:
+2025-04-03 14:47:10,104 - INFO -   Transaction ID: ADT_20250401_8fa7384a
+2025-04-03 14:47:10,104 - INFO -   Install Method: DIFM
+2025-04-03 14:47:10,104 - INFO -   Campaign ID: 91149
+2025-04-03 14:47:10,104 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:47:10,104 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:47:10,104 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_8fa7384a&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:47:10,104 - INFO -   Response Status: 200
+2025-04-03 14:47:11,027 - INFO - Pixel fired successfully:
+2025-04-03 14:47:11,028 - INFO -   Transaction ID: ADT_20250401_4d14f5b2
+2025-04-03 14:47:11,028 - INFO -   Install Method: DIFM
+2025-04-03 14:47:11,028 - INFO -   Campaign ID: 91149
+2025-04-03 14:47:11,028 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:47:11,028 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:47:11,029 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_4d14f5b2&pubid=42865&campid=91149&timestamp=1743595200
+2025-04-03 14:47:11,029 - INFO -   Response Status: 200
+2025-04-03 14:47:12,049 - INFO - Pixel fired successfully:
+2025-04-03 14:47:12,049 - INFO -   Transaction ID: ADT_20250401_e2abb97c
+2025-04-03 14:47:12,049 - INFO -   Install Method: DIY
+2025-04-03 14:47:12,049 - INFO -   Campaign ID: 91162
+2025-04-03 14:47:12,049 - INFO -   Timestamp Used: 2025-04-02 12:00:00
+2025-04-03 14:47:12,049 - INFO -   Unix Timestamp: 1743595200
+2025-04-03 14:47:12,049 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250401_e2abb97c&pubid=42865&campid=91162&timestamp=1743595200
+2025-04-03 14:47:12,049 - INFO -   Response Status: 200
+2025-04-03 14:47:12,050 - INFO - 
+Processing complete!
+Date processed: 20250401
+Successfully fired DIFM pixels: 33 out of 33
+Successfully fired DIY pixels: 6 out of 6
+Total pixels fired: 39 out of 39
+Check the log file for detailed information: adt_pixel_firing_20250403.log
