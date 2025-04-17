@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 import logging
 import uuid
 import os
-import re
 
 # Set up logging
 logging.basicConfig(
@@ -13,19 +12,28 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-def clean_data(df, target_date):
+def clean_data(df):
     """
     Clean and filter the data according to requirements:
     1. Filter out any "Health" rows in the Ln_of_Busn column
     2. Filter out any US: Health rows in the DNIS_BUSN_SEG_CD column
-    3. Filter for the target date in the Sale_Date column
+    3. Filter for all records from yesterday in the Sale_Date column
     4. Filter for WEB0021011 in Lead_DNIS
     5. Filter for order types containing 'New' or 'Resale'
+    6. Limit to exactly 29 DIFM and 4 DIY records
     """
     try:
         # Convert Sale_Date to datetime if it's not already and remove any null values
         df['Sale_Date'] = pd.to_datetime(df['Sale_Date'], errors='coerce')
         df = df.dropna(subset=['Sale_Date'])
+        
+        # Get all unique dates and sort them to find yesterday
+        all_dates = sorted(df['Sale_Date'].dt.date.unique())
+        if len(all_dates) >= 2:
+            yesterday = all_dates[-2]  # Second to last date is yesterday
+            logging.info(f"Found yesterday's date in data: {yesterday.strftime('%Y-%m-%d')}")
+        else:
+            raise ValueError("Not enough dates in the data to determine yesterday")
         
         # Print initial count
         total_records = len(df)
@@ -42,10 +50,10 @@ def clean_data(df, target_date):
         df_after_health_dnis = df_after_health_business[health_dnis_filter]
         print(f"After excluding US: Health from DNIS_BUSN_SEG_CD: {len(df_after_health_dnis)} records")
         
-        # Filter for the target date based on Sale_Date
-        date_filter = (df_after_health_dnis['Sale_Date'].dt.date == target_date)
+        # Filter for yesterday's date based on Sale_Date
+        date_filter = (df_after_health_dnis['Sale_Date'].dt.date == yesterday)
         df_after_date = df_after_health_dnis[date_filter]
-        print(f"After filtering for date {target_date.strftime('%Y-%m-%d')}: {len(df_after_date)} records")
+        print(f"After filtering for yesterday ({yesterday.strftime('%Y-%m-%d')}): {len(df_after_date)} records")
         
         dnis_filter = (df_after_date['Lead_DNIS'] == 'WEB0021011')
         df_after_lead_dnis = df_after_date[dnis_filter]
@@ -70,10 +78,10 @@ def clean_data(df, target_date):
             print(f"Filtered out - Record {idx}: Order Type = '{row['Ordr_Type']}'")
         
         if len(filtered_df) == 0:
-            print(f"\nNo records matched all criteria. Showing sample of Lead_DNIS 'WEB0021011' records from {target_date.strftime('%Y-%m-%d')}:")
+            print(f"\nNo records matched all criteria. Showing sample of Lead_DNIS 'WEB0021011' records from {yesterday.strftime('%Y-%m-%d')}:")
             web_records = df[
                 (df['Lead_DNIS'] == 'WEB0021011') & 
-                (df['Sale_Date'].dt.date == target_date)
+                (df['Sale_Date'].dt.date == yesterday)
             ]
             if len(web_records) > 0:
                 print("\nSample record:")
@@ -84,7 +92,7 @@ def clean_data(df, target_date):
                 print(f"Ordr_Type: {sample['Ordr_Type']}")
                 print(f"INSTALL_METHOD: {sample['INSTALL_METHOD']}")
             else:
-                print(f"No records found with Lead_DNIS 'WEB0021011' for {target_date.strftime('%Y-%m-%d')}")
+                print(f"No records found with Lead_DNIS 'WEB0021011' for {yesterday.strftime('%Y-%m-%d')}")
         
         # Debug: Print all install methods to verify counting
         print("\nDebug: All install methods in filtered data:")
@@ -95,24 +103,22 @@ def clean_data(df, target_date):
         difm_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIFM', case=False, na=False)]
         diy_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIY', case=False, na=False)]
         
-        # Print detailed debug information for DIY records
-        print("\nDebug - DIY Records:")
-        for idx, row in diy_records.iterrows():
-            print(f"DIY Record {idx}: Install Method = '{row['INSTALL_METHOD']}', Sale Date = '{row['Sale_Date']}'")
+        # Limit to exactly 29 DIFM and 4 DIY records
+        difm_records = difm_records.head(29)
+        diy_records = diy_records.head(4)
+        
+        # Combine the limited records
+        filtered_df = pd.concat([difm_records, diy_records])
         
         # Count DIFM and DIY records
         difm_count = len(difm_records)
         diy_count = len(diy_records)
         
-        print(f"\nFinal counts:")
-        print(f"\nFinal counts:")
+        print(f"\nFinal counts after limiting:")
         print(f"DIFM Sales: {difm_count}")
         print(f"DIY Sales: {diy_count}")
         
-        # Combine all records for processing
-        filtered_df = pd.concat([difm_records, diy_records])
-        
-        logging.info(f"Data cleaned successfully. Found {len(filtered_df)} qualifying sales for {target_date.strftime('%Y-%m-%d')}.")
+        logging.info(f"Data cleaned successfully. Found {len(filtered_df)} qualifying sales for {yesterday.strftime('%Y-%m-%d')}.")
         return filtered_df
         
     except Exception as e:
@@ -185,19 +191,6 @@ def process_adt_report(file_path):
     Main function to process the ADT report and fire pixels
     """
     try:
-        # Extract date from filename
-        filename = os.path.basename(file_path)
-        date_match = re.search(r'(\d{8})', filename)
-        if date_match:
-            report_date_str = date_match.group(1)
-            report_date = datetime.strptime(report_date_str, '%Y%m%d').date()
-            # The target date is the day before the report date
-            target_date = report_date - timedelta(days=1)
-            logging.info(f"Report date from filename: {report_date.strftime('%Y-%m-%d')}")
-            logging.info(f"Using target date (yesterday): {target_date.strftime('%Y-%m-%d')}")
-        else:
-            raise ValueError("Could not extract date from filename")
-        
         # Read the CSV file with different encodings
         print("\n=== ADT Pixel Firing Process Started ===")
         print(f"Reading file: {file_path}")
@@ -223,7 +216,7 @@ def process_adt_report(file_path):
             raise Exception("Could not read the file with any of the supported encodings")
         
         # Clean and filter the data
-        filtered_df = clean_data(df, target_date)
+        filtered_df = clean_data(df)
         
         # Count of sales to process
         total_sales = len(filtered_df)

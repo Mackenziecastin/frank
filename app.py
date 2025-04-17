@@ -3,8 +3,8 @@ import pandas as pd
 import numpy as np
 import re
 from io import BytesIO
+from datetime import datetime, timedelta
 import logging
-import sys
 
 st.set_page_config(page_title="Partner Optimization Report Generator", layout="wide")
 
@@ -495,125 +495,33 @@ def to_excel_download(df_affiliate, df_advanced, df_optimization):
     
     return output.getvalue()
 
-def clean_data_for_streamlit(df, target_date):
-    """
-    Clean and filter the data according to requirements for Streamlit app:
-    1. Filter out any "Health" rows in the Ln_of_Busn column
-    2. Filter out any US: Health rows in the DNIS_BUSN_SEG_CD column
-    3. Filter for the target date in the Sale_Date column
-    4. Filter for WEB0021011 in Lead_DNIS
-    5. Filter for order types containing 'New' or 'Resale'
-    """
-    try:
-        # Convert Sale_Date to datetime if it's not already and remove any null values
-        df['Sale_Date'] = pd.to_datetime(df['Sale_Date'], errors='coerce')
-        df = df.dropna(subset=['Sale_Date'])
-        
-        # Print initial count
-        total_records = len(df)
-        st.write(f"\nStarting with {total_records} total records")
-        
-        # Apply filters one by one and show counts
-        # Remove health leads from Ln_of_Busn
-        health_business_filter = ~df['Ln_of_Busn'].str.contains('Health', case=False, na=False)
-        df_after_health_business = df[health_business_filter]
-        st.write(f"After excluding Health from Ln_of_Busn: {len(df_after_health_business)} records")
-        
-        # Remove US: Health from DNIS_BUSN_SEG_CD
-        health_dnis_filter = ~df_after_health_business['DNIS_BUSN_SEG_CD'].str.contains('US: Health', case=False, na=False)
-        df_after_health_dnis = df_after_health_business[health_dnis_filter]
-        st.write(f"After excluding US: Health from DNIS_BUSN_SEG_CD: {len(df_after_health_dnis)} records")
-        
-        # Filter for the target date based on Sale_Date
-        date_filter = (df_after_health_dnis['Sale_Date'].dt.date == target_date)
-        df_after_date = df_after_health_dnis[date_filter]
-        st.write(f"After filtering for date {target_date.strftime('%Y-%m-%d')}: {len(df_after_date)} records")
-        
-        dnis_filter = (df_after_date['Lead_DNIS'] == 'WEB0021011')
-        df_after_lead_dnis = df_after_date[dnis_filter]
-        st.write(f"After filtering for Lead_DNIS 'WEB0021011': {len(df_after_lead_dnis)} records")
-        
-        # Log details about records before order type filtering
-        st.write("\nChecking order types before filtering:")
-        for idx, row in df_after_lead_dnis.iterrows():
-            st.write(f"Record {idx}: Order Type = '{row['Ordr_Type']}'")
-        
-        order_type_filter = (
-            df_after_lead_dnis['Ordr_Type'].str.contains('New', case=False, na=False) |
-            df_after_lead_dnis['Ordr_Type'].str.contains('Resale', case=False, na=False)
-        )
-        filtered_df = df_after_lead_dnis[order_type_filter]
-        st.write(f"\nAfter filtering for New/Resale order types: {len(filtered_df)} records")
-        
-        # Log details about which records were kept vs filtered
-        st.write("\nOrder types that were filtered out:")
-        filtered_out = df_after_lead_dnis[~order_type_filter]
-        for idx, row in filtered_out.iterrows():
-            st.write(f"Filtered out - Record {idx}: Order Type = '{row['Ordr_Type']}'")
-        
-        if len(filtered_df) == 0:
-            st.write(f"\nNo records matched all criteria. Showing sample of Lead_DNIS 'WEB0021011' records from {target_date.strftime('%Y-%m-%d')}:")
-            web_records = df[
-                (df['Lead_DNIS'] == 'WEB0021011') & 
-                (df['Sale_Date'].dt.date == target_date)
-            ]
-            if len(web_records) > 0:
-                st.write("\nSample record:")
-                sample = web_records.iloc[0]
-                st.write(f"Sale_Date: {sample['Sale_Date']}")
-                st.write(f"Ln_of_Busn: {sample['Ln_of_Busn']}")
-                st.write(f"DNIS_BUSN_SEG_CD: {sample['DNIS_BUSN_SEG_CD']}")
-                st.write(f"Ordr_Type: {sample['Ordr_Type']}")
-                st.write(f"INSTALL_METHOD: {sample['INSTALL_METHOD']}")
-            else:
-                st.write(f"No records found with Lead_DNIS 'WEB0021011' for {target_date.strftime('%Y-%m-%d')}")
-        
-        # Debug: Print all install methods to verify counting
-        st.write("\nDebug: All install methods in filtered data:")
-        for idx, row in filtered_df.iterrows():
-            st.write(f"Record {idx}: Install Method = '{row['INSTALL_METHOD']}'")
-        
-        # Separate DIFM and DIY records
-        difm_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIFM', case=False, na=False)]
-        diy_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIY', case=False, na=False)]
-        
-        # Count DIFM and DIY records
-        difm_count = len(difm_records)
-        diy_count = len(diy_records)
-        
-        st.write(f"\nFinal counts:")
-        st.write(f"DIFM Sales: {difm_count}")
-        st.write(f"DIY Sales: {diy_count}")
-        
-        logging.info(f"Data cleaned successfully. Found {len(filtered_df)} qualifying sales for {target_date.strftime('%Y-%m-%d')}.")
-        return filtered_df
-        
-    except Exception as e:
-        logging.error(f"Error cleaning data: {str(e)}")
-        raise
-
 def clean_data(df):
     """
     Clean and filter the data according to requirements:
     1. Filter out any "Health" rows in the Ln_of_Busn column
     2. Filter out any US: Health rows in the DNIS_BUSN_SEG_CD column
-    3. Filter for all records from yesterday based on report filename date
+    3. Filter for yesterday's date based on the report filename date
     4. Filter for WEB0021011 in Lead_DNIS
     5. Filter for order types containing 'New' or 'Resale'
     """
     try:
+        # Get the report filename from sys.argv[1]
+        import sys
+        report_filename = sys.argv[1]
+        
+        # Extract date from filename (assuming format: *_YYYYMMDD.csv)
+        import re
+        date_match = re.search(r'(\d{8})', report_filename)
+        if not date_match:
+            raise ValueError("Could not extract date from filename. Expected format: *_YYYYMMDD.csv")
+        
+        report_date = datetime.strptime(date_match.group(1), '%Y%m%d').date()
+        yesterday = report_date - timedelta(days=1)
+        logging.info(f"Report date: {report_date}, Using yesterday's date: {yesterday}")
+        
         # Convert Sale_Date to datetime if it's not already and remove any null values
         df['Sale_Date'] = pd.to_datetime(df['Sale_Date'], errors='coerce')
         df = df.dropna(subset=['Sale_Date'])
-        
-        # Get yesterday's date from the filename (assuming format ADT_Athena_DLY_Lead_CallData_Direct_Agnts_YYYYMMDD.csv)
-        filename = sys.argv[1]  # Get the filename from command line argument
-        report_date_str = filename.split('_')[-1].split('.')[0]  # Extract YYYYMMDD part
-        report_date = pd.to_datetime(report_date_str, format='%Y%m%d')
-        yesterday = (report_date - pd.Timedelta(days=1)).date()
-        
-        logging.info(f"Report date from filename: {report_date.strftime('%Y-%m-%d')}")
-        logging.info(f"Using yesterday's date: {yesterday.strftime('%Y-%m-%d')}")
         
         # Print initial count
         total_records = len(df)
