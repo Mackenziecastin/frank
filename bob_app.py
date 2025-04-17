@@ -1,25 +1,20 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-import re
-from io import BytesIO
 from adtbob_processor import ADTBobProcessor
+import plotly.express as px
+import plotly.graph_objects as go
+from datetime import datetime, timedelta
 
-st.set_page_config(page_title="ADT Analysis Dashboard", layout="wide")
-
-def show_frank_analysis():
-    st.title("Frank's Partner Optimization Report Generator")
-    st.write("""
-    This tool processes your marketing data files and generates a comprehensive optimization report.
-    Please upload the required files below.
-    """)
-    # ... existing code for Frank's analysis ...
-    # [Keep all the existing code for Frank's analysis here]
-
-def show_bob_analysis():
-    st.title("Bob's ADT Analysis Dashboard")
+def main():
+    st.set_page_config(
+        page_title="Bob's ADT Analysis Dashboard",
+        page_icon="📊",
+        layout="wide"
+    )
+    
+    st.title("📊 Bob's ADT Analysis Dashboard")
     st.markdown("""
-    Welcome to Bob's ADT Analysis Dashboard. This tool helps you analyze and optimize your marketing performance.
+    Welcome to the ADT Analysis Dashboard. This tool helps you analyze and optimize your marketing performance.
     Upload your data files to get started.
     """)
     
@@ -203,16 +198,6 @@ def show_trends(affiliate_df):
         yaxis_title='Revenue ($)'
     )
     st.plotly_chart(fig, use_container_width=True)
-
-def main():
-    # Create the navigation
-    st.sidebar.title("Navigation")
-    page = st.sidebar.radio("Go to", ["Frank's Analysis", "Bob's Analysis"])
-    
-    if page == "Frank's Analysis":
-        show_frank_analysis()
-    else:
-        show_bob_analysis()
 
 if __name__ == "__main__":
     main() 

@@ -20,20 +20,17 @@ def clean_data(df):
     3. Filter for all records from yesterday in the Sale_Date column
     4. Filter for WEB0021011 in Lead_DNIS
     5. Filter for order types containing 'New' or 'Resale'
-    6. Limit to exactly 29 DIFM and 4 DIY records
+    6. Keep all DIFM records and limit to exactly 4 DIY records
     """
     try:
         # Convert Sale_Date to datetime if it's not already and remove any null values
         df['Sale_Date'] = pd.to_datetime(df['Sale_Date'], errors='coerce')
         df = df.dropna(subset=['Sale_Date'])
         
-        # Get all unique dates and sort them to find yesterday
-        all_dates = sorted(df['Sale_Date'].dt.date.unique())
-        if len(all_dates) >= 2:
-            yesterday = all_dates[-2]  # Second to last date is yesterday
-            logging.info(f"Found yesterday's date in data: {yesterday.strftime('%Y-%m-%d')}")
-        else:
-            raise ValueError("Not enough dates in the data to determine yesterday")
+        # Calculate yesterday based on current date
+        today = datetime.now().date()
+        yesterday = today - timedelta(days=1)
+        logging.info(f"Calculated yesterday's date: {yesterday.strftime('%Y-%m-%d')}")
         
         # Print initial count
         total_records = len(df)
@@ -103,18 +100,17 @@ def clean_data(df):
         difm_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIFM', case=False, na=False)]
         diy_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIY', case=False, na=False)]
         
-        # Limit to exactly 29 DIFM and 4 DIY records
-        difm_records = difm_records.head(29)
+        # Keep all DIFM records, limit DIY to 4
         diy_records = diy_records.head(4)
         
-        # Combine the limited records
+        # Combine the records
         filtered_df = pd.concat([difm_records, diy_records])
         
         # Count DIFM and DIY records
         difm_count = len(difm_records)
         diy_count = len(diy_records)
         
-        print(f"\nFinal counts after limiting:")
+        print(f"\nFinal counts:")
         print(f"DIFM Sales: {difm_count}")
         print(f"DIY Sales: {diy_count}")
         
