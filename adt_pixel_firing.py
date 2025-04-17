@@ -20,7 +20,6 @@ def clean_data(df):
     3. Filter for all records from yesterday in the Sale_Date column
     4. Filter for WEB0021011 in Lead_DNIS
     5. Filter for order types containing 'New' or 'Resale'
-    6. Limit to exactly 29 DIFM and 4 DIY records
     """
     try:
         # Convert Sale_Date to datetime if it's not already and remove any null values
