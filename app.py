@@ -207,21 +207,11 @@ def show_trends(affiliate_df):
 def main():
     # Create the navigation
     st.sidebar.title("Navigation")
-<<<<<<< HEAD
-    page = st.sidebar.radio("Go to", ["Frank's Analysis", "Bob's Analysis"])
-    
-    if page == "Frank's Analysis":
-        show_frank_analysis()
-    else:
-=======
     page = st.sidebar.radio("Go to", ["Frank (LaserAway)", "Bob (ADT)"])
     
     if page == "Frank (LaserAway)":
-        show_main_page()
-    elif page == "Bob (ADT)":
-        # Import and show Bob's analysis page
-        from pages.bob_analysis import show_bob_analysis
->>>>>>> a050826157a3e8a68a4be99ac4c3af59579fe81c
+        show_frank_analysis()
+    else:
         show_bob_analysis()
 
 if __name__ == "__main__":
