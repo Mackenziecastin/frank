@@ -1,7 +1,10 @@
 # First try to import required packages with error handling
 import sys
-import logging
 import os
+from datetime import datetime, timedelta
+import logging
+import uuid
+import re
 
 # Set up logging first
 logging.basicConfig(
@@ -22,9 +25,6 @@ except ImportError as e:
 
 try:
     import requests
-    from datetime import datetime, timedelta
-    import uuid
-    import re
     logging.info("Successfully imported all other required packages")
 except ImportError as e:
     logging.error(f"Failed to import required package: {str(e)}")
