@@ -3,16 +3,8 @@ import pandas as pd
 import numpy as np
 import re
 from io import BytesIO
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
 from datetime import datetime, timedelta
 import logging
->>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
-=======
-from datetime import datetime, timedelta
-import logging
->>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 
 st.set_page_config(page_title="Partner Optimization Report Generator", layout="wide")
 
@@ -503,11 +495,6 @@ def to_excel_download(df_affiliate, df_advanced, df_optimization):
     
     return output.getvalue()
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
->>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 def clean_data(df):
     """
     Clean and filter the data according to requirements:
@@ -619,48 +606,17 @@ def clean_data(df):
         logging.error(f"Error cleaning data: {str(e)}")
         raise
 
-<<<<<<< HEAD
->>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
-=======
->>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 # At the bottom of the file, add the main execution logic
 def main():
     # Create the navigation
     st.sidebar.title("Navigation")
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-    page = st.sidebar.radio("Go to", ["Frank (LaserAway)", "Bob (ADT)"])
-    
-    if page == "Frank (LaserAway)":
-        show_frank_analysis()
-    else:
-=======
-    page = st.sidebar.radio("Go to", ["Main Report", "Bob's Analysis"])
-    
-    if page == "Main Report":
-        show_main_page()
-    elif page == "Bob's Analysis":
-        # Import and show Bob's analysis page
-        from pages.bob_analysis import show_bob_analysis
->>>>>>> parent of b9f7f7c (work!)
-=======
     page = st.sidebar.radio("Go to", ["Frank (LaserAway)", "Bob (ADT)", "ADT Pixel Firing"])
     
     if page == "Frank (LaserAway)":
-=======
-    page = st.sidebar.radio("Go to", ["Frank (LaserAway)", "Bob (ADT)", "ADT Pixel Firing"])
-    
-    if page == "Frank (LaserAway)":
->>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
         show_main_page()
     elif page == "Bob (ADT)":
         # Import and show Bob's analysis page
         from pages.bob_analysis import show_bob_analysis
-<<<<<<< HEAD
->>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
-=======
->>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
         show_bob_analysis()
     elif page == "ADT Pixel Firing":
         # Import and show ADT pixel firing page

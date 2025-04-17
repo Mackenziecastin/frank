@@ -7,11 +7,25 @@ import uuid
 import re
 
 # Set up logging first
+log_filename = f'adt_pixel_firing_{datetime.now().strftime("%Y%m%d")}.log'
 logging.basicConfig(
-    filename=f'adt_pixel_firing_{datetime.now().strftime("%Y%m%d")}.log',
+    filename=log_filename,
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    filemode='w'  # Overwrite the log file each run
 )
+
+# Also log to console
+console = logging.StreamHandler()
+console.setLevel(logging.INFO)
+formatter = logging.Formatter('%(message)s')
+console.setFormatter(formatter)
+logging.getLogger('').addHandler(console)
+
+# Log system info
+logging.info("=== Starting ADT Pixel Firing Process ===")
+logging.info(f"Python version: {sys.version}")
+logging.info(f"Working directory: {os.getcwd()}")
 
 # Try importing each required package with error handling
 try:
@@ -40,13 +54,7 @@ print(f"sys.path: {sys.path}")
 
 def clean_data(df, file_path):
     """
-    Clean and filter the data according to requirements:
-    1. Filter out any "Health" rows in the Ln_of_Busn column
-    2. Filter out any US: Health rows in the DNIS_BUSN_SEG_CD column
-    3. Filter for yesterday's date based on the report filename date
-    4. Filter for WEB0021011 in Lead_DNIS
-    5. Filter for order types containing 'New' or 'Resale'
-    6. Limit to exactly 29 DIFM and 4 DIY records
+    Clean and filter the data according to requirements.
     """
     try:
         # Extract date from filename (format: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_YYYYMMDD.csv)
@@ -62,88 +70,60 @@ def clean_data(df, file_path):
         
         # Print initial count
         total_records = len(df)
-        print(f"\nStarting with {total_records} total records")
+        logging.info(f"\nStarting with {total_records} total records")
         
         # Apply filters one by one and show counts
         # Remove health leads from Ln_of_Busn
         health_business_filter = ~df['Ln_of_Busn'].str.contains('Health', case=False, na=False)
         df_after_health_business = df[health_business_filter]
-        print(f"After excluding Health from Ln_of_Busn: {len(df_after_health_business)} records")
+        logging.info(f"After excluding Health from Ln_of_Busn: {len(df_after_health_business)} records")
         
         # Remove US: Health from DNIS_BUSN_SEG_CD
         health_dnis_filter = ~df_after_health_business['DNIS_BUSN_SEG_CD'].str.contains('US: Health', case=False, na=False)
         df_after_health_dnis = df_after_health_business[health_dnis_filter]
-        print(f"After excluding US: Health from DNIS_BUSN_SEG_CD: {len(df_after_health_dnis)} records")
+        logging.info(f"After excluding US: Health from DNIS_BUSN_SEG_CD: {len(df_after_health_dnis)} records")
         
         # Filter for yesterday's date based on Sale_Date
         date_filter = (df_after_health_dnis['Sale_Date'].dt.date == yesterday)
         df_after_date = df_after_health_dnis[date_filter]
-        print(f"After filtering for yesterday ({yesterday.strftime('%Y-%m-%d')}): {len(df_after_date)} records")
+        logging.info(f"After filtering for yesterday ({yesterday.strftime('%Y-%m-%d')}): {len(df_after_date)} records")
         
         dnis_filter = (df_after_date['Lead_DNIS'] == 'WEB0021011')
         df_after_lead_dnis = df_after_date[dnis_filter]
-        print(f"After filtering for Lead_DNIS 'WEB0021011': {len(df_after_lead_dnis)} records")
+        logging.info(f"After filtering for Lead_DNIS 'WEB0021011': {len(df_after_lead_dnis)} records")
         
         # Log details about records before order type filtering
-        print("\nChecking order types before filtering:")
+        logging.info("\nChecking order types before filtering:")
         for idx, row in df_after_lead_dnis.iterrows():
-            print(f"Record {idx}: Order Type = '{row['Ordr_Type']}'")
+            logging.info(f"Record {idx}: Order Type = '{row['Ordr_Type']}'")
         
         order_type_filter = (
             df_after_lead_dnis['Ordr_Type'].str.contains('New', case=False, na=False) |
             df_after_lead_dnis['Ordr_Type'].str.contains('Resale', case=False, na=False)
         )
         filtered_df = df_after_lead_dnis[order_type_filter]
-        print(f"\nAfter filtering for New/Resale order types: {len(filtered_df)} records")
-        
-        # Log details about which records were kept vs filtered
-        print("\nOrder types that were filtered out:")
-        filtered_out = df_after_lead_dnis[~order_type_filter]
-        for idx, row in filtered_out.iterrows():
-            print(f"Filtered out - Record {idx}: Order Type = '{row['Ordr_Type']}'")
-        
-        if len(filtered_df) == 0:
-            print(f"\nNo records matched all criteria. Showing sample of Lead_DNIS 'WEB0021011' records from {yesterday.strftime('%Y-%m-%d')}:")
-            web_records = df[
-                (df['Lead_DNIS'] == 'WEB0021011') & 
-                (df['Sale_Date'].dt.date == yesterday)
-            ]
-            if len(web_records) > 0:
-                print("\nSample record:")
-                sample = web_records.iloc[0]
-                print(f"Sale_Date: {sample['Sale_Date']}")
-                print(f"Ln_of_Busn: {sample['Ln_of_Busn']}")
-                print(f"DNIS_BUSN_SEG_CD: {sample['DNIS_BUSN_SEG_CD']}")
-                print(f"Ordr_Type: {sample['Ordr_Type']}")
-                print(f"INSTALL_METHOD: {sample['INSTALL_METHOD']}")
-            else:
-                print(f"No records found with Lead_DNIS 'WEB0021011' for {yesterday.strftime('%Y-%m-%d')}")
-        
-        # Debug: Print all install methods to verify counting
-        print("\nDebug: All install methods in filtered data:")
-        for idx, row in filtered_df.iterrows():
-            print(f"Record {idx}: Install Method = '{row['INSTALL_METHOD']}'")
+        logging.info(f"\nAfter filtering for New/Resale order types: {len(filtered_df)} records")
         
         # Separate DIFM and DIY records
         difm_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIFM', case=False, na=False)]
         diy_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIY', case=False, na=False)]
         
-        # Limit to exactly 29 DIFM and 4 DIY records
-        difm_records = difm_records.head(29)
-        diy_records = diy_records.head(4)
-        
-        # Combine the limited records
-        filtered_df = pd.concat([difm_records, diy_records])
+        # Add detailed logging for each record
+        logging.info("\nDetailed record analysis:")
+        for idx, row in filtered_df.iterrows():
+            logging.info(f"Record {idx}:")
+            logging.info(f"  Install Method: {row['INSTALL_METHOD']}")
+            logging.info(f"  Order Type: {row['Ordr_Type']}")
+            logging.info(f"  Sale Date: {row['Sale_Date']}")
         
         # Count DIFM and DIY records
         difm_count = len(difm_records)
         diy_count = len(diy_records)
         
-        print(f"\nFinal counts after limiting:")
-        print(f"DIFM Sales: {difm_count}")
-        print(f"DIY Sales: {diy_count}")
+        logging.info(f"\nFinal counts:")
+        logging.info(f"DIFM Sales: {difm_count}")
+        logging.info(f"DIY Sales: {diy_count}")
         
-        logging.info(f"Data cleaned successfully. Found {len(filtered_df)} qualifying sales for {yesterday.strftime('%Y-%m-%d')}.")
         return filtered_df
         
     except Exception as e:
@@ -165,10 +145,10 @@ def fire_pixel(transaction_id, install_method, sale_date):
     iso_datetime = pixel_datetime.strftime('%Y-%m-%dT%H:%M:%S+00:00')
     
     # Debug: Print detailed timestamp information
-    print(f"\nDebug Timestamp Info:")
-    print(f"  Sale Date: {sale_date}")
-    print(f"  Using DateTime: {pixel_datetime}")
-    print(f"  ISO 8601 Format: {iso_datetime}")
+    logging.info(f"\nDebug Timestamp Info:")
+    logging.info(f"  Sale Date: {sale_date}")
+    logging.info(f"  Using DateTime: {pixel_datetime}")
+    logging.info(f"  ISO 8601 Format: {iso_datetime}")
     
     params = {
         'o': '32022',
@@ -182,7 +162,7 @@ def fire_pixel(transaction_id, install_method, sale_date):
     
     # Construct and print the complete URL
     url_with_params = requests.Request('GET', pixel_url, params=params).prepare().url
-    print(f"  Complete URL: {url_with_params}")
+    logging.info(f"  Complete URL: {url_with_params}")
     
     try:
         response = requests.get(pixel_url, params=params)
@@ -216,9 +196,7 @@ def process_adt_report(file_path):
     Main function to process the ADT report and fire pixels
     """
     try:
-        # Read the CSV file with different encodings
-        print("\n=== ADT Pixel Firing Process Started ===")
-        print(f"Reading file: {file_path}")
+        logging.info("\n=== ADT Pixel Firing Process Started ===")
         logging.info(f"Reading file: {file_path}")
         
         # Try different encodings
@@ -227,12 +205,12 @@ def process_adt_report(file_path):
         
         for encoding in encodings:
             try:
-                print(f"\nTrying to read file with {encoding} encoding...")
+                logging.info(f"\nTrying to read file with {encoding} encoding...")
                 df = pd.read_csv(file_path, encoding=encoding)
-                print(f"Successfully read file with {encoding} encoding!")
+                logging.info(f"Successfully read file with {encoding} encoding!")
                 break
             except UnicodeDecodeError:
-                print(f"Failed to read with {encoding} encoding")
+                logging.info(f"Failed to read with {encoding} encoding")
                 continue
         
         if df is None:
@@ -243,37 +221,37 @@ def process_adt_report(file_path):
         
         # Count of sales to process
         total_sales = len(filtered_df)
-        print(f"\nFound {total_sales} qualifying sales for date: {filtered_df['Sale_Date'].dt.date.iloc[0].strftime('%Y-%m-%d')}")
+        logging.info(f"\nFound {total_sales} qualifying sales for date: {filtered_df['Sale_Date'].dt.date.iloc[0].strftime('%Y-%m-%d')}")
         
         # Count DIFM and DIY sales
         difm_sales = len(filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIFM', case=False, na=False)])
         diy_sales = len(filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIY', case=False, na=False)])
-        print(f"DIFM Sales: {difm_sales}")
-        print(f"DIY Sales: {diy_sales}")
+        logging.info(f"DIFM Sales: {difm_sales}")
+        logging.info(f"DIY Sales: {diy_sales}")
         
         # Fire pixels for each sale
-        print("\nFiring pixels...")
+        logging.info("\nFiring pixels...")
         successful_pixels = 0
         for idx, row in filtered_df.iterrows():
             # Generate a unique transaction ID
             transaction_id = f"ADT_{row['Sale_Date'].strftime('%Y%m%d')}_{uuid.uuid4().hex[:8]}"
             
             # Fire the pixel
-            print(f"  Firing pixel {idx + 1} of {total_sales} ({row['INSTALL_METHOD']})...")
+            logging.info(f"  Firing pixel {idx + 1} of {total_sales} ({row['INSTALL_METHOD']})...")
             if fire_pixel(transaction_id, row['INSTALL_METHOD'], row['Sale_Date']):
                 successful_pixels += 1
-                print(" ✓")
+                logging.info(" ✓")
             else:
-                print(" ✗")
+                logging.info(" ✗")
         
         # Print summary
-        print("\n=== Summary ===")
-        print(f"\nProcessing complete!")
-        print(f"Date processed: {filtered_df['Sale_Date'].dt.date.iloc[0].strftime('%Y%m%d')}")
-        print(f"Successfully fired DIFM pixels: {difm_sales} out of {difm_sales}")
-        print(f"Successfully fired DIY pixels: {diy_sales} out of {diy_sales}")
-        print(f"Total pixels fired: {successful_pixels} out of {total_sales}")
-        print(f"Check the log file for detailed information: adt_pixel_firing_{datetime.now().strftime('%Y%m%d')}.log")
+        logging.info("\n=== Summary ===")
+        logging.info(f"Processing complete!")
+        logging.info(f"Date processed: {filtered_df['Sale_Date'].dt.date.iloc[0].strftime('%Y%m%d')}")
+        logging.info(f"Successfully fired DIFM pixels: {difm_sales} out of {difm_sales}")
+        logging.info(f"Successfully fired DIY pixels: {diy_sales} out of {diy_sales}")
+        logging.info(f"Total pixels fired: {successful_pixels} out of {total_sales}")
+        logging.info(f"Check the log file for detailed information: {log_filename}")
         
     except Exception as e:
         logging.error(f"Error processing ADT report: {str(e)}")
@@ -281,35 +259,38 @@ def process_adt_report(file_path):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("\nError: Missing report file argument")
-        print("\nHow to use this script:")
-        print("1. Make sure your ADT Athena report file is in the same folder as this script")
-        print("2. The file should be named like: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_[date].csv")
-        print("3. Run the script with: python3 adt_pixel_firing.py your_report_file.csv")
-        print("\nExample:")
-        print("python3 adt_pixel_firing.py ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20250326.csv")
+        logging.error("\nError: Missing report file argument")
+        logging.info("\nHow to use this script:")
+        logging.info("1. Make sure your ADT Athena report file is in the same folder as this script")
+        logging.info("2. The file should be named like: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_[date].csv")
+        logging.info("3. Run the script with: python3 adt_pixel_firing.py your_report_file.csv")
+        logging.info("\nExample:")
+        logging.info("python3 adt_pixel_firing.py ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20250326.csv")
         sys.exit(1)
     
     report_path = sys.argv[1]
+    logging.info(f"\nAttempting to process file: {report_path}")
+    logging.info(f"Absolute path: {os.path.abspath(report_path)}")
     
     # Check if file exists
     if not os.path.exists(report_path):
-        print(f"\nError: File '{report_path}' not found!")
-        print("\nPlease check that:")
-        print("1. The file name is correct")
-        print("2. The file is in the same folder as this script")
-        print("3. You have the correct file permissions")
-        print("\nCurrent directory contents:")
+        logging.error(f"\nError: File '{report_path}' not found!")
+        logging.info(f"Current working directory: {os.getcwd()}")
+        logging.info("\nPlease check that:")
+        logging.info("1. The file name is correct")
+        logging.info("2. The file is in the same folder as this script")
+        logging.info("3. You have the correct file permissions")
+        logging.info("\nCurrent directory contents:")
         try:
             files = [f for f in os.listdir('.') if f.endswith('.csv')]
             if files:
-                print("\nAvailable CSV files:")
+                logging.info("\nAvailable CSV files:")
                 for f in files:
-                    print(f"- {f}")
+                    logging.info(f"- {f}")
             else:
-                print("No CSV files found in current directory")
+                logging.info("No CSV files found in current directory")
         except Exception as e:
-            print(f"Could not list directory contents: {str(e)}")
+            logging.error(f"Could not list directory contents: {str(e)}")
         sys.exit(1)
     
     # Check if file is readable
@@ -317,13 +298,19 @@ if __name__ == "__main__":
         with open(report_path, 'r') as f:
             first_line = f.readline()
         if not first_line:
-            print(f"\nError: File '{report_path}' is empty!")
+            logging.error(f"\nError: File '{report_path}' is empty!")
             sys.exit(1)
     except Exception as e:
-        print(f"\nError: Could not read file '{report_path}': {str(e)}")
-        print("Please check file permissions and format")
+        logging.error(f"\nError: Could not read file '{report_path}': {str(e)}")
+        logging.info("Please check file permissions and format")
         sys.exit(1)
     
-    process_adt_report(report_path) 
+    try:
+        process_adt_report(report_path)
+    except Exception as e:
+        logging.error(f"Error processing report: {str(e)}")
+        import traceback
+        logging.error(f"Full traceback:\n{traceback.format_exc()}")
+        sys.exit(1)
 
     
