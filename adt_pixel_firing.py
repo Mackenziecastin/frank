@@ -19,23 +19,11 @@ def clean_data(df):
     Clean and filter the data according to requirements:
     1. Filter out any "Health" rows in the Ln_of_Busn column
     2. Filter out any US: Health rows in the DNIS_BUSN_SEG_CD column
-    3. Filter for all records from yesterday in the Sale_Date column
+    3. Filter for April 1st, 2025 in the Sale_Date column
     4. Filter for WEB0021011 in Lead_DNIS
     5. Filter for order types containing 'New' or 'Resale'
     """
     try:
-        # Get the report filename from sys.argv[1]
-        report_filename = sys.argv[1]
-        
-        # Extract date from filename (assuming format: *_YYYYMMDD.csv)
-        date_match = re.search(r'(\d{8})', report_filename)
-        if not date_match:
-            raise ValueError("Could not extract date from filename. Expected format: *_YYYYMMDD.csv")
-        
-        report_date = datetime.strptime(date_match.group(1), '%Y%m%d').date()
-        yesterday = report_date - timedelta(days=1)
-        logging.info(f"Report date: {report_date}, Using yesterday's date: {yesterday}")
-        
         # Convert Sale_Date to datetime if it's not already and remove any null values
         df['Sale_Date'] = pd.to_datetime(df['Sale_Date'], errors='coerce')
         df = df.dropna(subset=['Sale_Date'])
@@ -55,10 +43,11 @@ def clean_data(df):
         df_after_health_dnis = df_after_health_business[health_dnis_filter]
         print(f"After excluding US: Health from DNIS_BUSN_SEG_CD: {len(df_after_health_dnis)} records")
         
-        # Filter for yesterday's date based on Sale_Date
-        date_filter = (df_after_health_dnis['Sale_Date'].dt.date == yesterday)
+        # Filter for April 1st, 2025
+        target_date = datetime(2025, 4, 1).date()
+        date_filter = (df_after_health_dnis['Sale_Date'].dt.date == target_date)
         df_after_date = df_after_health_dnis[date_filter]
-        print(f"After filtering for yesterday ({yesterday.strftime('%Y-%m-%d')}): {len(df_after_date)} records")
+        print(f"After filtering for target date ({target_date.strftime('%Y-%m-%d')}): {len(df_after_date)} records")
         
         dnis_filter = (df_after_date['Lead_DNIS'] == 'WEB0021011')
         df_after_lead_dnis = df_after_date[dnis_filter]
@@ -83,10 +72,10 @@ def clean_data(df):
             print(f"Filtered out - Record {idx}: Order Type = '{row['Ordr_Type']}'")
         
         if len(filtered_df) == 0:
-            print(f"\nNo records matched all criteria. Showing sample of Lead_DNIS 'WEB0021011' records from {yesterday.strftime('%Y-%m-%d')}:")
+            print(f"\nNo records matched all criteria. Showing sample of Lead_DNIS 'WEB0021011' records from {target_date.strftime('%Y-%m-%d')}:")
             web_records = df[
                 (df['Lead_DNIS'] == 'WEB0021011') & 
-                (df['Sale_Date'].dt.date == yesterday)
+                (df['Sale_Date'].dt.date == target_date)
             ]
             if len(web_records) > 0:
                 print("\nSample record:")
@@ -97,7 +86,7 @@ def clean_data(df):
                 print(f"Ordr_Type: {sample['Ordr_Type']}")
                 print(f"INSTALL_METHOD: {sample['INSTALL_METHOD']}")
             else:
-                print(f"No records found with Lead_DNIS 'WEB0021011' for {yesterday.strftime('%Y-%m-%d')}")
+                print(f"No records found with Lead_DNIS 'WEB0021011' for {target_date.strftime('%Y-%m-%d')}")
         
         # Debug: Print all install methods to verify counting
         print("\nDebug: All install methods in filtered data:")
@@ -112,14 +101,14 @@ def clean_data(df):
         difm_count = len(difm_records)
         diy_count = len(diy_records)
         
-        # Combine all records without any limits
+        # Combine all records
         filtered_df = pd.concat([difm_records, diy_records])
         
         print(f"\nFinal counts:")
         print(f"DIFM Sales: {difm_count}")
         print(f"DIY Sales: {diy_count}")
         
-        logging.info(f"Data cleaned successfully. Found {len(filtered_df)} qualifying sales for {yesterday.strftime('%Y-%m-%d')}.")
+        logging.info(f"Data cleaned successfully. Found {len(filtered_df)} qualifying sales for {target_date.strftime('%Y-%m-%d')}.")
         return filtered_df
         
     except Exception as e:
