@@ -105,6 +105,7 @@ def clean_data(df, target_date):
         diy_count = len(diy_records)
         
         print(f"\nFinal counts:")
+        print(f"\nFinal counts:")
         print(f"DIFM Sales: {difm_count}")
         print(f"DIY Sales: {diy_count}")
         
