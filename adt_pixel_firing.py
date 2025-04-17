@@ -1,25 +1,56 @@
-import pandas as pd
-import requests
+# First try to import required packages with error handling
+import sys
+import os
 from datetime import datetime, timedelta
 import logging
 import uuid
-import os
+import re
 
-# Set up logging
+# Set up logging first
 logging.basicConfig(
     filename=f'adt_pixel_firing_{datetime.now().strftime("%Y%m%d")}.log',
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
+<<<<<<< HEAD
 def clean_data(df, file_path):
+=======
+# Try importing each required package with error handling
+try:
+    import pandas as pd
+    logging.info("Successfully imported pandas")
+except ImportError as e:
+    logging.error(f"Failed to import pandas: {str(e)}")
+    print(f"Error: Failed to import pandas. Please ensure it's installed: {str(e)}")
+    print("Try running: pip install pandas==2.2.0")
+    sys.exit(1)
+
+try:
+    import requests
+    logging.info("Successfully imported all other required packages")
+except ImportError as e:
+    logging.error(f"Failed to import required package: {str(e)}")
+    print(f"Error: Failed to import required package: {str(e)}")
+    sys.exit(1)
+
+# Print Python environment information for debugging
+print("\nPython Environment Information:")
+print(f"Python version: {sys.version}")
+print(f"Pandas version: {pd.__version__}")
+print(f"Working directory: {os.getcwd()}")
+print(f"sys.path: {sys.path}")
+
+def clean_data(df):
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
     """
     Clean and filter the data according to requirements:
     1. Filter out any "Health" rows in the Ln_of_Busn column
     2. Filter out any US: Health rows in the DNIS_BUSN_SEG_CD column
-    3. Filter for all records from yesterday in the Sale_Date column
+    3. Filter for yesterday's date based on the report filename date
     4. Filter for WEB0021011 in Lead_DNIS
     5. Filter for order types containing 'New' or 'Resale'
+<<<<<<< HEAD
     6. Limit to exactly 29 DIFM and 4 DIY records
     """
     try:
@@ -29,6 +60,21 @@ def clean_data(df, file_path):
         report_date = datetime.strptime(report_date_str, '%Y%m%d').date()
         yesterday = report_date - timedelta(days=1)
         logging.info(f"Report date: {report_date.strftime('%Y-%m-%d')}, Using yesterday: {yesterday.strftime('%Y-%m-%d')}")
+=======
+    """
+    try:
+        # Get the report filename from sys.argv[1]
+        report_filename = sys.argv[1]
+        
+        # Extract date from filename (assuming format: *_YYYYMMDD.csv)
+        date_match = re.search(r'(\d{8})', report_filename)
+        if not date_match:
+            raise ValueError("Could not extract date from filename. Expected format: *_YYYYMMDD.csv")
+        
+        report_date = datetime.strptime(date_match.group(1), '%Y%m%d').date()
+        yesterday = report_date - timedelta(days=1)
+        logging.info(f"Report date: {report_date}, Using yesterday's date: {yesterday}")
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
         
         # Convert Sale_Date to datetime if it's not already and remove any null values
         df['Sale_Date'] = pd.to_datetime(df['Sale_Date'], errors='coerce')
@@ -102,6 +148,7 @@ def clean_data(df, file_path):
         difm_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIFM', case=False, na=False)]
         diy_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIY', case=False, na=False)]
         
+<<<<<<< HEAD
         # Limit to exactly 29 DIFM and 4 DIY records
         difm_records = difm_records.head(29)
         diy_records = diy_records.head(4)
@@ -109,11 +156,20 @@ def clean_data(df, file_path):
         # Combine the limited records
         filtered_df = pd.concat([difm_records, diy_records])
         
+=======
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
         # Count DIFM and DIY records
         difm_count = len(difm_records)
         diy_count = len(diy_records)
         
+<<<<<<< HEAD
         print(f"\nFinal counts after limiting:")
+=======
+        # Combine all records
+        filtered_df = pd.concat([difm_records, diy_records])
+        
+        print(f"\nFinal counts:")
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
         print(f"DIFM Sales: {difm_count}")
         print(f"DIY Sales: {diy_count}")
         
@@ -254,9 +310,6 @@ def process_adt_report(file_path):
         raise
 
 if __name__ == "__main__":
-    import sys
-    import os
-    
     if len(sys.argv) != 2:
         print("\nError: Missing report file argument")
         print("\nHow to use this script:")
