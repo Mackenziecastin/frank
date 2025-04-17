@@ -610,7 +610,7 @@ def clean_data(df):
 def main():
     # Create the navigation
     st.sidebar.title("Navigation")
-    page = st.sidebar.radio("Go to", ["Frank (LaserAway)", "Bob (ADT)"])
+    page = st.sidebar.radio("Go to", ["Frank (LaserAway)", "Bob (ADT)", "ADT Pixel Firing"])
     
     if page == "Frank (LaserAway)":
         show_main_page()
@@ -618,6 +618,10 @@ def main():
         # Import and show Bob's analysis page
         from pages.bob_analysis import show_bob_analysis
         show_bob_analysis()
+    elif page == "ADT Pixel Firing":
+        # Import and show ADT pixel firing page
+        from pages.adt_pixel import show_adt_pixel
+        show_adt_pixel()
 
 if __name__ == "__main__":
     main() 
