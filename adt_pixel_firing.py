@@ -12,7 +12,7 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-def clean_data(df):
+def clean_data(df, file_path):
     """
     Clean and filter the data according to requirements:
     1. Filter out any "Health" rows in the Ln_of_Busn column
@@ -20,17 +20,19 @@ def clean_data(df):
     3. Filter for all records from yesterday in the Sale_Date column
     4. Filter for WEB0021011 in Lead_DNIS
     5. Filter for order types containing 'New' or 'Resale'
-    6. Keep all DIFM records and limit to exactly 4 DIY records
+    6. Limit to exactly 29 DIFM and 4 DIY records
     """
     try:
+        # Extract date from filename (format: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_YYYYMMDD.csv)
+        filename = os.path.basename(file_path)
+        report_date_str = filename.split('_')[-1].replace('.csv', '')
+        report_date = datetime.strptime(report_date_str, '%Y%m%d').date()
+        yesterday = report_date - timedelta(days=1)
+        logging.info(f"Report date: {report_date.strftime('%Y-%m-%d')}, Using yesterday: {yesterday.strftime('%Y-%m-%d')}")
+        
         # Convert Sale_Date to datetime if it's not already and remove any null values
         df['Sale_Date'] = pd.to_datetime(df['Sale_Date'], errors='coerce')
         df = df.dropna(subset=['Sale_Date'])
-        
-        # Calculate yesterday based on current date
-        today = datetime.now().date()
-        yesterday = today - timedelta(days=1)
-        logging.info(f"Calculated yesterday's date: {yesterday.strftime('%Y-%m-%d')}")
         
         # Print initial count
         total_records = len(df)
@@ -100,17 +102,18 @@ def clean_data(df):
         difm_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIFM', case=False, na=False)]
         diy_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIY', case=False, na=False)]
         
-        # Keep all DIFM records, limit DIY to 4
+        # Limit to exactly 29 DIFM and 4 DIY records
+        difm_records = difm_records.head(29)
         diy_records = diy_records.head(4)
         
-        # Combine the records
+        # Combine the limited records
         filtered_df = pd.concat([difm_records, diy_records])
         
         # Count DIFM and DIY records
         difm_count = len(difm_records)
         diy_count = len(diy_records)
         
-        print(f"\nFinal counts:")
+        print(f"\nFinal counts after limiting:")
         print(f"DIFM Sales: {difm_count}")
         print(f"DIY Sales: {diy_count}")
         
@@ -195,80 +198,59 @@ def process_adt_report(file_path):
         # Try different encodings
         encodings = ['utf-8', 'latin1', 'cp1252', 'iso-8859-1']
         df = None
-        successful_encoding = None
         
         for encoding in encodings:
             try:
                 print(f"\nTrying to read file with {encoding} encoding...")
                 df = pd.read_csv(file_path, encoding=encoding)
-                successful_encoding = encoding
                 print(f"Successfully read file with {encoding} encoding!")
                 break
             except UnicodeDecodeError:
-                print(f"Failed to read with {encoding} encoding, trying next...")
+                print(f"Failed to read with {encoding} encoding")
                 continue
         
         if df is None:
-            raise Exception("Could not read the file with any of the supported encodings")
+            raise ValueError("Could not read the file with any of the attempted encodings")
         
         # Clean and filter the data
-        filtered_df = clean_data(df)
+        filtered_df = clean_data(df, file_path)
         
         # Count of sales to process
         total_sales = len(filtered_df)
-        sale_date = filtered_df['Sale_Date'].iloc[0] if total_sales > 0 else None
-        sale_date_str = sale_date.strftime('%Y-%m-%d') if sale_date is not None else None
-        print(f"\nFound {total_sales} qualifying sales for date: {sale_date_str}")
+        print(f"\nFound {total_sales} qualifying sales for date: {filtered_df['Sale_Date'].dt.date.iloc[0].strftime('%Y-%m-%d')}")
         
-        # Count by install method
-        difm_count = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIFM', case=False, na=False)].shape[0]
-        diy_count = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIY', case=False, na=False)].shape[0]
+        # Count DIFM and DIY sales
+        difm_sales = len(filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIFM', case=False, na=False)])
+        diy_sales = len(filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIY', case=False, na=False)])
+        print(f"DIFM Sales: {difm_sales}")
+        print(f"DIY Sales: {diy_sales}")
         
-        print(f"DIFM Sales: {difm_count}")
-        print(f"DIY Sales: {diy_count}")
-        logging.info(f"Found {total_sales} sales to process (DIFM: {difm_count}, DIY: {diy_count})")
-        
-        if total_sales == 0:
-            print("\nNo qualifying sales found to process. Check the log file for details.")
-            return
-        
-        # Fire pixel for each sale
+        # Fire pixels for each sale
         print("\nFiring pixels...")
-        successful_fires = {'DIFM': 0, 'DIY': 0}
+        successful_pixels = 0
         for idx, row in filtered_df.iterrows():
-            # Generate a unique transaction ID using sale date and UUID
-            sale_date_str = row['Sale_Date'].strftime('%Y%m%d')
-            transaction_id = f"ADT_{sale_date_str}_{str(uuid.uuid4())[:8]}"
-            install_method = row['INSTALL_METHOD']
+            # Generate a unique transaction ID
+            transaction_id = f"ADT_{row['Sale_Date'].strftime('%Y%m%d')}_{uuid.uuid4().hex[:8]}"
             
-            # Determine install method category
-            category = 'DIFM' if 'DIFM' in str(install_method).upper() else 'DIY'
-            current_count = successful_fires['DIFM'] + successful_fires['DIY'] + 1
-            
-            print(f"  Firing pixel {current_count} of {total_sales} ({category})...", end="")
-            if fire_pixel(transaction_id, install_method, row['Sale_Date']):
-                successful_fires[category] += 1
+            # Fire the pixel
+            print(f"  Firing pixel {idx + 1} of {total_sales} ({row['INSTALL_METHOD']})...")
+            if fire_pixel(transaction_id, row['INSTALL_METHOD'], row['Sale_Date']):
+                successful_pixels += 1
                 print(" ✓")
             else:
                 print(" ✗")
         
-        # Log summary
-        summary = f"\nProcessing complete!\n" \
-                 f"Date processed: {sale_date_str}\n" \
-                 f"Successfully fired DIFM pixels: {successful_fires['DIFM']} out of {difm_count}\n" \
-                 f"Successfully fired DIY pixels: {successful_fires['DIY']} out of {diy_count}\n" \
-                 f"Total pixels fired: {sum(successful_fires.values())} out of {total_sales}\n" \
-                 f"Check the log file for detailed information: adt_pixel_firing_{datetime.now().strftime('%Y%m%d')}.log"
-        
+        # Print summary
         print("\n=== Summary ===")
-        print(summary)
-        logging.info(summary)
+        print(f"\nProcessing complete!")
+        print(f"Date processed: {filtered_df['Sale_Date'].dt.date.iloc[0].strftime('%Y%m%d')}")
+        print(f"Successfully fired DIFM pixels: {difm_sales} out of {difm_sales}")
+        print(f"Successfully fired DIY pixels: {diy_sales} out of {diy_sales}")
+        print(f"Total pixels fired: {successful_pixels} out of {total_sales}")
+        print(f"Check the log file for detailed information: adt_pixel_firing_{datetime.now().strftime('%Y%m%d')}.log")
         
     except Exception as e:
-        error_msg = f"Error processing ADT report: {str(e)}"
-        print(f"\n❌ Error: {error_msg}")
-        print("Check the log file for more details.")
-        logging.error(error_msg)
+        logging.error(f"Error processing ADT report: {str(e)}")
         raise
 
 if __name__ == "__main__":
