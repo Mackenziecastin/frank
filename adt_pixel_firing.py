@@ -13,9 +13,6 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-<<<<<<< HEAD
-def clean_data(df, file_path):
-=======
 # Try importing each required package with error handling
 try:
     import pandas as pd
@@ -41,8 +38,7 @@ print(f"Pandas version: {pd.__version__}")
 print(f"Working directory: {os.getcwd()}")
 print(f"sys.path: {sys.path}")
 
-def clean_data(df):
->>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
+def clean_data(df, file_path):
     """
     Clean and filter the data according to requirements:
     1. Filter out any "Health" rows in the Ln_of_Busn column
@@ -50,7 +46,6 @@ def clean_data(df):
     3. Filter for yesterday's date based on the report filename date
     4. Filter for WEB0021011 in Lead_DNIS
     5. Filter for order types containing 'New' or 'Resale'
-<<<<<<< HEAD
     6. Limit to exactly 29 DIFM and 4 DIY records
     """
     try:
@@ -60,21 +55,6 @@ def clean_data(df):
         report_date = datetime.strptime(report_date_str, '%Y%m%d').date()
         yesterday = report_date - timedelta(days=1)
         logging.info(f"Report date: {report_date.strftime('%Y-%m-%d')}, Using yesterday: {yesterday.strftime('%Y-%m-%d')}")
-=======
-    """
-    try:
-        # Get the report filename from sys.argv[1]
-        report_filename = sys.argv[1]
-        
-        # Extract date from filename (assuming format: *_YYYYMMDD.csv)
-        date_match = re.search(r'(\d{8})', report_filename)
-        if not date_match:
-            raise ValueError("Could not extract date from filename. Expected format: *_YYYYMMDD.csv")
-        
-        report_date = datetime.strptime(date_match.group(1), '%Y%m%d').date()
-        yesterday = report_date - timedelta(days=1)
-        logging.info(f"Report date: {report_date}, Using yesterday's date: {yesterday}")
->>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
         
         # Convert Sale_Date to datetime if it's not already and remove any null values
         df['Sale_Date'] = pd.to_datetime(df['Sale_Date'], errors='coerce')
@@ -148,7 +128,6 @@ def clean_data(df):
         difm_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIFM', case=False, na=False)]
         diy_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIY', case=False, na=False)]
         
-<<<<<<< HEAD
         # Limit to exactly 29 DIFM and 4 DIY records
         difm_records = difm_records.head(29)
         diy_records = diy_records.head(4)
@@ -156,20 +135,11 @@ def clean_data(df):
         # Combine the limited records
         filtered_df = pd.concat([difm_records, diy_records])
         
-=======
->>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
         # Count DIFM and DIY records
         difm_count = len(difm_records)
         diy_count = len(diy_records)
         
-<<<<<<< HEAD
         print(f"\nFinal counts after limiting:")
-=======
-        # Combine all records
-        filtered_df = pd.concat([difm_records, diy_records])
-        
-        print(f"\nFinal counts:")
->>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
         print(f"DIFM Sales: {difm_count}")
         print(f"DIY Sales: {diy_count}")
         

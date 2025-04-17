@@ -40,4 +40,9 @@ ENV/
 .Spotlight-V100
 .Trashes
 ehthumbs.db
-Thumbs.db 
+Thumbs.db
+
+# Log files
+adt_pixel_firing_*.log
+
+# Existing content... 

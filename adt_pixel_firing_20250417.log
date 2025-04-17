@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 2025-04-17 17:18:19,389 - INFO - Reading file: C:\Users\dtanudirjo\ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20250417.csv
 2025-04-17 17:18:20,754 - INFO - Found yesterday's date in data: 2025-04-15
 2025-04-17 17:18:20,827 - INFO - Data cleaned successfully. Found 29 qualifying sales for 2025-04-15.
@@ -882,6 +883,8 @@ Check the log file for detailed information: adt_pixel_firing_20250417.log
 	<msg>SUCCESS</msg>
 </result>...
 =======
+=======
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 2025-04-17 14:30:43,583 - INFO - Reading file: temp/ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20250417.csv
 2025-04-17 14:30:44,335 - INFO - Found yesterday's date in data: 2025-04-15
 2025-04-17 14:30:44,360 - INFO - Data cleaned successfully. Found 29 qualifying sales for 2025-04-15.
@@ -2245,4 +2248,404 @@ Successfully fired DIFM pixels: 29 out of 29
 Successfully fired DIY pixels: 4 out of 4
 Total pixels fired: 33 out of 33
 Check the log file for detailed information: adt_pixel_firing_20250417.log
+<<<<<<< HEAD
 >>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
+=======
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
+2025-04-17 17:34:42,125 - INFO - Successfully imported pandas
+2025-04-17 17:34:42,758 - INFO - Successfully imported all other required packages
+2025-04-17 17:34:42,772 - INFO - Reading file: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20250417.csv
+2025-04-17 17:34:44,342 - INFO - Report date: 2025-04-17, Using yesterday: 2025-04-16
+2025-04-17 17:34:44,531 - INFO - Data cleaned successfully. Found 33 qualifying sales for 2025-04-16.
+2025-04-17 17:34:45,673 - INFO - Pixel fired successfully:
+2025-04-17 17:34:45,673 - INFO -   Transaction ID: ADT_20250416_ee9f19a7
+2025-04-17 17:34:45,673 - INFO -   Install Method: DIFM
+2025-04-17 17:34:45,673 - INFO -   Campaign ID: 91149
+2025-04-17 17:34:45,673 - INFO -   Sale Date: 2025-04-16 14:19:46
+2025-04-17 17:34:45,673 - INFO -   ISO DateTime: 2025-04-16T12:00:00+00:00
+2025-04-17 17:34:45,673 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250416_ee9f19a7&pubid=42865&campid=91149&dt=2025-04-16T12%3A00%3A00%2B00%3A00
+2025-04-17 17:34:45,673 - INFO -   Response Status: 200
+2025-04-17 17:34:45,673 - INFO -   Response Headers: {'date': 'Thu, 17 Apr 2025 21:34:45 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+2025-04-17 17:34:45,673 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+</result>...
+2025-04-17 17:34:46,422 - INFO - Pixel fired successfully:
+2025-04-17 17:34:46,423 - INFO -   Transaction ID: ADT_20250416_294ae45f
+2025-04-17 17:34:46,423 - INFO -   Install Method: DIFM
+2025-04-17 17:34:46,423 - INFO -   Campaign ID: 91149
+2025-04-17 17:34:46,423 - INFO -   Sale Date: 2025-04-16 13:48:22
+2025-04-17 17:34:46,423 - INFO -   ISO DateTime: 2025-04-16T12:00:00+00:00
+2025-04-17 17:34:46,423 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250416_294ae45f&pubid=42865&campid=91149&dt=2025-04-16T12%3A00%3A00%2B00%3A00
+2025-04-17 17:34:46,423 - INFO -   Response Status: 200
+2025-04-17 17:34:46,423 - INFO -   Response Headers: {'date': 'Thu, 17 Apr 2025 21:34:46 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+2025-04-17 17:34:46,423 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+</result>...
+2025-04-17 17:34:47,360 - INFO - Pixel fired successfully:
+2025-04-17 17:34:47,360 - INFO -   Transaction ID: ADT_20250416_00cceabd
+2025-04-17 17:34:47,360 - INFO -   Install Method: DIFM
+2025-04-17 17:34:47,360 - INFO -   Campaign ID: 91149
+2025-04-17 17:34:47,360 - INFO -   Sale Date: 2025-04-16 18:30:20
+2025-04-17 17:34:47,360 - INFO -   ISO DateTime: 2025-04-16T12:00:00+00:00
+2025-04-17 17:34:47,360 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250416_00cceabd&pubid=42865&campid=91149&dt=2025-04-16T12%3A00%3A00%2B00%3A00
+2025-04-17 17:34:47,360 - INFO -   Response Status: 200
+2025-04-17 17:34:47,360 - INFO -   Response Headers: {'date': 'Thu, 17 Apr 2025 21:34:47 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+2025-04-17 17:34:47,360 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+</result>...
+2025-04-17 17:34:47,935 - INFO - Pixel fired successfully:
+2025-04-17 17:34:47,935 - INFO -   Transaction ID: ADT_20250416_64e8d64a
+2025-04-17 17:34:47,935 - INFO -   Install Method: DIFM
+2025-04-17 17:34:47,935 - INFO -   Campaign ID: 91149
+2025-04-17 17:34:47,935 - INFO -   Sale Date: 2025-04-16 12:18:38
+2025-04-17 17:34:47,935 - INFO -   ISO DateTime: 2025-04-16T12:00:00+00:00
+2025-04-17 17:34:47,935 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250416_64e8d64a&pubid=42865&campid=91149&dt=2025-04-16T12%3A00%3A00%2B00%3A00
+2025-04-17 17:34:47,935 - INFO -   Response Status: 200
+2025-04-17 17:34:47,935 - INFO -   Response Headers: {'date': 'Thu, 17 Apr 2025 21:34:47 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+2025-04-17 17:34:47,935 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+</result>...
+2025-04-17 17:34:48,675 - INFO - Pixel fired successfully:
+2025-04-17 17:34:48,675 - INFO -   Transaction ID: ADT_20250416_0f70d478
+2025-04-17 17:34:48,675 - INFO -   Install Method: DIFM
+2025-04-17 17:34:48,675 - INFO -   Campaign ID: 91149
+2025-04-17 17:34:48,680 - INFO -   Sale Date: 2025-04-16 20:34:57
+2025-04-17 17:34:48,680 - INFO -   ISO DateTime: 2025-04-16T12:00:00+00:00
+2025-04-17 17:34:48,680 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250416_0f70d478&pubid=42865&campid=91149&dt=2025-04-16T12%3A00%3A00%2B00%3A00
+2025-04-17 17:34:48,680 - INFO -   Response Status: 200
+2025-04-17 17:34:48,680 - INFO -   Response Headers: {'date': 'Thu, 17 Apr 2025 21:34:48 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+2025-04-17 17:34:48,680 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+</result>...
+2025-04-17 17:34:49,756 - INFO - Pixel fired successfully:
+2025-04-17 17:34:49,756 - INFO -   Transaction ID: ADT_20250416_1e1a9ca9
+2025-04-17 17:34:49,756 - INFO -   Install Method: DIFM
+2025-04-17 17:34:49,756 - INFO -   Campaign ID: 91149
+2025-04-17 17:34:49,760 - INFO -   Sale Date: 2025-04-16 15:29:05
+2025-04-17 17:34:49,760 - INFO -   ISO DateTime: 2025-04-16T12:00:00+00:00
+2025-04-17 17:34:49,760 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250416_1e1a9ca9&pubid=42865&campid=91149&dt=2025-04-16T12%3A00%3A00%2B00%3A00
+2025-04-17 17:34:49,760 - INFO -   Response Status: 200
+2025-04-17 17:34:49,760 - INFO -   Response Headers: {'date': 'Thu, 17 Apr 2025 21:34:49 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+2025-04-17 17:34:49,760 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+</result>...
+2025-04-17 17:34:50,446 - INFO - Pixel fired successfully:
+2025-04-17 17:34:50,446 - INFO -   Transaction ID: ADT_20250416_60dbb05b
+2025-04-17 17:34:50,446 - INFO -   Install Method: DIFM
+2025-04-17 17:34:50,446 - INFO -   Campaign ID: 91149
+2025-04-17 17:34:50,446 - INFO -   Sale Date: 2025-04-16 12:52:08
+2025-04-17 17:34:50,446 - INFO -   ISO DateTime: 2025-04-16T12:00:00+00:00
+2025-04-17 17:34:50,446 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250416_60dbb05b&pubid=42865&campid=91149&dt=2025-04-16T12%3A00%3A00%2B00%3A00
+2025-04-17 17:34:50,446 - INFO -   Response Status: 200
+2025-04-17 17:34:50,446 - INFO -   Response Headers: {'date': 'Thu, 17 Apr 2025 21:34:50 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+2025-04-17 17:34:50,446 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+</result>...
+2025-04-17 17:34:51,163 - INFO - Pixel fired successfully:
+2025-04-17 17:34:51,163 - INFO -   Transaction ID: ADT_20250416_9c635a75
+2025-04-17 17:34:51,163 - INFO -   Install Method: DIFM
+2025-04-17 17:34:51,163 - INFO -   Campaign ID: 91149
+2025-04-17 17:34:51,163 - INFO -   Sale Date: 2025-04-16 16:41:33
+2025-04-17 17:34:51,171 - INFO -   ISO DateTime: 2025-04-16T12:00:00+00:00
+2025-04-17 17:34:51,172 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250416_9c635a75&pubid=42865&campid=91149&dt=2025-04-16T12%3A00%3A00%2B00%3A00
+2025-04-17 17:34:51,172 - INFO -   Response Status: 200
+2025-04-17 17:34:51,172 - INFO -   Response Headers: {'date': 'Thu, 17 Apr 2025 21:34:51 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+2025-04-17 17:34:51,172 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+</result>...
+2025-04-17 17:34:51,860 - INFO - Pixel fired successfully:
+2025-04-17 17:34:51,860 - INFO -   Transaction ID: ADT_20250416_fe34f793
+2025-04-17 17:34:51,860 - INFO -   Install Method: DIFM
+2025-04-17 17:34:51,860 - INFO -   Campaign ID: 91149
+2025-04-17 17:34:51,860 - INFO -   Sale Date: 2025-04-16 16:35:11
+2025-04-17 17:34:51,860 - INFO -   ISO DateTime: 2025-04-16T12:00:00+00:00
+2025-04-17 17:34:51,860 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250416_fe34f793&pubid=42865&campid=91149&dt=2025-04-16T12%3A00%3A00%2B00%3A00
+2025-04-17 17:34:51,860 - INFO -   Response Status: 200
+2025-04-17 17:34:51,860 - INFO -   Response Headers: {'date': 'Thu, 17 Apr 2025 21:34:51 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+2025-04-17 17:34:51,860 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+</result>...
+2025-04-17 17:34:52,554 - INFO - Pixel fired successfully:
+2025-04-17 17:34:52,558 - INFO -   Transaction ID: ADT_20250416_a15db628
+2025-04-17 17:34:52,558 - INFO -   Install Method: DIFM
+2025-04-17 17:34:52,558 - INFO -   Campaign ID: 91149
+2025-04-17 17:34:52,558 - INFO -   Sale Date: 2025-04-16 11:50:45
+2025-04-17 17:34:52,558 - INFO -   ISO DateTime: 2025-04-16T12:00:00+00:00
+2025-04-17 17:34:52,558 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250416_a15db628&pubid=42865&campid=91149&dt=2025-04-16T12%3A00%3A00%2B00%3A00
+2025-04-17 17:34:52,558 - INFO -   Response Status: 200
+2025-04-17 17:34:52,558 - INFO -   Response Headers: {'date': 'Thu, 17 Apr 2025 21:34:52 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+2025-04-17 17:34:52,558 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+</result>...
+2025-04-17 17:34:53,773 - INFO - Pixel fired successfully:
+2025-04-17 17:34:53,774 - INFO -   Transaction ID: ADT_20250416_84700055
+2025-04-17 17:34:53,774 - INFO -   Install Method: DIFM
+2025-04-17 17:34:53,774 - INFO -   Campaign ID: 91149
+2025-04-17 17:34:53,774 - INFO -   Sale Date: 2025-04-16 13:46:35
+2025-04-17 17:34:53,774 - INFO -   ISO DateTime: 2025-04-16T12:00:00+00:00
+2025-04-17 17:34:53,774 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250416_84700055&pubid=42865&campid=91149&dt=2025-04-16T12%3A00%3A00%2B00%3A00
+2025-04-17 17:34:53,774 - INFO -   Response Status: 200
+2025-04-17 17:34:53,774 - INFO -   Response Headers: {'date': 'Thu, 17 Apr 2025 21:34:53 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+2025-04-17 17:34:53,774 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+</result>...
+2025-04-17 17:34:54,670 - INFO - Pixel fired successfully:
+2025-04-17 17:34:54,672 - INFO -   Transaction ID: ADT_20250416_0e742104
+2025-04-17 17:34:54,672 - INFO -   Install Method: DIFM
+2025-04-17 17:34:54,672 - INFO -   Campaign ID: 91149
+2025-04-17 17:34:54,672 - INFO -   Sale Date: 2025-04-16 13:19:25
+2025-04-17 17:34:54,672 - INFO -   ISO DateTime: 2025-04-16T12:00:00+00:00
+2025-04-17 17:34:54,672 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250416_0e742104&pubid=42865&campid=91149&dt=2025-04-16T12%3A00%3A00%2B00%3A00
+2025-04-17 17:34:54,672 - INFO -   Response Status: 200
+2025-04-17 17:34:54,672 - INFO -   Response Headers: {'date': 'Thu, 17 Apr 2025 21:34:54 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+2025-04-17 17:34:54,672 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+</result>...
+2025-04-17 17:34:55,342 - INFO - Pixel fired successfully:
+2025-04-17 17:34:55,342 - INFO -   Transaction ID: ADT_20250416_24229377
+2025-04-17 17:34:55,342 - INFO -   Install Method: DIFM
+2025-04-17 17:34:55,342 - INFO -   Campaign ID: 91149
+2025-04-17 17:34:55,342 - INFO -   Sale Date: 2025-04-16 13:40:26
+2025-04-17 17:34:55,342 - INFO -   ISO DateTime: 2025-04-16T12:00:00+00:00
+2025-04-17 17:34:55,342 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250416_24229377&pubid=42865&campid=91149&dt=2025-04-16T12%3A00%3A00%2B00%3A00
+2025-04-17 17:34:55,342 - INFO -   Response Status: 200
+2025-04-17 17:34:55,342 - INFO -   Response Headers: {'date': 'Thu, 17 Apr 2025 21:34:55 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+2025-04-17 17:34:55,342 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+</result>...
+2025-04-17 17:34:56,230 - INFO - Pixel fired successfully:
+2025-04-17 17:34:56,237 - INFO -   Transaction ID: ADT_20250416_f5de4520
+2025-04-17 17:34:56,237 - INFO -   Install Method: DIFM
+2025-04-17 17:34:56,237 - INFO -   Campaign ID: 91149
+2025-04-17 17:34:56,237 - INFO -   Sale Date: 2025-04-16 14:39:48
+2025-04-17 17:34:56,237 - INFO -   ISO DateTime: 2025-04-16T12:00:00+00:00
+2025-04-17 17:34:56,237 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250416_f5de4520&pubid=42865&campid=91149&dt=2025-04-16T12%3A00%3A00%2B00%3A00
+2025-04-17 17:34:56,237 - INFO -   Response Status: 200
+2025-04-17 17:34:56,238 - INFO -   Response Headers: {'date': 'Thu, 17 Apr 2025 21:34:56 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+2025-04-17 17:34:56,238 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+</result>...
+2025-04-17 17:34:57,057 - INFO - Pixel fired successfully:
+2025-04-17 17:34:57,057 - INFO -   Transaction ID: ADT_20250416_196456d1
+2025-04-17 17:34:57,057 - INFO -   Install Method: DIFM
+2025-04-17 17:34:57,057 - INFO -   Campaign ID: 91149
+2025-04-17 17:34:57,057 - INFO -   Sale Date: 2025-04-16 13:36:35
+2025-04-17 17:34:57,057 - INFO -   ISO DateTime: 2025-04-16T12:00:00+00:00
+2025-04-17 17:34:57,057 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250416_196456d1&pubid=42865&campid=91149&dt=2025-04-16T12%3A00%3A00%2B00%3A00
+2025-04-17 17:34:57,057 - INFO -   Response Status: 200
+2025-04-17 17:34:57,057 - INFO -   Response Headers: {'date': 'Thu, 17 Apr 2025 21:34:56 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+2025-04-17 17:34:57,057 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+</result>...
+2025-04-17 17:34:57,821 - INFO - Pixel fired successfully:
+2025-04-17 17:34:57,821 - INFO -   Transaction ID: ADT_20250416_e04a0f83
+2025-04-17 17:34:57,821 - INFO -   Install Method: DIFM
+2025-04-17 17:34:57,821 - INFO -   Campaign ID: 91149
+2025-04-17 17:34:57,821 - INFO -   Sale Date: 2025-04-16 19:20:20
+2025-04-17 17:34:57,821 - INFO -   ISO DateTime: 2025-04-16T12:00:00+00:00
+2025-04-17 17:34:57,821 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250416_e04a0f83&pubid=42865&campid=91149&dt=2025-04-16T12%3A00%3A00%2B00%3A00
+2025-04-17 17:34:57,821 - INFO -   Response Status: 200
+2025-04-17 17:34:57,821 - INFO -   Response Headers: {'date': 'Thu, 17 Apr 2025 21:34:57 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+2025-04-17 17:34:57,821 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+</result>...
+2025-04-17 17:34:58,605 - INFO - Pixel fired successfully:
+2025-04-17 17:34:58,605 - INFO -   Transaction ID: ADT_20250416_2b4ec669
+2025-04-17 17:34:58,605 - INFO -   Install Method: DIFM
+2025-04-17 17:34:58,605 - INFO -   Campaign ID: 91149
+2025-04-17 17:34:58,605 - INFO -   Sale Date: 2025-04-16 17:36:09
+2025-04-17 17:34:58,605 - INFO -   ISO DateTime: 2025-04-16T12:00:00+00:00
+2025-04-17 17:34:58,605 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250416_2b4ec669&pubid=42865&campid=91149&dt=2025-04-16T12%3A00%3A00%2B00%3A00
+2025-04-17 17:34:58,605 - INFO -   Response Status: 200
+2025-04-17 17:34:58,605 - INFO -   Response Headers: {'date': 'Thu, 17 Apr 2025 21:34:58 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+2025-04-17 17:34:58,605 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+</result>...
+2025-04-17 17:34:59,294 - INFO - Pixel fired successfully:
+2025-04-17 17:34:59,297 - INFO -   Transaction ID: ADT_20250416_183b755d
+2025-04-17 17:34:59,297 - INFO -   Install Method: DIFM
+2025-04-17 17:34:59,297 - INFO -   Campaign ID: 91149
+2025-04-17 17:34:59,297 - INFO -   Sale Date: 2025-04-16 15:08:02
+2025-04-17 17:34:59,297 - INFO -   ISO DateTime: 2025-04-16T12:00:00+00:00
+2025-04-17 17:34:59,297 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250416_183b755d&pubid=42865&campid=91149&dt=2025-04-16T12%3A00%3A00%2B00%3A00
+2025-04-17 17:34:59,297 - INFO -   Response Status: 200
+2025-04-17 17:34:59,297 - INFO -   Response Headers: {'date': 'Thu, 17 Apr 2025 21:34:59 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+2025-04-17 17:34:59,297 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+</result>...
+2025-04-17 17:34:59,893 - INFO - Pixel fired successfully:
+2025-04-17 17:34:59,893 - INFO -   Transaction ID: ADT_20250416_e077446d
+2025-04-17 17:34:59,893 - INFO -   Install Method: DIFM
+2025-04-17 17:34:59,893 - INFO -   Campaign ID: 91149
+2025-04-17 17:34:59,893 - INFO -   Sale Date: 2025-04-16 19:19:25
+2025-04-17 17:34:59,893 - INFO -   ISO DateTime: 2025-04-16T12:00:00+00:00
+2025-04-17 17:34:59,893 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250416_e077446d&pubid=42865&campid=91149&dt=2025-04-16T12%3A00%3A00%2B00%3A00
+2025-04-17 17:34:59,893 - INFO -   Response Status: 200
+2025-04-17 17:34:59,893 - INFO -   Response Headers: {'date': 'Thu, 17 Apr 2025 21:34:59 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+2025-04-17 17:34:59,893 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+</result>...
+2025-04-17 17:35:01,238 - INFO - Pixel fired successfully:
+2025-04-17 17:35:01,238 - INFO -   Transaction ID: ADT_20250416_4327b230
+2025-04-17 17:35:01,238 - INFO -   Install Method: DIFM
+2025-04-17 17:35:01,238 - INFO -   Campaign ID: 91149
+2025-04-17 17:35:01,238 - INFO -   Sale Date: 2025-04-16 17:08:22
+2025-04-17 17:35:01,238 - INFO -   ISO DateTime: 2025-04-16T12:00:00+00:00
+2025-04-17 17:35:01,238 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250416_4327b230&pubid=42865&campid=91149&dt=2025-04-16T12%3A00%3A00%2B00%3A00
+2025-04-17 17:35:01,238 - INFO -   Response Status: 200
+2025-04-17 17:35:01,238 - INFO -   Response Headers: {'date': 'Thu, 17 Apr 2025 21:35:01 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+2025-04-17 17:35:01,238 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+</result>...
+2025-04-17 17:35:04,094 - INFO - Pixel fired successfully:
+2025-04-17 17:35:04,094 - INFO -   Transaction ID: ADT_20250416_64509102
+2025-04-17 17:35:04,094 - INFO -   Install Method: DIFM
+2025-04-17 17:35:04,104 - INFO -   Campaign ID: 91149
+2025-04-17 17:35:04,105 - INFO -   Sale Date: 2025-04-16 12:14:56
+2025-04-17 17:35:04,105 - INFO -   ISO DateTime: 2025-04-16T12:00:00+00:00
+2025-04-17 17:35:04,105 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250416_64509102&pubid=42865&campid=91149&dt=2025-04-16T12%3A00%3A00%2B00%3A00
+2025-04-17 17:35:04,106 - INFO -   Response Status: 200
+2025-04-17 17:35:04,106 - INFO -   Response Headers: {'date': 'Thu, 17 Apr 2025 21:35:04 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+2025-04-17 17:35:04,106 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+</result>...
+2025-04-17 17:35:05,761 - INFO - Pixel fired successfully:
+2025-04-17 17:35:05,761 - INFO -   Transaction ID: ADT_20250416_503fd522
+2025-04-17 17:35:05,761 - INFO -   Install Method: DIFM
+2025-04-17 17:35:05,761 - INFO -   Campaign ID: 91149
+2025-04-17 17:35:05,761 - INFO -   Sale Date: 2025-04-16 10:49:52
+2025-04-17 17:35:05,761 - INFO -   ISO DateTime: 2025-04-16T12:00:00+00:00
+2025-04-17 17:35:05,761 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250416_503fd522&pubid=42865&campid=91149&dt=2025-04-16T12%3A00%3A00%2B00%3A00
+2025-04-17 17:35:05,761 - INFO -   Response Status: 200
+2025-04-17 17:35:05,761 - INFO -   Response Headers: {'date': 'Thu, 17 Apr 2025 21:35:05 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+2025-04-17 17:35:05,761 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+</result>...
+2025-04-17 17:35:07,812 - INFO - Pixel fired successfully:
+2025-04-17 17:35:07,812 - INFO -   Transaction ID: ADT_20250416_6f459bc4
+2025-04-17 17:35:07,812 - INFO -   Install Method: DIFM
+2025-04-17 17:35:07,812 - INFO -   Campaign ID: 91149
+2025-04-17 17:35:07,812 - INFO -   Sale Date: 2025-04-16 20:01:30
+2025-04-17 17:35:07,812 - INFO -   ISO DateTime: 2025-04-16T12:00:00+00:00
+2025-04-17 17:35:07,812 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250416_6f459bc4&pubid=42865&campid=91149&dt=2025-04-16T12%3A00%3A00%2B00%3A00
+2025-04-17 17:35:07,812 - INFO -   Response Status: 200
+2025-04-17 17:35:07,812 - INFO -   Response Headers: {'date': 'Thu, 17 Apr 2025 21:35:07 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+2025-04-17 17:35:07,812 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+</result>...
+2025-04-17 17:35:09,139 - INFO - Pixel fired successfully:
+2025-04-17 17:35:09,139 - INFO -   Transaction ID: ADT_20250416_9173ee2b
+2025-04-17 17:35:09,139 - INFO -   Install Method: DIFM
+2025-04-17 17:35:09,139 - INFO -   Campaign ID: 91149
+2025-04-17 17:35:09,139 - INFO -   Sale Date: 2025-04-16 19:58:44
+2025-04-17 17:35:09,139 - INFO -   ISO DateTime: 2025-04-16T12:00:00+00:00
+2025-04-17 17:35:09,139 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250416_9173ee2b&pubid=42865&campid=91149&dt=2025-04-16T12%3A00%3A00%2B00%3A00
+2025-04-17 17:35:09,139 - INFO -   Response Status: 200
+2025-04-17 17:35:09,139 - INFO -   Response Headers: {'date': 'Thu, 17 Apr 2025 21:35:09 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+2025-04-17 17:35:09,139 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+</result>...
+2025-04-17 17:35:10,262 - INFO - Pixel fired successfully:
+2025-04-17 17:35:10,262 - INFO -   Transaction ID: ADT_20250416_219c86d7
+2025-04-17 17:35:10,262 - INFO -   Install Method: DIFM
+2025-04-17 17:35:10,262 - INFO -   Campaign ID: 91149
+2025-04-17 17:35:10,262 - INFO -   Sale Date: 2025-04-16 12:18:02
+2025-04-17 17:35:10,262 - INFO -   ISO DateTime: 2025-04-16T12:00:00+00:00
+2025-04-17 17:35:10,262 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250416_219c86d7&pubid=42865&campid=91149&dt=2025-04-16T12%3A00%3A00%2B00%3A00
+2025-04-17 17:35:10,262 - INFO -   Response Status: 200
+2025-04-17 17:35:10,262 - INFO -   Response Headers: {'date': 'Thu, 17 Apr 2025 21:35:10 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+2025-04-17 17:35:10,262 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+</result>...
+2025-04-17 17:35:11,079 - INFO - Pixel fired successfully:
+2025-04-17 17:35:11,079 - INFO -   Transaction ID: ADT_20250416_d11a5991
+2025-04-17 17:35:11,079 - INFO -   Install Method: DIFM
+2025-04-17 17:35:11,088 - INFO -   Campaign ID: 91149
+2025-04-17 17:35:11,088 - INFO -   Sale Date: 2025-04-16 11:22:13
+2025-04-17 17:35:11,089 - INFO -   ISO DateTime: 2025-04-16T12:00:00+00:00
+2025-04-17 17:35:11,089 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250416_d11a5991&pubid=42865&campid=91149&dt=2025-04-16T12%3A00%3A00%2B00%3A00
+2025-04-17 17:35:11,089 - INFO -   Response Status: 200
+2025-04-17 17:35:11,089 - INFO -   Response Headers: {'date': 'Thu, 17 Apr 2025 21:35:11 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+2025-04-17 17:35:11,089 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+</result>...
+2025-04-17 17:35:12,210 - INFO - Pixel fired successfully:
+2025-04-17 17:35:12,210 - INFO -   Transaction ID: ADT_20250416_fefa03e5
+2025-04-17 17:35:12,210 - INFO -   Install Method: DIFM
+2025-04-17 17:35:12,210 - INFO -   Campaign ID: 91149
+2025-04-17 17:35:12,210 - INFO -   Sale Date: 2025-04-16 11:17:03
+2025-04-17 17:35:12,210 - INFO -   ISO DateTime: 2025-04-16T12:00:00+00:00
+2025-04-17 17:35:12,210 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250416_fefa03e5&pubid=42865&campid=91149&dt=2025-04-16T12%3A00%3A00%2B00%3A00
+2025-04-17 17:35:12,210 - INFO -   Response Status: 200
+2025-04-17 17:35:12,210 - INFO -   Response Headers: {'date': 'Thu, 17 Apr 2025 21:35:12 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+2025-04-17 17:35:12,214 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+</result>...
+2025-04-17 17:35:13,238 - INFO - Pixel fired successfully:
+2025-04-17 17:35:13,238 - INFO -   Transaction ID: ADT_20250416_4033c54c
+2025-04-17 17:35:13,238 - INFO -   Install Method: DIFM
+2025-04-17 17:35:13,238 - INFO -   Campaign ID: 91149
+2025-04-17 17:35:13,240 - INFO -   Sale Date: 2025-04-16 15:07:27
+2025-04-17 17:35:13,240 - INFO -   ISO DateTime: 2025-04-16T12:00:00+00:00
+2025-04-17 17:35:13,241 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250416_4033c54c&pubid=42865&campid=91149&dt=2025-04-16T12%3A00%3A00%2B00%3A00
+2025-04-17 17:35:13,241 - INFO -   Response Status: 200
+2025-04-17 17:35:13,241 - INFO -   Response Headers: {'date': 'Thu, 17 Apr 2025 21:35:13 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+2025-04-17 17:35:13,241 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+</result>...

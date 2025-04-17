@@ -11,10 +11,17 @@
 2025-04-14 11:19:14,355 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_61df9e8c&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:19:14,355 - INFO -   Response Status: 200
 2025-04-14 11:19:14,355 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:19:14 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:19:14,355 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:19:14,355 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:19:15,196 - INFO - Pixel fired successfully:
 2025-04-14 11:19:15,196 - INFO -   Transaction ID: ADT_20250411_a0ab5bcd
@@ -25,10 +32,17 @@
 2025-04-14 11:19:15,196 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_a0ab5bcd&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:19:15,196 - INFO -   Response Status: 200
 2025-04-14 11:19:15,196 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:19:15 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:19:15,196 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:19:15,196 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:19:16,094 - INFO - Pixel fired successfully:
 2025-04-14 11:19:16,095 - INFO -   Transaction ID: ADT_20250411_ec53d368
@@ -39,10 +53,17 @@
 2025-04-14 11:19:16,096 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_ec53d368&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:19:16,096 - INFO -   Response Status: 200
 2025-04-14 11:19:16,096 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:19:15 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:19:16,096 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:19:16,096 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:19:16,893 - INFO - Pixel fired successfully:
 2025-04-14 11:19:16,894 - INFO -   Transaction ID: ADT_20250411_d4268302
@@ -53,10 +74,17 @@
 2025-04-14 11:19:16,894 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_d4268302&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:19:16,894 - INFO -   Response Status: 200
 2025-04-14 11:19:16,894 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:19:16 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:19:16,894 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:19:16,894 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:19:17,733 - INFO - Pixel fired successfully:
 2025-04-14 11:19:17,733 - INFO -   Transaction ID: ADT_20250411_57ac6229
@@ -67,10 +95,17 @@
 2025-04-14 11:19:17,733 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_57ac6229&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:19:17,733 - INFO -   Response Status: 200
 2025-04-14 11:19:17,733 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:19:17 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:19:17,733 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:19:17,733 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:19:18,553 - INFO - Pixel fired successfully:
 2025-04-14 11:19:18,553 - INFO -   Transaction ID: ADT_20250411_9c2ebf07
@@ -81,10 +116,17 @@
 2025-04-14 11:19:18,553 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_9c2ebf07&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:19:18,553 - INFO -   Response Status: 200
 2025-04-14 11:19:18,553 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:19:18 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:19:18,553 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:19:18,553 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:19:19,781 - INFO - Pixel fired successfully:
 2025-04-14 11:19:19,782 - INFO -   Transaction ID: ADT_20250411_34a9fa39
@@ -95,10 +137,17 @@
 2025-04-14 11:19:19,782 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_34a9fa39&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:19:19,782 - INFO -   Response Status: 200
 2025-04-14 11:19:19,782 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:19:19 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:19:19,782 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:19:19,782 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:19:20,551 - INFO - Pixel fired successfully:
 2025-04-14 11:19:20,551 - INFO -   Transaction ID: ADT_20250411_bda87794
@@ -109,10 +158,17 @@
 2025-04-14 11:19:20,552 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_bda87794&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:19:20,552 - INFO -   Response Status: 200
 2025-04-14 11:19:20,552 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:19:20 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:19:20,552 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:19:20,552 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:19:21,421 - INFO - Pixel fired successfully:
 2025-04-14 11:19:21,421 - INFO -   Transaction ID: ADT_20250411_4e4592d0
@@ -123,10 +179,17 @@
 2025-04-14 11:19:21,422 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_4e4592d0&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:19:21,422 - INFO -   Response Status: 200
 2025-04-14 11:19:21,422 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:19:21 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:19:21,422 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:19:21,422 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:19:22,955 - INFO - Pixel fired successfully:
 2025-04-14 11:19:22,955 - INFO -   Transaction ID: ADT_20250411_2d62af4b
@@ -137,10 +200,17 @@
 2025-04-14 11:19:22,955 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_2d62af4b&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:19:22,955 - INFO -   Response Status: 200
 2025-04-14 11:19:22,955 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:19:22 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:19:22,955 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:19:22,955 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:19:23,746 - INFO - Pixel fired successfully:
 2025-04-14 11:19:23,746 - INFO -   Transaction ID: ADT_20250411_357bb083
@@ -151,10 +221,17 @@
 2025-04-14 11:19:23,746 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_357bb083&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:19:23,746 - INFO -   Response Status: 200
 2025-04-14 11:19:23,746 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:19:23 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:19:23,746 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:19:23,746 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:19:24,593 - INFO - Pixel fired successfully:
 2025-04-14 11:19:24,594 - INFO -   Transaction ID: ADT_20250411_0a45c405
@@ -165,10 +242,17 @@
 2025-04-14 11:19:24,594 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_0a45c405&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:19:24,594 - INFO -   Response Status: 200
 2025-04-14 11:19:24,594 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:19:24 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:19:24,594 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:19:24,594 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:19:25,414 - INFO - Pixel fired successfully:
 2025-04-14 11:19:25,415 - INFO -   Transaction ID: ADT_20250411_95f0dd40
@@ -179,10 +263,17 @@
 2025-04-14 11:19:25,415 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_95f0dd40&pubid=42865&campid=91162&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:19:25,415 - INFO -   Response Status: 200
 2025-04-14 11:19:25,415 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:19:25 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:19:25,415 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:19:25,415 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:19:26,439 - INFO - Pixel fired successfully:
 2025-04-14 11:19:26,439 - INFO -   Transaction ID: ADT_20250411_9b743da8
@@ -193,10 +284,17 @@
 2025-04-14 11:19:26,440 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_9b743da8&pubid=42865&campid=91162&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:19:26,440 - INFO -   Response Status: 200
 2025-04-14 11:19:26,440 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:19:26 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:19:26,440 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:19:26,440 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:19:27,549 - INFO - Pixel fired successfully:
 2025-04-14 11:19:27,550 - INFO -   Transaction ID: ADT_20250411_8d464504
@@ -207,10 +305,17 @@
 2025-04-14 11:19:27,550 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_8d464504&pubid=42865&campid=91162&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:19:27,550 - INFO -   Response Status: 200
 2025-04-14 11:19:27,550 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:19:27 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:19:27,550 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:19:27,550 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:19:28,383 - INFO - Pixel fired successfully:
 2025-04-14 11:19:28,384 - INFO -   Transaction ID: ADT_20250411_7340b626
@@ -221,10 +326,17 @@
 2025-04-14 11:19:28,384 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_7340b626&pubid=42865&campid=91162&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:19:28,384 - INFO -   Response Status: 200
 2025-04-14 11:19:28,384 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:19:28 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:19:28,384 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:19:28,384 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:19:28,385 - INFO - 
 Processing complete!
@@ -246,10 +358,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:23:00,050 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_cead2a2a&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:23:00,050 - INFO -   Response Status: 200
 2025-04-14 11:23:00,050 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:22:59 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:23:00,050 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:23:00,050 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:23:00,738 - INFO - Pixel fired successfully:
 2025-04-14 11:23:00,739 - INFO -   Transaction ID: ADT_20250411_bcc16153
@@ -260,10 +379,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:23:00,739 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_bcc16153&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:23:00,739 - INFO -   Response Status: 200
 2025-04-14 11:23:00,739 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:23:00 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:23:00,739 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:23:00,739 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:23:01,487 - INFO - Pixel fired successfully:
 2025-04-14 11:23:01,487 - INFO -   Transaction ID: ADT_20250411_218c21ba
@@ -274,10 +400,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:23:01,487 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_218c21ba&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:23:01,487 - INFO -   Response Status: 200
 2025-04-14 11:23:01,488 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:23:01 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:23:01,488 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:23:01,488 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:23:02,402 - INFO - Pixel fired successfully:
 2025-04-14 11:23:02,402 - INFO -   Transaction ID: ADT_20250411_1cc1583b
@@ -288,10 +421,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:23:02,403 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_1cc1583b&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:23:02,403 - INFO -   Response Status: 200
 2025-04-14 11:23:02,403 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:23:02 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:23:02,403 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:23:02,403 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:23:03,453 - INFO - Pixel fired successfully:
 2025-04-14 11:23:03,453 - INFO -   Transaction ID: ADT_20250411_356093de
@@ -302,10 +442,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:23:03,454 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_356093de&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:23:03,454 - INFO -   Response Status: 200
 2025-04-14 11:23:03,454 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:23:03 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:23:03,454 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:23:03,454 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:23:04,297 - INFO - Pixel fired successfully:
 2025-04-14 11:23:04,297 - INFO -   Transaction ID: ADT_20250411_153358a4
@@ -316,10 +463,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:23:04,298 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_153358a4&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:23:04,298 - INFO -   Response Status: 200
 2025-04-14 11:23:04,298 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:23:04 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:23:04,298 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:23:04,298 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:23:05,373 - INFO - Pixel fired successfully:
 2025-04-14 11:23:05,373 - INFO -   Transaction ID: ADT_20250411_d53e3520
@@ -330,10 +484,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:23:05,373 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_d53e3520&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:23:05,374 - INFO -   Response Status: 200
 2025-04-14 11:23:05,374 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:23:05 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:23:05,374 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:23:05,374 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:23:06,226 - INFO - Pixel fired successfully:
 2025-04-14 11:23:06,227 - INFO -   Transaction ID: ADT_20250411_6f41d00d
@@ -344,10 +505,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:23:06,228 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_6f41d00d&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:23:06,228 - INFO -   Response Status: 200
 2025-04-14 11:23:06,228 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:23:06 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:23:06,228 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:23:06,228 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:23:07,064 - INFO - Pixel fired successfully:
 2025-04-14 11:23:07,065 - INFO -   Transaction ID: ADT_20250411_c6cf4a23
@@ -358,10 +526,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:23:07,065 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_c6cf4a23&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:23:07,065 - INFO -   Response Status: 200
 2025-04-14 11:23:07,066 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:23:07 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:23:07,066 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:23:07,066 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:23:07,931 - INFO - Pixel fired successfully:
 2025-04-14 11:23:07,931 - INFO -   Transaction ID: ADT_20250411_01d31c21
@@ -372,10 +547,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:23:07,932 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_01d31c21&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:23:07,932 - INFO -   Response Status: 200
 2025-04-14 11:23:07,932 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:23:07 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:23:07,932 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:23:07,932 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:23:08,695 - INFO - Pixel fired successfully:
 2025-04-14 11:23:08,695 - INFO -   Transaction ID: ADT_20250411_a7b523f5
@@ -386,10 +568,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:23:08,695 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_a7b523f5&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:23:08,695 - INFO -   Response Status: 200
 2025-04-14 11:23:08,695 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:23:08 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:23:08,696 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:23:08,696 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:23:09,658 - INFO - Pixel fired successfully:
 2025-04-14 11:23:09,659 - INFO -   Transaction ID: ADT_20250411_2ba434a5
@@ -400,10 +589,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:23:09,659 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_2ba434a5&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:23:09,659 - INFO -   Response Status: 200
 2025-04-14 11:23:09,659 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:23:09 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:23:09,659 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:23:09,659 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:23:10,628 - INFO - Pixel fired successfully:
 2025-04-14 11:23:10,629 - INFO -   Transaction ID: ADT_20250411_83d675a9
@@ -414,10 +610,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:23:10,629 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_83d675a9&pubid=42865&campid=91162&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:23:10,629 - INFO -   Response Status: 200
 2025-04-14 11:23:10,629 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:23:10 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:23:10,630 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:23:10,630 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:23:11,744 - INFO - Pixel fired successfully:
 2025-04-14 11:23:11,745 - INFO -   Transaction ID: ADT_20250411_33b77153
@@ -428,10 +631,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:23:11,745 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_33b77153&pubid=42865&campid=91162&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:23:11,745 - INFO -   Response Status: 200
 2025-04-14 11:23:11,745 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:23:11 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:23:11,745 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:23:11,745 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:23:12,592 - INFO - Pixel fired successfully:
 2025-04-14 11:23:12,592 - INFO -   Transaction ID: ADT_20250411_7a8c7bee
@@ -442,10 +652,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:23:12,592 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_7a8c7bee&pubid=42865&campid=91162&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:23:12,592 - INFO -   Response Status: 200
 2025-04-14 11:23:12,593 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:23:12 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:23:12,593 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:23:12,593 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:23:13,666 - INFO - Pixel fired successfully:
 2025-04-14 11:23:13,666 - INFO -   Transaction ID: ADT_20250411_c17ed9d1
@@ -456,10 +673,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:23:13,667 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_c17ed9d1&pubid=42865&campid=91162&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:23:13,667 - INFO -   Response Status: 200
 2025-04-14 11:23:13,667 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:23:13 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:23:13,667 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:23:13,667 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:23:14,491 - INFO - Pixel fired successfully:
 2025-04-14 11:23:14,491 - INFO -   Transaction ID: ADT_20250411_6eb4ab63
@@ -470,10 +694,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:23:14,492 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_6eb4ab63&pubid=42865&campid=91162&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:23:14,492 - INFO -   Response Status: 200
 2025-04-14 11:23:14,492 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:23:14 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:23:14,492 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:23:14,492 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:23:15,510 - INFO - Pixel fired successfully:
 2025-04-14 11:23:15,510 - INFO -   Transaction ID: ADT_20250411_1cbf7ffc
@@ -484,10 +715,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:23:15,511 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_1cbf7ffc&pubid=42865&campid=91162&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:23:15,511 - INFO -   Response Status: 200
 2025-04-14 11:23:15,511 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:23:15 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:23:15,511 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:23:15,511 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:23:15,512 - INFO - 
 Processing complete!
@@ -509,10 +747,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:24:38,944 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_0a9b930f&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:24:38,944 - INFO -   Response Status: 200
 2025-04-14 11:24:38,944 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:24:38 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:24:38,944 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:24:38,944 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:24:39,853 - INFO - Pixel fired successfully:
 2025-04-14 11:24:39,853 - INFO -   Transaction ID: ADT_20250411_68064179
@@ -523,10 +768,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:24:39,853 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_68064179&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:24:39,853 - INFO -   Response Status: 200
 2025-04-14 11:24:39,853 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:24:39 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:24:39,853 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:24:39,853 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:24:40,572 - INFO - Pixel fired successfully:
 2025-04-14 11:24:40,572 - INFO -   Transaction ID: ADT_20250411_c808bfac
@@ -537,10 +789,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:24:40,572 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_c808bfac&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:24:40,572 - INFO -   Response Status: 200
 2025-04-14 11:24:40,573 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:24:40 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:24:40,573 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:24:40,573 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:24:41,313 - INFO - Pixel fired successfully:
 2025-04-14 11:24:41,313 - INFO -   Transaction ID: ADT_20250411_d13ccc07
@@ -551,10 +810,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:24:41,314 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_d13ccc07&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:24:41,314 - INFO -   Response Status: 200
 2025-04-14 11:24:41,314 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:24:41 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:24:41,314 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:24:41,314 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:24:42,378 - INFO - Pixel fired successfully:
 2025-04-14 11:24:42,378 - INFO -   Transaction ID: ADT_20250411_441f068f
@@ -565,10 +831,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:24:42,379 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_441f068f&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:24:42,379 - INFO -   Response Status: 200
 2025-04-14 11:24:42,379 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:24:42 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:24:42,379 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:24:42,379 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:24:43,348 - INFO - Pixel fired successfully:
 2025-04-14 11:24:43,348 - INFO -   Transaction ID: ADT_20250411_b6aecaa6
@@ -579,10 +852,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:24:43,348 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_b6aecaa6&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:24:43,348 - INFO -   Response Status: 200
 2025-04-14 11:24:43,348 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:24:43 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:24:43,348 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:24:43,348 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:24:43,931 - INFO - Pixel fired successfully:
 2025-04-14 11:24:43,931 - INFO -   Transaction ID: ADT_20250411_c68d032c
@@ -593,10 +873,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:24:43,931 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_c68d032c&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:24:43,931 - INFO -   Response Status: 200
 2025-04-14 11:24:43,931 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:24:43 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:24:43,931 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:24:43,931 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:24:45,008 - INFO - Pixel fired successfully:
 2025-04-14 11:24:45,008 - INFO -   Transaction ID: ADT_20250411_723686b1
@@ -607,10 +894,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:24:45,008 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_723686b1&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:24:45,008 - INFO -   Response Status: 200
 2025-04-14 11:24:45,008 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:24:44 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:24:45,008 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:24:45,008 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:24:45,779 - INFO - Pixel fired successfully:
 2025-04-14 11:24:45,779 - INFO -   Transaction ID: ADT_20250411_d374ee5d
@@ -621,10 +915,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:24:45,780 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_d374ee5d&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:24:45,780 - INFO -   Response Status: 200
 2025-04-14 11:24:45,780 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:24:45 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:24:45,780 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:24:45,780 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:24:46,749 - INFO - Pixel fired successfully:
 2025-04-14 11:24:46,749 - INFO -   Transaction ID: ADT_20250411_151905b2
@@ -635,10 +936,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:24:46,750 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_151905b2&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:24:46,750 - INFO -   Response Status: 200
 2025-04-14 11:24:46,750 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:24:46 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:24:46,750 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:24:46,750 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:24:47,445 - INFO - Pixel fired successfully:
 2025-04-14 11:24:47,445 - INFO -   Transaction ID: ADT_20250411_db29b7da
@@ -649,10 +957,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:24:47,445 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_db29b7da&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:24:47,445 - INFO -   Response Status: 200
 2025-04-14 11:24:47,445 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:24:47 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:24:47,446 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:24:47,446 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:24:48,319 - INFO - Pixel fired successfully:
 2025-04-14 11:24:48,319 - INFO -   Transaction ID: ADT_20250411_5d20234b
@@ -663,10 +978,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:24:48,319 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_5d20234b&pubid=42865&campid=91162&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:24:48,319 - INFO -   Response Status: 200
 2025-04-14 11:24:48,319 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:24:48 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:24:48,319 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:24:48,319 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:24:49,207 - INFO - Pixel fired successfully:
 2025-04-14 11:24:49,207 - INFO -   Transaction ID: ADT_20250411_024f4e38
@@ -677,10 +999,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:24:49,208 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_024f4e38&pubid=42865&campid=91162&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:24:49,208 - INFO -   Response Status: 200
 2025-04-14 11:24:49,208 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:24:49 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:24:49,208 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:24:49,208 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:24:50,092 - INFO - Pixel fired successfully:
 2025-04-14 11:24:50,092 - INFO -   Transaction ID: ADT_20250411_d645df4d
@@ -691,10 +1020,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:24:50,093 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_d645df4d&pubid=42865&campid=91162&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:24:50,093 - INFO -   Response Status: 200
 2025-04-14 11:24:50,093 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:24:50 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:24:50,093 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:24:50,093 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:24:50,760 - INFO - Pixel fired successfully:
 2025-04-14 11:24:50,760 - INFO -   Transaction ID: ADT_20250411_8aca22ca
@@ -705,10 +1041,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:24:50,761 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_8aca22ca&pubid=42865&campid=91162&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:24:50,761 - INFO -   Response Status: 200
 2025-04-14 11:24:50,761 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:24:50 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:24:50,761 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:24:50,761 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:24:51,420 - INFO - Pixel fired successfully:
 2025-04-14 11:24:51,420 - INFO -   Transaction ID: ADT_20250411_92596ba6
@@ -719,10 +1062,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:24:51,421 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_92596ba6&pubid=42865&campid=91162&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:24:51,421 - INFO -   Response Status: 200
 2025-04-14 11:24:51,421 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:24:51 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:24:51,421 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:24:51,421 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:24:52,278 - INFO - Pixel fired successfully:
 2025-04-14 11:24:52,278 - INFO -   Transaction ID: ADT_20250411_8cb62087
@@ -733,10 +1083,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:24:52,278 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_8cb62087&pubid=42865&campid=91162&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:24:52,278 - INFO -   Response Status: 200
 2025-04-14 11:24:52,278 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:24:52 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:24:52,278 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:24:52,278 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:24:52,278 - INFO - 
 Processing complete!
@@ -758,10 +1115,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:27:21,165 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_78022fc7&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:27:21,165 - INFO -   Response Status: 200
 2025-04-14 11:27:21,165 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:27:21 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:27:21,165 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:27:21,165 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:27:21,992 - INFO - Pixel fired successfully:
 2025-04-14 11:27:21,992 - INFO -   Transaction ID: ADT_20250411_51bd0a3d
@@ -772,10 +1136,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:27:21,993 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_51bd0a3d&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:27:21,993 - INFO -   Response Status: 200
 2025-04-14 11:27:21,993 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:27:21 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:27:21,993 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:27:21,993 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:27:22,803 - INFO - Pixel fired successfully:
 2025-04-14 11:27:22,803 - INFO -   Transaction ID: ADT_20250411_fe519d29
@@ -786,10 +1157,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:27:22,804 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_fe519d29&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:27:22,804 - INFO -   Response Status: 200
 2025-04-14 11:27:22,804 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:27:22 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:27:22,804 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:27:22,804 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:27:23,708 - INFO - Pixel fired successfully:
 2025-04-14 11:27:23,708 - INFO -   Transaction ID: ADT_20250411_45feccbb
@@ -800,10 +1178,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:27:23,708 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_45feccbb&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:27:23,708 - INFO -   Response Status: 200
 2025-04-14 11:27:23,709 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:27:23 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:27:23,709 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:27:23,709 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:27:24,451 - INFO - Pixel fired successfully:
 2025-04-14 11:27:24,451 - INFO -   Transaction ID: ADT_20250411_60b5966c
@@ -814,10 +1199,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:27:24,451 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_60b5966c&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:27:24,451 - INFO -   Response Status: 200
 2025-04-14 11:27:24,451 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:27:24 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:27:24,451 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:27:24,451 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:27:25,192 - INFO - Pixel fired successfully:
 2025-04-14 11:27:25,192 - INFO -   Transaction ID: ADT_20250411_3deb8267
@@ -828,10 +1220,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:27:25,192 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_3deb8267&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:27:25,192 - INFO -   Response Status: 200
 2025-04-14 11:27:25,192 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:27:25 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:27:25,192 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:27:25,192 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:27:25,978 - INFO - Pixel fired successfully:
 2025-04-14 11:27:25,979 - INFO -   Transaction ID: ADT_20250411_faee3527
@@ -842,10 +1241,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:27:25,979 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_faee3527&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:27:25,979 - INFO -   Response Status: 200
 2025-04-14 11:27:25,979 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:27:25 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:27:25,979 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:27:25,979 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:27:26,901 - INFO - Pixel fired successfully:
 2025-04-14 11:27:26,902 - INFO -   Transaction ID: ADT_20250411_7285d874
@@ -856,10 +1262,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:27:26,902 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_7285d874&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:27:26,902 - INFO -   Response Status: 200
 2025-04-14 11:27:26,902 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:27:26 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:27:26,902 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:27:26,902 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:27:27,728 - INFO - Pixel fired successfully:
 2025-04-14 11:27:27,728 - INFO -   Transaction ID: ADT_20250411_f7a26075
@@ -870,10 +1283,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:27:27,728 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_f7a26075&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:27:27,728 - INFO -   Response Status: 200
 2025-04-14 11:27:27,729 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:27:27 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:27:27,729 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:27:27,729 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:27:28,866 - INFO - Pixel fired successfully:
 2025-04-14 11:27:28,867 - INFO -   Transaction ID: ADT_20250411_d24189cd
@@ -884,10 +1304,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:27:28,867 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_d24189cd&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:27:28,867 - INFO -   Response Status: 200
 2025-04-14 11:27:28,867 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:27:28 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:27:28,867 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:27:28,867 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:27:29,665 - INFO - Pixel fired successfully:
 2025-04-14 11:27:29,665 - INFO -   Transaction ID: ADT_20250411_6af97968
@@ -898,10 +1325,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:27:29,665 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_6af97968&pubid=42865&campid=91149&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:27:29,665 - INFO -   Response Status: 200
 2025-04-14 11:27:29,665 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:27:29 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:27:29,665 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:27:29,665 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:27:30,482 - INFO - Pixel fired successfully:
 2025-04-14 11:27:30,483 - INFO -   Transaction ID: ADT_20250411_1be0172a
@@ -912,10 +1346,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:27:30,483 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_1be0172a&pubid=42865&campid=91162&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:27:30,483 - INFO -   Response Status: 200
 2025-04-14 11:27:30,483 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:27:30 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:27:30,483 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:27:30,483 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:27:31,308 - INFO - Pixel fired successfully:
 2025-04-14 11:27:31,308 - INFO -   Transaction ID: ADT_20250411_58d910c9
@@ -926,10 +1367,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:27:31,308 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_58d910c9&pubid=42865&campid=91162&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:27:31,308 - INFO -   Response Status: 200
 2025-04-14 11:27:31,308 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:27:31 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:27:31,308 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:27:31,308 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:27:32,644 - INFO - Pixel fired successfully:
 2025-04-14 11:27:32,645 - INFO -   Transaction ID: ADT_20250411_4a5c1a8a
@@ -940,10 +1388,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:27:32,645 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_4a5c1a8a&pubid=42865&campid=91162&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:27:32,645 - INFO -   Response Status: 200
 2025-04-14 11:27:32,645 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:27:32 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:27:32,645 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:27:32,645 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:27:33,388 - INFO - Pixel fired successfully:
 2025-04-14 11:27:33,388 - INFO -   Transaction ID: ADT_20250411_c6a605f7
@@ -954,10 +1409,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:27:33,389 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_c6a605f7&pubid=42865&campid=91162&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:27:33,389 - INFO -   Response Status: 200
 2025-04-14 11:27:33,389 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:27:33 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:27:33,389 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:27:33,389 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:27:34,142 - INFO - Pixel fired successfully:
 2025-04-14 11:27:34,142 - INFO -   Transaction ID: ADT_20250411_7b4f0b64
@@ -968,10 +1430,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:27:34,143 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_7b4f0b64&pubid=42865&campid=91162&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:27:34,143 - INFO -   Response Status: 200
 2025-04-14 11:27:34,143 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:27:34 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:27:34,143 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:27:34,143 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:27:34,902 - INFO - Pixel fired successfully:
 2025-04-14 11:27:34,902 - INFO -   Transaction ID: ADT_20250411_af344648
@@ -982,10 +1451,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:27:34,903 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250411_af344648&pubid=42865&campid=91162&dt=2025-04-11T12%3A00%3A00%2B00%3A00
 2025-04-14 11:27:34,903 - INFO -   Response Status: 200
 2025-04-14 11:27:34,903 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:27:34 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:27:34,903 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:27:34,903 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:27:34,904 - INFO - 
 Processing complete!
@@ -1012,10 +1488,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:30:18,969 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250412_79f119e0&pubid=42865&campid=91149&dt=2025-04-12T12%3A00%3A00%2B00%3A00
 2025-04-14 11:30:18,969 - INFO -   Response Status: 200
 2025-04-14 11:30:18,970 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:30:18 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:30:18,970 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:30:18,970 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:30:20,737 - INFO - Pixel fired successfully:
 2025-04-14 11:30:20,737 - INFO -   Transaction ID: ADT_20250412_9efdecbb
@@ -1026,10 +1509,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:30:20,737 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250412_9efdecbb&pubid=42865&campid=91149&dt=2025-04-12T12%3A00%3A00%2B00%3A00
 2025-04-14 11:30:20,737 - INFO -   Response Status: 200
 2025-04-14 11:30:20,737 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:30:20 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:30:20,738 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:30:20,738 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:30:21,903 - INFO - Pixel fired successfully:
 2025-04-14 11:30:21,903 - INFO -   Transaction ID: ADT_20250412_00f5c902
@@ -1040,10 +1530,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:30:21,904 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250412_00f5c902&pubid=42865&campid=91149&dt=2025-04-12T12%3A00%3A00%2B00%3A00
 2025-04-14 11:30:21,904 - INFO -   Response Status: 200
 2025-04-14 11:30:21,904 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:30:21 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:30:21,904 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:30:21,904 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:30:23,336 - INFO - Pixel fired successfully:
 2025-04-14 11:30:23,336 - INFO -   Transaction ID: ADT_20250412_0cce9e23
@@ -1054,10 +1551,17 @@ Check the log file for detailed information: adt_pixel_firing_20250414.log
 2025-04-14 11:30:23,337 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250412_0cce9e23&pubid=42865&campid=91162&dt=2025-04-12T12%3A00%3A00%2B00%3A00
 2025-04-14 11:30:23,337 - INFO -   Response Status: 200
 2025-04-14 11:30:23,337 - INFO -   Response Headers: {'date': 'Mon, 14 Apr 2025 15:30:23 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-14 11:30:23,337 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-14 11:30:23,337 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-14 11:30:23,338 - INFO - 
 Processing complete!

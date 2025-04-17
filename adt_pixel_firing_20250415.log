@@ -12,10 +12,17 @@
 2025-04-15 11:47:58,967 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250414_b93e9933&pubid=42865&campid=91149&dt=2025-04-14T12%3A00%3A00%2B00%3A00
 2025-04-15 11:47:58,967 - INFO -   Response Status: 200
 2025-04-15 11:47:58,967 - INFO -   Response Headers: {'date': 'Tue, 15 Apr 2025 15:47:58 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-15 11:47:58,967 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-15 11:47:58,967 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-15 11:47:59,757 - INFO - Pixel fired successfully:
 2025-04-15 11:47:59,757 - INFO -   Transaction ID: ADT_20250414_891172ef
@@ -26,10 +33,17 @@
 2025-04-15 11:47:59,758 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250414_891172ef&pubid=42865&campid=91149&dt=2025-04-14T12%3A00%3A00%2B00%3A00
 2025-04-15 11:47:59,758 - INFO -   Response Status: 200
 2025-04-15 11:47:59,758 - INFO -   Response Headers: {'date': 'Tue, 15 Apr 2025 15:47:59 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-15 11:47:59,758 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-15 11:47:59,758 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-15 11:48:00,935 - INFO - Pixel fired successfully:
 2025-04-15 11:48:00,935 - INFO -   Transaction ID: ADT_20250414_497452e5
@@ -40,10 +54,17 @@
 2025-04-15 11:48:00,935 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250414_497452e5&pubid=42865&campid=91149&dt=2025-04-14T12%3A00%3A00%2B00%3A00
 2025-04-15 11:48:00,935 - INFO -   Response Status: 200
 2025-04-15 11:48:00,935 - INFO -   Response Headers: {'date': 'Tue, 15 Apr 2025 15:48:00 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-15 11:48:00,935 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-15 11:48:00,935 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-15 11:48:02,332 - INFO - Pixel fired successfully:
 2025-04-15 11:48:02,332 - INFO -   Transaction ID: ADT_20250414_a23cf857
@@ -54,10 +75,17 @@
 2025-04-15 11:48:02,333 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250414_a23cf857&pubid=42865&campid=91149&dt=2025-04-14T12%3A00%3A00%2B00%3A00
 2025-04-15 11:48:02,333 - INFO -   Response Status: 200
 2025-04-15 11:48:02,333 - INFO -   Response Headers: {'date': 'Tue, 15 Apr 2025 15:48:02 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-15 11:48:02,333 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-15 11:48:02,333 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-15 11:48:03,677 - INFO - Pixel fired successfully:
 2025-04-15 11:48:03,678 - INFO -   Transaction ID: ADT_20250414_bc09ef0a
@@ -68,10 +96,17 @@
 2025-04-15 11:48:03,678 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250414_bc09ef0a&pubid=42865&campid=91149&dt=2025-04-14T12%3A00%3A00%2B00%3A00
 2025-04-15 11:48:03,678 - INFO -   Response Status: 200
 2025-04-15 11:48:03,678 - INFO -   Response Headers: {'date': 'Tue, 15 Apr 2025 15:48:03 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-15 11:48:03,678 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-15 11:48:03,678 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-15 11:48:04,683 - INFO - Pixel fired successfully:
 2025-04-15 11:48:04,684 - INFO -   Transaction ID: ADT_20250414_48518300
@@ -82,10 +117,17 @@
 2025-04-15 11:48:04,685 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250414_48518300&pubid=42865&campid=91149&dt=2025-04-14T12%3A00%3A00%2B00%3A00
 2025-04-15 11:48:04,685 - INFO -   Response Status: 200
 2025-04-15 11:48:04,686 - INFO -   Response Headers: {'date': 'Tue, 15 Apr 2025 15:48:04 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-15 11:48:04,686 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-15 11:48:04,686 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-15 11:48:05,752 - INFO - Pixel fired successfully:
 2025-04-15 11:48:05,753 - INFO -   Transaction ID: ADT_20250414_a1b8de90
@@ -96,10 +138,17 @@
 2025-04-15 11:48:05,753 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250414_a1b8de90&pubid=42865&campid=91149&dt=2025-04-14T12%3A00%3A00%2B00%3A00
 2025-04-15 11:48:05,754 - INFO -   Response Status: 200
 2025-04-15 11:48:05,754 - INFO -   Response Headers: {'date': 'Tue, 15 Apr 2025 15:48:05 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-15 11:48:05,754 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-15 11:48:05,754 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-15 11:48:06,669 - INFO - Pixel fired successfully:
 2025-04-15 11:48:06,669 - INFO -   Transaction ID: ADT_20250414_f8ed02d5
@@ -110,10 +159,17 @@
 2025-04-15 11:48:06,669 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250414_f8ed02d5&pubid=42865&campid=91149&dt=2025-04-14T12%3A00%3A00%2B00%3A00
 2025-04-15 11:48:06,669 - INFO -   Response Status: 200
 2025-04-15 11:48:06,669 - INFO -   Response Headers: {'date': 'Tue, 15 Apr 2025 15:48:06 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-15 11:48:06,670 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-15 11:48:06,670 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-15 11:48:07,557 - INFO - Pixel fired successfully:
 2025-04-15 11:48:07,557 - INFO -   Transaction ID: ADT_20250414_1d2c061c
@@ -124,10 +180,17 @@
 2025-04-15 11:48:07,558 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250414_1d2c061c&pubid=42865&campid=91149&dt=2025-04-14T12%3A00%3A00%2B00%3A00
 2025-04-15 11:48:07,558 - INFO -   Response Status: 200
 2025-04-15 11:48:07,558 - INFO -   Response Headers: {'date': 'Tue, 15 Apr 2025 15:48:07 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-15 11:48:07,558 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-15 11:48:07,558 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-15 11:48:09,481 - INFO - Pixel fired successfully:
 2025-04-15 11:48:09,481 - INFO -   Transaction ID: ADT_20250414_bcd2061b
@@ -138,10 +201,17 @@
 2025-04-15 11:48:09,482 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250414_bcd2061b&pubid=42865&campid=91149&dt=2025-04-14T12%3A00%3A00%2B00%3A00
 2025-04-15 11:48:09,482 - INFO -   Response Status: 200
 2025-04-15 11:48:09,482 - INFO -   Response Headers: {'date': 'Tue, 15 Apr 2025 15:48:09 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-15 11:48:09,482 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-15 11:48:09,482 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-15 11:48:10,504 - INFO - Pixel fired successfully:
 2025-04-15 11:48:10,505 - INFO -   Transaction ID: ADT_20250414_775c7142
@@ -152,10 +222,17 @@
 2025-04-15 11:48:10,505 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250414_775c7142&pubid=42865&campid=91149&dt=2025-04-14T12%3A00%3A00%2B00%3A00
 2025-04-15 11:48:10,505 - INFO -   Response Status: 200
 2025-04-15 11:48:10,506 - INFO -   Response Headers: {'date': 'Tue, 15 Apr 2025 15:48:10 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-15 11:48:10,506 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-15 11:48:10,506 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-15 11:48:11,585 - INFO - Pixel fired successfully:
 2025-04-15 11:48:11,585 - INFO -   Transaction ID: ADT_20250414_3584b42e
@@ -166,10 +243,17 @@
 2025-04-15 11:48:11,585 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250414_3584b42e&pubid=42865&campid=91149&dt=2025-04-14T12%3A00%3A00%2B00%3A00
 2025-04-15 11:48:11,585 - INFO -   Response Status: 200
 2025-04-15 11:48:11,585 - INFO -   Response Headers: {'date': 'Tue, 15 Apr 2025 15:48:11 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-15 11:48:11,585 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-15 11:48:11,585 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-15 11:48:12,710 - INFO - Pixel fired successfully:
 2025-04-15 11:48:12,711 - INFO -   Transaction ID: ADT_20250414_18205e61
@@ -180,10 +264,17 @@
 2025-04-15 11:48:12,712 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250414_18205e61&pubid=42865&campid=91149&dt=2025-04-14T12%3A00%3A00%2B00%3A00
 2025-04-15 11:48:12,712 - INFO -   Response Status: 200
 2025-04-15 11:48:12,712 - INFO -   Response Headers: {'date': 'Tue, 15 Apr 2025 15:48:12 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-15 11:48:12,712 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-15 11:48:12,712 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-15 11:48:13,784 - INFO - Pixel fired successfully:
 2025-04-15 11:48:13,784 - INFO -   Transaction ID: ADT_20250414_d4b6d2b4
@@ -194,10 +285,17 @@
 2025-04-15 11:48:13,784 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250414_d4b6d2b4&pubid=42865&campid=91149&dt=2025-04-14T12%3A00%3A00%2B00%3A00
 2025-04-15 11:48:13,785 - INFO -   Response Status: 200
 2025-04-15 11:48:13,785 - INFO -   Response Headers: {'date': 'Tue, 15 Apr 2025 15:48:13 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-15 11:48:13,785 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-15 11:48:13,785 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-15 11:48:14,756 - INFO - Pixel fired successfully:
 2025-04-15 11:48:14,756 - INFO -   Transaction ID: ADT_20250414_779b76af
@@ -208,10 +306,17 @@
 2025-04-15 11:48:14,756 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250414_779b76af&pubid=42865&campid=91149&dt=2025-04-14T12%3A00%3A00%2B00%3A00
 2025-04-15 11:48:14,756 - INFO -   Response Status: 200
 2025-04-15 11:48:14,756 - INFO -   Response Headers: {'date': 'Tue, 15 Apr 2025 15:48:14 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-15 11:48:14,756 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-15 11:48:14,756 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-15 11:48:15,577 - INFO - Pixel fired successfully:
 2025-04-15 11:48:15,578 - INFO -   Transaction ID: ADT_20250414_e872b279
@@ -222,10 +327,17 @@
 2025-04-15 11:48:15,578 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250414_e872b279&pubid=42865&campid=91149&dt=2025-04-14T12%3A00%3A00%2B00%3A00
 2025-04-15 11:48:15,578 - INFO -   Response Status: 200
 2025-04-15 11:48:15,579 - INFO -   Response Headers: {'date': 'Tue, 15 Apr 2025 15:48:15 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-15 11:48:15,579 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-15 11:48:15,579 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-15 11:48:16,902 - INFO - Pixel fired successfully:
 2025-04-15 11:48:16,902 - INFO -   Transaction ID: ADT_20250414_325828df
@@ -236,10 +348,17 @@
 2025-04-15 11:48:16,902 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250414_325828df&pubid=42865&campid=91149&dt=2025-04-14T12%3A00%3A00%2B00%3A00
 2025-04-15 11:48:16,902 - INFO -   Response Status: 200
 2025-04-15 11:48:16,902 - INFO -   Response Headers: {'date': 'Tue, 15 Apr 2025 15:48:16 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-15 11:48:16,902 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-15 11:48:16,902 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-15 11:48:17,835 - INFO - Pixel fired successfully:
 2025-04-15 11:48:17,835 - INFO -   Transaction ID: ADT_20250414_73194435
@@ -250,10 +369,17 @@
 2025-04-15 11:48:17,836 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250414_73194435&pubid=42865&campid=91149&dt=2025-04-14T12%3A00%3A00%2B00%3A00
 2025-04-15 11:48:17,836 - INFO -   Response Status: 200
 2025-04-15 11:48:17,836 - INFO -   Response Headers: {'date': 'Tue, 15 Apr 2025 15:48:17 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-15 11:48:17,836 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-15 11:48:17,836 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-15 11:48:18,784 - INFO - Pixel fired successfully:
 2025-04-15 11:48:18,785 - INFO -   Transaction ID: ADT_20250414_a75d6b35
@@ -264,10 +390,17 @@
 2025-04-15 11:48:18,785 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250414_a75d6b35&pubid=42865&campid=91149&dt=2025-04-14T12%3A00%3A00%2B00%3A00
 2025-04-15 11:48:18,785 - INFO -   Response Status: 200
 2025-04-15 11:48:18,785 - INFO -   Response Headers: {'date': 'Tue, 15 Apr 2025 15:48:18 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-15 11:48:18,785 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-15 11:48:18,785 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-15 11:48:19,542 - INFO - Pixel fired successfully:
 2025-04-15 11:48:19,543 - INFO -   Transaction ID: ADT_20250414_c0a78aac
@@ -278,10 +411,17 @@
 2025-04-15 11:48:19,543 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250414_c0a78aac&pubid=42865&campid=91149&dt=2025-04-14T12%3A00%3A00%2B00%3A00
 2025-04-15 11:48:19,543 - INFO -   Response Status: 200
 2025-04-15 11:48:19,543 - INFO -   Response Headers: {'date': 'Tue, 15 Apr 2025 15:48:19 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-15 11:48:19,544 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-15 11:48:19,544 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-15 11:48:20,277 - INFO - Pixel fired successfully:
 2025-04-15 11:48:20,277 - INFO -   Transaction ID: ADT_20250414_c33d2194
@@ -292,10 +432,17 @@
 2025-04-15 11:48:20,277 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250414_c33d2194&pubid=42865&campid=91149&dt=2025-04-14T12%3A00%3A00%2B00%3A00
 2025-04-15 11:48:20,278 - INFO -   Response Status: 200
 2025-04-15 11:48:20,278 - INFO -   Response Headers: {'date': 'Tue, 15 Apr 2025 15:48:20 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-15 11:48:20,278 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-15 11:48:20,278 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-15 11:48:21,210 - INFO - Pixel fired successfully:
 2025-04-15 11:48:21,211 - INFO -   Transaction ID: ADT_20250414_7b7698a0
@@ -306,10 +453,17 @@
 2025-04-15 11:48:21,211 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250414_7b7698a0&pubid=42865&campid=91149&dt=2025-04-14T12%3A00%3A00%2B00%3A00
 2025-04-15 11:48:21,211 - INFO -   Response Status: 200
 2025-04-15 11:48:21,211 - INFO -   Response Headers: {'date': 'Tue, 15 Apr 2025 15:48:21 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-15 11:48:21,211 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-15 11:48:21,211 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-15 11:48:21,955 - INFO - Pixel fired successfully:
 2025-04-15 11:48:21,955 - INFO -   Transaction ID: ADT_20250414_634b7112
@@ -320,10 +474,17 @@
 2025-04-15 11:48:21,955 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250414_634b7112&pubid=42865&campid=91149&dt=2025-04-14T12%3A00%3A00%2B00%3A00
 2025-04-15 11:48:21,955 - INFO -   Response Status: 200
 2025-04-15 11:48:21,956 - INFO -   Response Headers: {'date': 'Tue, 15 Apr 2025 15:48:21 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-15 11:48:21,956 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-15 11:48:21,956 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-15 11:48:22,831 - INFO - Pixel fired successfully:
 2025-04-15 11:48:22,832 - INFO -   Transaction ID: ADT_20250414_a664910b
@@ -334,10 +495,17 @@
 2025-04-15 11:48:22,832 - INFO -   URL: https://speedtrkzone.com/m.ashx?o=32022&e=565&f=pb&t=ADT_20250414_a664910b&pubid=42865&campid=91149&dt=2025-04-14T12%3A00%3A00%2B00%3A00
 2025-04-15 11:48:22,832 - INFO -   Response Status: 200
 2025-04-15 11:48:22,832 - INFO -   Response Headers: {'date': 'Tue, 15 Apr 2025 15:48:22 GMT', 'content-type': 'text/xml; charset=utf-8', 'content-length': '97', 'cache-control': 'private', 'p3p': 'CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT"'}
+<<<<<<< HEAD
 2025-04-15 11:48:22,832 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
 <result>
 	<code>0</code>
 	<msg>SUCCESS</msg>
+=======
+2025-04-15 11:48:22,832 - INFO -   Response Content: <?xml version="1.0" encoding="utf-8"?>
+<result>
+	<code>0</code>
+	<msg>SUCCESS</msg>
+>>>>>>> 5c93ffce1a338681af141e5dda477b580d04a405
 </result>...
 2025-04-15 11:48:22,833 - INFO - 
 Processing complete!
