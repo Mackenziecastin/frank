@@ -1,18 +1,42 @@
-import pandas as pd
-import requests
-from datetime import datetime, timedelta
-import logging
-import uuid
-import os
+# First try to import required packages with error handling
 import sys
-import re
+import logging
+import os
 
-# Set up logging
+# Set up logging first
 logging.basicConfig(
     filename=f'adt_pixel_firing_{datetime.now().strftime("%Y%m%d")}.log',
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
+
+# Try importing each required package with error handling
+try:
+    import pandas as pd
+    logging.info("Successfully imported pandas")
+except ImportError as e:
+    logging.error(f"Failed to import pandas: {str(e)}")
+    print(f"Error: Failed to import pandas. Please ensure it's installed: {str(e)}")
+    print("Try running: pip install pandas==2.2.0")
+    sys.exit(1)
+
+try:
+    import requests
+    from datetime import datetime, timedelta
+    import uuid
+    import re
+    logging.info("Successfully imported all other required packages")
+except ImportError as e:
+    logging.error(f"Failed to import required package: {str(e)}")
+    print(f"Error: Failed to import required package: {str(e)}")
+    sys.exit(1)
+
+# Print Python environment information for debugging
+print("\nPython Environment Information:")
+print(f"Python version: {sys.version}")
+print(f"Pandas version: {pd.__version__}")
+print(f"Working directory: {os.getcwd()}")
+print(f"sys.path: {sys.path}")
 
 def clean_data(df):
     """
