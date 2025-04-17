@@ -103,18 +103,14 @@ def clean_data(df):
         difm_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIFM', case=False, na=False)]
         diy_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIY', case=False, na=False)]
         
-        # Limit to exactly 29 DIFM and 4 DIY records
-        difm_records = difm_records.head(29)
-        diy_records = diy_records.head(4)
-        
-        # Combine the limited records
-        filtered_df = pd.concat([difm_records, diy_records])
-        
         # Count DIFM and DIY records
         difm_count = len(difm_records)
         diy_count = len(diy_records)
         
-        print(f"\nFinal counts after limiting:")
+        # Combine all records without any limits
+        filtered_df = pd.concat([difm_records, diy_records])
+        
+        print(f"\nFinal counts:")
         print(f"DIFM Sales: {difm_count}")
         print(f"DIY Sales: {diy_count}")
         
