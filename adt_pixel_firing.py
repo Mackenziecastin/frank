@@ -4,6 +4,8 @@ from datetime import datetime, timedelta
 import logging
 import uuid
 import os
+import sys
+import re
 
 # Set up logging
 logging.basicConfig(
@@ -22,17 +24,21 @@ def clean_data(df):
     5. Filter for order types containing 'New' or 'Resale'
     """
     try:
+        # Get the report filename from sys.argv[1]
+        report_filename = sys.argv[1]
+        
+        # Extract date from filename (assuming format: *_YYYYMMDD.csv)
+        date_match = re.search(r'(\d{8})', report_filename)
+        if not date_match:
+            raise ValueError("Could not extract date from filename. Expected format: *_YYYYMMDD.csv")
+        
+        report_date = datetime.strptime(date_match.group(1), '%Y%m%d').date()
+        yesterday = report_date - timedelta(days=1)
+        logging.info(f"Report date: {report_date}, Using yesterday's date: {yesterday}")
+        
         # Convert Sale_Date to datetime if it's not already and remove any null values
         df['Sale_Date'] = pd.to_datetime(df['Sale_Date'], errors='coerce')
         df = df.dropna(subset=['Sale_Date'])
-        
-        # Get all unique dates and sort them to find yesterday
-        all_dates = sorted(df['Sale_Date'].dt.date.unique())
-        if len(all_dates) >= 2:
-            yesterday = all_dates[-2]  # Second to last date is yesterday
-            logging.info(f"Found yesterday's date in data: {yesterday.strftime('%Y-%m-%d')}")
-        else:
-            raise ValueError("Not enough dates in the data to determine yesterday")
         
         # Print initial count
         total_records = len(df)
@@ -271,9 +277,6 @@ def process_adt_report(file_path):
         raise
 
 if __name__ == "__main__":
-    import sys
-    import os
-    
     if len(sys.argv) != 2:
         print("\nError: Missing report file argument")
         print("\nHow to use this script:")
