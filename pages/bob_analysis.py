@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
+import io
 
 # -------------------------------
 # Constants
@@ -470,21 +471,28 @@ def show_bob_analysis():
             st.subheader("Export Report")
             if st.button("Export to Excel"):
                 try:
-                    # Create Excel file
-                    output = pd.ExcelWriter('adt_optimization_report.xlsx', engine='xlsxwriter')
-                    final_df.to_excel(output, sheet_name='Partner Performance', index=False)
-                    output.save()
+                    # Create a BytesIO object to hold the Excel file in memory
+                    output = io.BytesIO()
+                    
+                    # Create Excel writer object
+                    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                        final_df.to_excel(writer, sheet_name='Partner Performance', index=False)
+                    
+                    # Seek to the beginning of the BytesIO object
+                    output.seek(0)
                     
                     # Create download button
-                    with open('adt_optimization_report.xlsx', 'rb') as f:
-                        st.download_button(
-                            label="Download Excel Report",
-                            data=f,
-                            file_name=f"adt_optimization_report_leads_{start_date.strftime('%Y%m%d')}-{end_date.strftime('%Y%m%d')}.xlsx",
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                        )
+                    st.download_button(
+                        label="Download Excel Report",
+                        data=output,
+                        file_name=f"adt_optimization_report_leads_{start_date.strftime('%Y%m%d')}-{end_date.strftime('%Y%m%d')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
                 except Exception as e:
                     st.error(f"Error exporting report: {str(e)}")
+                    st.error("Full error details:")
+                    import traceback
+                    st.error(traceback.format_exc())
         
         except Exception as e:
             st.error(f"Error processing data: {str(e)}")
