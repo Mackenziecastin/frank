@@ -77,28 +77,52 @@ def load_combined_resi_tfn_data(sheet_url):
     base_url = sheet_url.split("/edit")[0]
     def sheet_csv_url(sheet_name):
         return f"{base_url}/gviz/tq?tqx=out:csv&sheet={sheet_name.replace(' ', '%20')}"
+    
+    # Load both sheets
     resi_df = pd.read_csv(sheet_csv_url("RESI TFN Sheet"))
     display_df = pd.read_csv(sheet_csv_url("Display TFN Sheet"))
+    
+    # Debug the raw data
+    st.write("### Raw TFN Data Sample")
+    st.write("RESI Sheet Sample:")
+    st.write(resi_df.head())
+    st.write("\nDisplay Sheet Sample:")
+    st.write(display_df.head())
+    
+    # Combine the sheets
     combined_df = pd.concat([
-        resi_df.rename(columns={"PID": "PID", "TFN": "TFN"}),
-        display_df.rename(columns={"Partner ID": "PID", "TFN": "TFN"})
+        resi_df[['PID', 'TFN']],  # Only take these columns
+        display_df[['Partner ID', 'TFN']].rename(columns={'Partner ID': 'PID'})  # Rename to match
     ], ignore_index=True)
     
-    # Clean TFN numbers and handle NaN/empty values
+    # Clean TFN numbers - remove all non-numeric characters
     combined_df['Clean_TFN'] = combined_df['TFN'].fillna('').astype(str)
     combined_df['Clean_TFN'] = combined_df['Clean_TFN'].str.replace(r'[^0-9]', '', regex=True)
     
-    # Handle PID - convert NaN to empty string, then process valid numbers
+    # Clean PID - ensure it's a string of integers
     combined_df['PID'] = combined_df['PID'].fillna('')
-    combined_df['PID'] = combined_df['PID'].apply(
-        lambda x: str(int(float(x))) if str(x).strip() and not pd.isna(x) else ''
-    )
+    combined_df['PID'] = combined_df['PID'].astype(str)
+    combined_df['PID'] = combined_df['PID'].apply(lambda x: str(int(float(x))) if x.strip() and not pd.isna(x) else '')
     
-    # Remove rows with empty TFNs or PIDs
+    # Remove any rows with empty TFNs or PIDs
     combined_df = combined_df[
         (combined_df['Clean_TFN'].str.strip() != '') & 
         (combined_df['PID'].str.strip() != '')
     ]
+    
+    # Debug the specific case
+    st.write("\n### TFN Mapping Debug")
+    st.write("Looking for specific TFN: 8442069696")
+    specific_tfn = combined_df[combined_df['Clean_TFN'] == '8442069696']
+    if not specific_tfn.empty:
+        st.write("Found matching record:")
+        st.write(specific_tfn)
+    else:
+        st.write("TFN 8442069696 not found in mapping!")
+    
+    # Show full mapping
+    st.write("\nFull TFN to PID mapping:")
+    st.write(combined_df[['Clean_TFN', 'PID']].head(10))
     
     return combined_df[['Clean_TFN', 'PID']]
 
@@ -223,31 +247,32 @@ def generate_pivots(athena_df):
     web_df = athena_df[athena_df['Lead_DNIS'].str.contains("WEB", na=False, case=False)].copy()
     phone_df = athena_df[~athena_df['Lead_DNIS'].str.contains("WEB", na=False, case=False)].copy()
     
-    st.write("\nSample of Phone Lead_DNIS values before cleaning:")
+    # Debug phone numbers before cleaning
+    st.write("\n### Phone Number Debug")
+    st.write("Sample of Phone Lead_DNIS values before cleaning:")
     st.write(phone_df['Lead_DNIS'].head())
     
     # Clean phone Lead_DNIS for matching
     phone_df['Clean_DNIS'] = phone_df['Lead_DNIS'].fillna('').astype(str)
     phone_df['Clean_DNIS'] = phone_df['Clean_DNIS'].str.replace(r'[^0-9]', '', regex=True)
     
+    # Debug cleaned phone numbers
     st.write("\nSample of Cleaned Phone Lead_DNIS values:")
-    st.write(phone_df['Clean_DNIS'].head())
+    st.write(phone_df[['Lead_DNIS', 'Clean_DNIS']].head())
     
     # Load and prepare TFN data
     try:
         tfn_df = load_combined_resi_tfn_data(TFN_SHEET_URL)
         st.write("\n### TFN Data Summary")
         st.write(f"Total TFN records: {len(tfn_df)}")
-        st.write("Sample of TFN mappings:")
-        st.dataframe(tfn_df.head())
         
         # Create TFN to PID mapping
         tfn_map = dict(zip(tfn_df['Clean_TFN'], tfn_df['PID']))
         
-        # Debug TFN mapping
-        st.write("\n### TFN Mapping Sample")
-        st.write("First 5 entries in TFN map:")
-        st.write(dict(list(tfn_map.items())[:5]))
+        # Debug specific TFN mapping
+        st.write("\n### Checking specific TFN mapping")
+        test_number = '8442069696'
+        st.write(f"Mapping for {test_number}: {tfn_map.get(test_number, 'Not found')}")
         
         # Match PIDs for phone records
         phone_df['Matched_PID'] = phone_df['Clean_DNIS'].map(tfn_map)
@@ -256,8 +281,12 @@ def generate_pivots(athena_df):
         st.write("\n### Phone Matching Results")
         st.write(f"Total phone records: {len(phone_df)}")
         st.write(f"Records with matched PIDs: {phone_df['Matched_PID'].notna().sum()}")
+        
+        # Show sample of matched and unmatched records
         st.write("\nSample of matched records:")
-        st.dataframe(phone_df[['Lead_DNIS', 'Clean_DNIS', 'Matched_PID']].head())
+        st.dataframe(phone_df[phone_df['Matched_PID'].notna()][['Lead_DNIS', 'Clean_DNIS', 'Matched_PID']].head())
+        st.write("\nSample of unmatched records:")
+        st.dataframe(phone_df[phone_df['Matched_PID'].isna()][['Lead_DNIS', 'Clean_DNIS']].head())
         
         # Filter to only include matched records
         phone_df = phone_df[phone_df['Matched_PID'].notna()]
