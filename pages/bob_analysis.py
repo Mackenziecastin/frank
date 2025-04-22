@@ -83,8 +83,23 @@ def load_combined_resi_tfn_data(sheet_url):
         resi_df.rename(columns={"PID": "PID", "TFN": "TFN"}),
         display_df.rename(columns={"Partner ID": "PID", "TFN": "TFN"})
     ], ignore_index=True)
-    combined_df['Clean_TFN'] = combined_df['TFN'].astype(str).str.replace(r'[^0-9]', '', regex=True)
-    combined_df['PID'] = combined_df['PID'].astype(str)
+    
+    # Clean TFN numbers and handle NaN/empty values
+    combined_df['Clean_TFN'] = combined_df['TFN'].fillna('').astype(str)
+    combined_df['Clean_TFN'] = combined_df['Clean_TFN'].str.replace(r'[^0-9]', '', regex=True)
+    
+    # Handle PID - convert NaN to empty string, then process valid numbers
+    combined_df['PID'] = combined_df['PID'].fillna('')
+    combined_df['PID'] = combined_df['PID'].apply(
+        lambda x: str(int(float(x))) if str(x).strip() and not pd.isna(x) else ''
+    )
+    
+    # Remove rows with empty TFNs or PIDs
+    combined_df = combined_df[
+        (combined_df['Clean_TFN'].str.strip() != '') & 
+        (combined_df['PID'].str.strip() != '')
+    ]
+    
     return combined_df[['Clean_TFN', 'PID']]
 
 def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
@@ -211,38 +226,30 @@ def generate_pivots(athena_df):
     # Clean Affiliate_Code first
     athena_df['Affiliate_Code'] = athena_df['Affiliate_Code'].apply(clean_affiliate_code)
     
-    # Load and prepare TFN data
     try:
         tfn_df = load_combined_resi_tfn_data(TFN_SHEET_URL)
-        # Clean TFN numbers
-        tfn_df['Clean_TFN'] = tfn_df['Clean_TFN'].astype(str).str.replace(r'[^0-9]', '', regex=True)
-        # Convert PID to proper format and handle NaN
-        tfn_df['PID'] = tfn_df['PID'].apply(lambda x: str(int(float(x))) if pd.notna(x) and str(x).strip() != '' else '')
-        
-        # Remove any empty TFNs or PIDs
-        tfn_df = tfn_df[
-            (tfn_df['Clean_TFN'].str.strip() != '') & 
-            (tfn_df['PID'].str.strip() != '')
-        ]
-        
         st.write("\n### TFN Data Summary")
         st.write(f"Total TFN records: {len(tfn_df)}")
         st.write("Sample of TFN mappings:")
         st.dataframe(tfn_df.head())
+        
+        # Create TFN to PID mapping (no need for additional cleaning since it's done in load_combined_resi_tfn_data)
+        tfn_map = dict(zip(tfn_df['Clean_TFN'], tfn_df['PID']))
+        
+        # Debug TFN mapping
+        st.write("\n### TFN Mapping Sample")
+        st.write("First 5 entries in TFN map:")
+        st.write(dict(list(tfn_map.items())[:5]))
+        
     except Exception as e:
         st.error(f"Error loading TFN data: {str(e)}")
+        st.error("Full error details:")
+        import traceback
+        st.error(traceback.format_exc())
         return pd.DataFrame(), pd.DataFrame()
     
-    # Create TFN to PID mapping
-    tfn_map = dict(zip(tfn_df['Clean_TFN'], tfn_df['PID']))
-    
-    # Debug TFN mapping
-    st.write("\n### TFN Mapping Sample")
-    st.write("First 5 entries in TFN map:")
-    st.write(dict(list(tfn_map.items())[:5]))
-    
     # Separate web and phone
-    web_df = athena_df[athena_df['Lead_DNIS'].str.contains("WEB", na=False, case=False)]
+    web_df = athena_df[athena_df['Lead_DNIS'].str.contains("WEB", na=False, case=False)].copy()
     phone_df = athena_df[~athena_df['Lead_DNIS'].str.contains("WEB", na=False, case=False)].copy()
     
     # Clean and match phone numbers for phone data
@@ -271,6 +278,12 @@ def generate_pivots(athena_df):
     st.write("Sample of phone records:")
     st.dataframe(phone_df[['Matched_PID', 'Lead_DNIS', 'Clean_DNIS', 'Sale_Date', 'Install_Date', 'INSTALL_METHOD']].head())
     
+    # Create empty DataFrames with correct columns if no data
+    if len(web_df) == 0:
+        web_df = pd.DataFrame(columns=['Affiliate_Code', 'Sale_Date', 'Install_Date', 'INSTALL_METHOD'])
+    if len(phone_df) == 0:
+        phone_df = pd.DataFrame(columns=['Matched_PID', 'Sale_Date', 'Install_Date', 'INSTALL_METHOD'])
+    
     # Create pivots
     web_pivot = pd.pivot_table(
         web_df, 
@@ -279,7 +292,7 @@ def generate_pivots(athena_df):
         columns='INSTALL_METHOD', 
         aggfunc='count', 
         fill_value=0
-    )
+    ) if len(web_df) > 0 else pd.DataFrame()
     
     phone_pivot = pd.pivot_table(
         phone_df, 
@@ -288,11 +301,13 @@ def generate_pivots(athena_df):
         columns='INSTALL_METHOD', 
         aggfunc='count', 
         fill_value=0
-    )
+    ) if len(phone_df) > 0 else pd.DataFrame()
     
-    # Flatten column names
-    web_pivot.columns = [f"{val} {col}" for col, val in web_pivot.columns]
-    phone_pivot.columns = [f"{val} {col}" for col, val in phone_pivot.columns]
+    # Flatten column names only if we have data
+    if len(web_pivot) > 0:
+        web_pivot.columns = [f"{val} {col}" for col, val in web_pivot.columns]
+    if len(phone_pivot) > 0:
+        phone_pivot.columns = [f"{val} {col}" for col, val in phone_pivot.columns]
     
     # Display the pivots
     st.write("\n### Web Pivot Table")
@@ -305,7 +320,7 @@ def generate_pivots(athena_df):
     st.write("\n### Sample of Final Affiliate_Code Values")
     st.write(web_df['Affiliate_Code'].value_counts().head())
     
-    return web_pivot.reset_index(), phone_pivot.reset_index()
+    return web_pivot.reset_index() if len(web_pivot) > 0 else pd.DataFrame(), phone_pivot.reset_index() if len(phone_pivot) > 0 else pd.DataFrame()
 
 def clean_conversion(conversion_df):
     conversion_df = conversion_df[~conversion_df['Offer ID'].isin([31908, 31989])]
