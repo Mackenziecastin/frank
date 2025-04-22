@@ -60,9 +60,12 @@ def load_combined_resi_tfn_data(sheet_url):
     combined_df['PID'] = combined_df['PID'].astype(str)
     return combined_df[['Clean_TFN', 'PID']]
 
-def clean_athena(athena_df, tfn_df, leads_df):
+def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     athena_df['Lead_Creation_Date'] = pd.to_datetime(athena_df['Lead_Creation_Date'], errors='coerce')
-    athena_df = athena_df[athena_df['Lead_Creation_Date'].dt.month == 4]
+    athena_df = athena_df[
+        (athena_df['Lead_Creation_Date'] >= start_date) &
+        (athena_df['Lead_Creation_Date'] <= end_date)
+    ]
     athena_df = athena_df[
         (athena_df['Ln_of_Busn'].str.lower() != 'health') &
         (athena_df['DNIS_BUSN_SEG_CD'].str.lower() != 'us: health') &
@@ -164,10 +167,37 @@ def show_bob_analysis():
     
     st.write("""
     This tool analyzes ADT partner performance data to generate optimization reports.
-    Please upload the required files below.
+    Please select the lead creation date range and upload the required files below.
     """)
     
+    # Date Range Selection
+    st.subheader("Select Lead Creation Date Range")
+    col_date1, col_date2 = st.columns(2)
+    
+    with col_date1:
+        start_date = st.date_input(
+            "Start Date (Lead Creation)",
+            value=pd.Timestamp.now().replace(day=1),  # First day of current month
+            help="Select the start date for lead creation"
+        )
+    
+    with col_date2:
+        end_date = st.date_input(
+            "End Date (Lead Creation)",
+            value=pd.Timestamp.now(),  # Current date
+            help="Select the end date for lead creation"
+        )
+    
+    if start_date > end_date:
+        st.error("Error: End date must be after start date")
+        return
+    
+    # Convert dates to datetime
+    start_date = pd.Timestamp(start_date)
+    end_date = pd.Timestamp(end_date)
+    
     # File uploaders in three columns
+    st.subheader("Upload Files")
     col1, col2, col3 = st.columns(3)
     
     with col1:
@@ -203,8 +233,19 @@ def show_bob_analysis():
             
             tfn_df = load_combined_resi_tfn_data(TFN_SHEET_URL)
             
+            # Display date range being analyzed
+            st.info(f"Analyzing leads created from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+            
             # Step 1: Clean Athena + Leads Report
-            athena_df = clean_athena(athena_df, tfn_df, leads_df)
+            athena_df = clean_athena(athena_df, tfn_df, leads_df, start_date, end_date)
+            
+            # Display record counts
+            total_leads = len(athena_df)
+            if total_leads == 0:
+                st.warning("No leads found in the selected creation date range. Please adjust the dates and try again.")
+                return
+            
+            st.write(f"Total leads created in date range: {total_leads:,}")
             
             # Step 2: Generate Web + Phone Pivots
             web_pivot, phone_pivot = generate_pivots(athena_df)
@@ -254,7 +295,7 @@ def show_bob_analysis():
                         st.download_button(
                             label="Download Excel Report",
                             data=f,
-                            file_name="adt_optimization_report.xlsx",
+                            file_name=f"adt_optimization_report_leads_{start_date.strftime('%Y%m%d')}-{end_date.strftime('%Y%m%d')}.xlsx",
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                         )
                 except Exception as e:
