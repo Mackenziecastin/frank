@@ -225,12 +225,8 @@ def merge_and_compute(cake, web, phone):
         cake = cake.merge(web, how='left', left_on='Concatenated', right_index=True)
         cake = cake.merge(phone, how='left', left_on='PID', right_index=True)
         
-        # Debug after merges
-        st.write("\nDEBUG: Data sample after merges:")
-        st.write("All columns after merge:", cake.columns.tolist())
-        
         # Fill NaN values with 0
-        st.write("\nDEBUG: Filling NaN values")
+        st.write("DEBUG: Filling NaN values")
         cake = cake.fillna(0)
         
         # Helper function to safely convert to integer
@@ -242,45 +238,58 @@ def merge_and_compute(cake, web, phone):
                 return pd.Series([0] * len(series))
         
         # Process DIFM Sales columns
-        st.write("\nDEBUG: Processing DIFM Sales columns")
+        st.write("DEBUG: Processing DIFM Sales columns")
         cake['Web DIFM Sales'] = safe_convert_to_int(cake.get('DIFM Sale_Date', pd.Series([0] * len(cake))))
         cake['Phone DIFM Sales'] = safe_convert_to_int(cake.get('DIFM Sale_Date', pd.Series([0] * len(cake))))
+        cake['Total DIFM Sales'] = cake['Web DIFM Sales'] + cake['Phone DIFM Sales']
         
-        # Process DIY Sales columns
-        st.write("\nDEBUG: Processing DIY Sales columns")
-        cake['Web DIY Sales'] = safe_convert_to_int(cake.get('DIY Sale_Date', pd.Series([0] * len(cake))))
-        cake['Phone DIY Sales'] = safe_convert_to_int(cake.get('DIY Sale_Date', pd.Series([0] * len(cake))))
-        
-        # Process Install columns
-        st.write("\nDEBUG: Processing Install columns")
+        # Process DIFM Install columns
+        st.write("DEBUG: Processing DIFM Install columns")
         cake['DIFM Web Installs'] = safe_convert_to_int(cake.get('DIFM Install_Date', pd.Series([0] * len(cake))))
         cake['DIFM Phone Installs'] = safe_convert_to_int(cake.get('DIFM Install_Date', pd.Series([0] * len(cake))))
-        
-        # Calculate totals
-        st.write("\nDEBUG: Calculating totals")
-        cake['Total DIFM Sales'] = cake['Web DIFM Sales'] + cake['Phone DIFM Sales']
-        cake['Total DIY Sales'] = cake['Web DIY Sales'] + cake['Phone DIY Sales']
         cake['Total DIFM Installs'] = cake['DIFM Web Installs'] + cake['DIFM Phone Installs']
         
+        # Process DIY Sales columns
+        st.write("DEBUG: Processing DIY Sales columns")
+        cake['DIY Web Sales'] = safe_convert_to_int(cake.get('DIY Sale_Date', pd.Series([0] * len(cake))))
+        cake['DIY Phone Sales'] = safe_convert_to_int(cake.get('DIY Sale_Date', pd.Series([0] * len(cake))))
+        cake['Total DIY Sales'] = cake['DIY Web Sales'] + cake['DIY Phone Sales']
+        
         # Calculate revenue and profit metrics
-        st.write("\nDEBUG: Calculating revenue and profit metrics")
+        st.write("DEBUG: Calculating revenue and profit metrics")
         cake['Revenue'] = 1080 * cake['Total DIFM Installs'] + 300 * cake['Total DIY Sales']
         cake['Profit/Loss'] = cake['Revenue'] - cake['Cost']
-        
-        # Debug before projected installs
-        st.write("\nDEBUG: Data before projected installs calculation:")
-        st.write("Sample of data:", cake[['Concatenated', 'Total DIFM Sales']].head())
-        
         cake['Projected Installs'] = cake.apply(calculate_projected_installs, axis=1)
         cake['Projected Revenue'] = 1080 * cake['Projected Installs'] + 300 * cake['Total DIY Sales']
         cake['Projected Profit/Loss'] = cake['Projected Revenue'] - cake['Cost']
         
         # Calculate ratios
-        st.write("\nDEBUG: Calculating ratios")
-        cake['Projected Margin'] = np.where(cake['Projected Revenue'] == 0, -1, 
+        st.write("DEBUG: Calculating ratios")
+        cake['Projected Margin'] = np.where(cake['Projected Revenue'] == 0, float('nan'), 
                                           cake['Projected Profit/Loss'] / cake['Projected Revenue'])
         cake['eCPL'] = np.where(cake['Leads'] == 0, 0, 
                                cake['Projected Revenue'] / cake['Leads'])
+        
+        # Format numeric columns
+        cake['Revenue'] = cake['Revenue'].apply(lambda x: f"${x:,.2f}")
+        cake['Profit/Loss'] = cake['Profit/Loss'].apply(lambda x: f"${x:,.2f}")
+        cake['Projected Revenue'] = cake['Projected Revenue'].apply(lambda x: f"${x:,.2f}")
+        cake['Projected Profit/Loss'] = cake['Projected Profit/Loss'].apply(lambda x: f"${x:,.2f}")
+        cake['Cost'] = cake['Cost'].apply(lambda x: f"${x:,.2f}")
+        cake['eCPL'] = cake['eCPL'].apply(lambda x: f"${x:,.2f}")
+        cake['Projected Margin'] = cake['Projected Margin'].apply(lambda x: f"{x:.2%}" if pd.notnull(x) else "-")
+        
+        # Reorder columns to match the report
+        columns = [
+            'Concatenated', 'PID', 'Leads', 'Cost',
+            'Web DIFM Sales', 'Phone DIFM Sales', 'Total DIFM Sales',
+            'DIFM Web Installs', 'DIFM Phone Installs', 'Total DIFM Installs',
+            'DIY Web Sales', 'DIY Phone Sales', 'Total DIY Sales',
+            'Revenue', 'Profit/Loss',
+            'Projected Installs', 'Projected Revenue', 'Projected Profit/Loss',
+            'Projected Margin', 'Current Rate', 'eCPL'
+        ]
+        cake = cake[columns]
         
         st.write("DEBUG: Merge and compute completed successfully")
         return cake
@@ -291,6 +300,70 @@ def merge_and_compute(cake, web, phone):
         import traceback
         st.error(traceback.format_exc())
         raise
+
+def compare_with_reference(computed_df):
+    try:
+        # Load reference report
+        reference_df = pd.read_csv('Final_Formatted_Optimization_Report.csv')
+        
+        # Remove formatting from computed df for numeric comparison
+        numeric_df = computed_df.copy()
+        for col in ['Cost', 'Revenue', 'Profit/Loss', 'Projected Revenue', 'Projected Profit/Loss', 'eCPL']:
+            numeric_df[col] = numeric_df[col].str.replace('$', '').str.replace(',', '').astype(float)
+        numeric_df['Projected Margin'] = numeric_df['Projected Margin'].replace('-', float('nan')).str.rstrip('%').astype(float) / 100
+        
+        # Remove formatting from reference df
+        ref_numeric = reference_df.copy()
+        for col in ['Cost', 'Revenue', 'Profit/Loss', 'Projected Revenue', 'Projected Profit/Loss', 'eCPL']:
+            ref_numeric[col] = ref_numeric[col].str.replace('$', '').str.replace(',', '').astype(float)
+        ref_numeric['Projected Margin'] = ref_numeric['Projected Margin'].replace('-', float('nan')).str.rstrip('%').astype(float) / 100
+        
+        # Compare key metrics
+        metrics = [
+            'Leads', 'Web DIFM Sales', 'Phone DIFM Sales', 'Total DIFM Sales',
+            'DIFM Web Installs', 'DIFM Phone Installs', 'Total DIFM Installs',
+            'DIY Web Sales', 'DIY Phone Sales', 'Total DIY Sales',
+            'Projected Installs'
+        ]
+        
+        st.write("### Comparison with Reference Report")
+        st.write("Checking key metrics for differences...")
+        
+        for metric in metrics:
+            computed_sum = numeric_df[metric].sum()
+            reference_sum = ref_numeric[metric].sum()
+            if abs(computed_sum - reference_sum) > 0.01:  # Allow for small floating point differences
+                st.error(f"Discrepancy in {metric}:")
+                st.error(f"Our calculation: {computed_sum:,.0f}")
+                st.error(f"Reference: {reference_sum:,.0f}")
+                st.error(f"Difference: {computed_sum - reference_sum:,.0f}")
+        
+        # Compare monetary metrics
+        monetary_metrics = ['Cost', 'Revenue', 'Profit/Loss', 'Projected Revenue', 'Projected Profit/Loss', 'eCPL']
+        for metric in monetary_metrics:
+            computed_sum = numeric_df[metric].sum()
+            reference_sum = ref_numeric[metric].sum()
+            if abs(computed_sum - reference_sum) > 0.01:  # Allow for small floating point differences
+                st.error(f"Discrepancy in {metric}:")
+                st.error(f"Our calculation: ${computed_sum:,.2f}")
+                st.error(f"Reference: ${reference_sum:,.2f}")
+                st.error(f"Difference: ${computed_sum - reference_sum:,.2f}")
+        
+        # Check for any missing or extra rows
+        if len(numeric_df) != len(ref_numeric):
+            st.error(f"Row count mismatch:")
+            st.error(f"Our rows: {len(numeric_df)}")
+            st.error(f"Reference rows: {len(ref_numeric)}")
+        
+        # If no discrepancies found
+        if not st.session_state.get('has_error', False):
+            st.success("All numbers match the reference report!")
+            
+    except Exception as e:
+        st.error(f"Error comparing reports: {str(e)}")
+        st.error("Full error details:")
+        import traceback
+        st.error(traceback.format_exc())
 
 def show_bob_analysis():
     st.title("ADT Partner Optimization Analysis")
@@ -454,18 +527,15 @@ def show_bob_analysis():
             
             # Format the dataframe
             display_df = final_df[display_columns].copy()
-            display_df['Projected Margin'] = display_df['Projected Margin'].apply(lambda x: f"{x:.2%}" if x != -1 else "N/A")
-            display_df['eCPL'] = display_df['eCPL'].apply(lambda x: f"${x:,.2f}")
-            display_df['Revenue'] = display_df['Revenue'].apply(lambda x: f"${x:,.2f}")
-            display_df['Cost'] = display_df['Cost'].apply(lambda x: f"${x:,.2f}")
-            display_df['Projected Revenue'] = display_df['Projected Revenue'].apply(lambda x: f"${x:,.2f}")
-            display_df['Profit/Loss'] = display_df['Profit/Loss'].apply(lambda x: f"${x:,.2f}")
             
             # Display the table
             st.dataframe(
                 display_df.sort_values('Projected Revenue', ascending=False),
                 use_container_width=True
             )
+            
+            # Compare with reference report
+            compare_with_reference(final_df)
             
             # Export functionality
             st.subheader("Export Report")
