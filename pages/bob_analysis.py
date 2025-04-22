@@ -61,69 +61,100 @@ def load_combined_resi_tfn_data(sheet_url):
     return combined_df[['Clean_TFN', 'PID']]
 
 def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
-    athena_df['Lead_Creation_Date'] = pd.to_datetime(athena_df['Lead_Creation_Date'], errors='coerce')
-    athena_df = athena_df[
-        (athena_df['Lead_Creation_Date'] >= start_date) &
-        (athena_df['Lead_Creation_Date'] <= end_date)
-    ]
-    athena_df = athena_df[
-        (athena_df['Ln_of_Busn'].str.lower() != 'health') &
-        (athena_df['DNIS_BUSN_SEG_CD'].str.lower() != 'us: health') &
-        (athena_df['Sale_Date'].notna()) &
-        (athena_df['Ordr_Type'].str.upper().isin(['NEW', 'RESALE']))
-    ]
-    athena_df['Affiliate_Code'] = athena_df['Affiliate_Code'].apply(clean_affiliate_code)
-    athena_df['Lead_DNIS'] = athena_df['Lead_DNIS'].astype(str)
-    tfn_map = dict(zip(tfn_df['Clean_TFN'], tfn_df['PID']))
-    athena_df['PID'] = athena_df['Lead_DNIS'].apply(lambda x: tfn_map.get(x) if x.isdigit() else None)
-    
-    # Ensure all columns are strings before processing
-    for col in leads_df.columns:
-        leads_df[col] = leads_df[col].astype(str)
-    
-    # Convert column names to lowercase for case-insensitive comparison
-    leads_df.columns = leads_df.columns.str.strip()
-    column_map = {col: col.lower() for col in leads_df.columns}
-    leads_df = leads_df.rename(columns=column_map)
-    
-    # Find the correct column names (case-insensitive)
-    sub_id_col = next((col for col in leads_df.columns if col.lower() == 'subid'), None)
-    pid_col = next((col for col in leads_df.columns if col.lower() == 'pid'), None)
-    phone_col = next((col for col in leads_df.columns if col.lower() == 'phone'), None)
-    
-    if not all([sub_id_col, pid_col, phone_col]):
-        missing_cols = []
-        if not sub_id_col:
-            missing_cols.append("Subid")
-        if not pid_col:
-            missing_cols.append("PID")
-        if not phone_col:
-            missing_cols.append("Phone")
-        raise ValueError(f"Missing required columns: {', '.join(missing_cols)}. Found columns: {', '.join(leads_df.columns)}")
-    
-    # Clean and process the data with the correct column names
-    leads_df[sub_id_col] = leads_df[sub_id_col].apply(lambda x: str(x) if str(x).strip() and not str(x).lower() == 'nan' else '')
-    leads_df[pid_col] = leads_df[pid_col].astype(str)
-    leads_df['Concatenated'] = leads_df.apply(
-        lambda r: f"{r[pid_col]}_{r[sub_id_col]}" if r[sub_id_col] else f"{r[pid_col]}_", 
-        axis=1
-    )
-    
-    # Create phone mapping using the correct column name
-    # Clean phone numbers to remove any non-numeric characters
-    leads_df[phone_col] = leads_df[phone_col].astype(str).str.replace(r'[^0-9]', '', regex=True)
-    phone_map = dict(zip(leads_df[phone_col], leads_df['Concatenated']))
-    
-    # Clean phone numbers in Athena data
-    athena_df['Primary_Phone_Customer_ANI'] = athena_df['Primary_Phone_Customer_ANI'].astype(str).str.replace(r'[^0-9]', '', regex=True)
-    
-    def fill_code(row):
-        if row['Affiliate_Code'] == '' and 'WEB' in row['Lead_DNIS']:
-            return phone_map.get(row['Primary_Phone_Customer_ANI'], '')
-        return row['Affiliate_Code']
-    
-    athena_df['Affiliate_Code'] = athena_df.apply(fill_code, axis=1)
-    return athena_df
+    try:
+        # Print initial data types
+        st.write("Initial column types in leads_df:")
+        st.write(leads_df.dtypes)
+        
+        # Convert all columns to string and print the result
+        for col in leads_df.columns:
+            try:
+                leads_df[col] = leads_df[col].fillna('').astype(str)
+            except Exception as e:
+                st.error(f"Error converting column {col}: {str(e)}")
+        
+        st.write("Column types after conversion:")
+        st.write(leads_df.dtypes)
+        
+        # Convert column names to lowercase for case-insensitive comparison
+        leads_df.columns = leads_df.columns.str.strip()
+        column_map = {col: col.lower() for col in leads_df.columns}
+        leads_df = leads_df.rename(columns=column_map)
+        
+        st.write("Column names after lowercase conversion:", leads_df.columns.tolist())
+        
+        # Find the correct column names (case-insensitive)
+        sub_id_col = next((col for col in leads_df.columns if col.lower() == 'subid'), None)
+        pid_col = next((col for col in leads_df.columns if col.lower() == 'pid'), None)
+        phone_col = next((col for col in leads_df.columns if col.lower() == 'phone'), None)
+        
+        st.write(f"Found columns - Subid: {sub_id_col}, PID: {pid_col}, Phone: {phone_col}")
+        
+        if not all([sub_id_col, pid_col, phone_col]):
+            missing_cols = []
+            if not sub_id_col:
+                missing_cols.append("Subid")
+            if not pid_col:
+                missing_cols.append("PID")
+            if not phone_col:
+                missing_cols.append("Phone")
+            raise ValueError(f"Missing required columns: {', '.join(missing_cols)}. Found columns: {', '.join(leads_df.columns)}")
+        
+        # Process Athena data first
+        athena_df['Lead_Creation_Date'] = pd.to_datetime(athena_df['Lead_Creation_Date'], errors='coerce')
+        athena_df = athena_df[
+            (athena_df['Lead_Creation_Date'] >= start_date) &
+            (athena_df['Lead_Creation_Date'] <= end_date)
+        ]
+        athena_df = athena_df[
+            (athena_df['Ln_of_Busn'].str.lower() != 'health') &
+            (athena_df['DNIS_BUSN_SEG_CD'].str.lower() != 'us: health') &
+            (athena_df['Sale_Date'].notna()) &
+            (athena_df['Ordr_Type'].str.upper().isin(['NEW', 'RESALE']))
+        ]
+        
+        # Clean and process the data with the correct column names
+        leads_df[sub_id_col] = leads_df[sub_id_col].fillna('')
+        leads_df[pid_col] = leads_df[pid_col].fillna('')
+        leads_df[phone_col] = leads_df[phone_col].fillna('')
+        
+        # Show sample of data before processing
+        st.write("Sample of leads data before processing:")
+        st.write(leads_df[[sub_id_col, pid_col, phone_col]].head())
+        
+        # Create concatenated field
+        leads_df['Concatenated'] = leads_df.apply(
+            lambda r: f"{str(r[pid_col])}_{str(r[sub_id_col])}" if str(r[sub_id_col]).strip() else f"{str(r[pid_col])}_",
+            axis=1
+        )
+        
+        # Clean phone numbers
+        leads_df[phone_col] = leads_df[phone_col].astype(str).str.replace(r'[^0-9]', '', regex=True)
+        athena_df['Primary_Phone_Customer_ANI'] = athena_df['Primary_Phone_Customer_ANI'].astype(str).str.replace(r'[^0-9]', '', regex=True)
+        
+        # Create phone mapping
+        phone_map = dict(zip(leads_df[phone_col], leads_df['Concatenated']))
+        
+        # Process affiliate codes
+        athena_df['Affiliate_Code'] = athena_df['Affiliate_Code'].apply(clean_affiliate_code)
+        athena_df['Lead_DNIS'] = athena_df['Lead_DNIS'].astype(str)
+        tfn_map = dict(zip(tfn_df['Clean_TFN'], tfn_df['PID']))
+        athena_df['PID'] = athena_df['Lead_DNIS'].apply(lambda x: tfn_map.get(x) if x.isdigit() else None)
+        
+        def fill_code(row):
+            if row['Affiliate_Code'] == '' and 'WEB' in row['Lead_DNIS']:
+                return phone_map.get(row['Primary_Phone_Customer_ANI'], '')
+            return row['Affiliate_Code']
+        
+        athena_df['Affiliate_Code'] = athena_df.apply(fill_code, axis=1)
+        return athena_df
+        
+    except Exception as e:
+        st.error(f"Error in clean_athena: {str(e)}")
+        st.error("Full error details:")
+        import traceback
+        st.error(traceback.format_exc())
+        raise
 
 def generate_pivots(athena_df):
     web_df = athena_df[athena_df['Lead_DNIS'].str.contains("WEB", na=False)]
