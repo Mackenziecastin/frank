@@ -17,7 +17,23 @@ TFN_SHEET_URL = "https://docs.google.com/spreadsheets/d/10BHN_-Wz_ZPmi7rezNtqiDP
 
 def clean_affiliate_code(code):
     if pd.isna(code): return ''
-    return str(code)  # Simply return the full code without any modification
+    # Split by underscore
+    parts = code.split('_')
+    if len(parts) < 2: return ''
+    
+    # Remove the first part (e.g., '32015' from '32015_41899_601493')
+    parts = parts[1:]
+    
+    # Clean the remaining parts to remove any non-numeric characters
+    cleaned_parts = []
+    for part in parts:
+        # Keep only numeric characters
+        numeric_part = ''.join(c for c in part if c.isdigit())
+        if numeric_part:
+            cleaned_parts.append(numeric_part)
+    
+    # Join back with underscore
+    return '_'.join(cleaned_parts)
 
 def proportional_allocation(row, web_val, total_web_val, total_phone_val):
     if row[total_web_val] == 0 or pd.isna(row[total_web_val]): return 0
@@ -182,16 +198,22 @@ def generate_pivots(athena_df):
     st.write("\nSample of PID values:")
     st.write(athena_df['PID'].value_counts().head())
     
-    # Separate web and phone with more detailed conditions
+    # Clean Affiliate_Code first
+    athena_df['Affiliate_Code'] = athena_df['Affiliate_Code'].apply(clean_affiliate_code)
+    
+    # Separate web and phone
     web_df = athena_df[athena_df['Lead_DNIS'].str.contains("WEB", na=False, case=False)]
-    # Changed phone filtering logic - now just anything that's not web
-    phone_df = athena_df[~athena_df['Lead_DNIS'].str.contains("WEB", na=False, case=False)]
+    phone_df = athena_df[
+        (~athena_df['Lead_DNIS'].str.contains("WEB", na=False, case=False)) & 
+        (athena_df['PID'].notna()) &  # Only include records with valid PIDs
+        (athena_df['PID'] != '')  # Ensure PID is not empty string
+    ]
     
     # Debug info about the filtered dataframes
     st.write("\n### Web Data Summary")
     st.write(f"Total web records: {len(web_df)}")
     st.write("Sample of web records:")
-    st.dataframe(web_df[['Affiliate_Code', 'Lead_DNIS', 'Sale_Date', 'Install_Date', 'INSTALL_METHOD']].head())
+    st.dataframe(web_df[['Affiliate_Code', 'Lead_DNIS', 'Sale_Date', 'Install_Date', 'INSTALL_METHOD', 'PID']].head())
     
     st.write("\n### Phone Data Summary")
     st.write(f"Total phone records: {len(phone_df)}")
@@ -226,6 +248,10 @@ def generate_pivots(athena_df):
     
     st.write("\n### Phone Pivot Table")
     st.dataframe(phone_pivot)
+    
+    # Add debugging for final Affiliate_Code values
+    st.write("\n### Sample of Final Affiliate_Code Values")
+    st.write(web_df['Affiliate_Code'].value_counts().head())
     
     return web_pivot.reset_index(), phone_pivot.reset_index()
 
