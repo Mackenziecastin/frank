@@ -306,7 +306,9 @@ def show_bob_analysis():
             st.error("Please check your input files and try again.")
             # Add more detailed error information
             st.error("Required columns in Database Leads file: Subid, PID, Phone")
-            st.error("Current columns found:", leads_df.columns.tolist() if 'leads_df' in locals() else "No file loaded")
+            # Fix: Combine the message and columns into a single string
+            columns_found = leads_df.columns.tolist() if 'leads_df' in locals() else ["No file loaded"]
+            st.error(f"Current columns found: {', '.join(str(col) for col in columns_found)}")
 
 if __name__ == "__main__":
     show_bob_analysis() 
