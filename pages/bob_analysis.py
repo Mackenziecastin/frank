@@ -194,32 +194,90 @@ def clean_conversion(conversion_df):
     return cake
 
 def merge_and_compute(cake, web, phone):
-    cake = cake.copy()
-    web = web.set_index('Affiliate_Code')
-    phone = phone.set_index('PID')
-    cake = cake.merge(web, how='left', left_on='Concatenated', right_index=True)
-    cake = cake.merge(phone, how='left', left_on='PID', right_index=True)
-    cake.fillna(0, inplace=True)
-
-    cake['Web DIFM Sales'] = cake.get('DIFM Sale_Date_x', 0).astype(int)
-    cake['Phone DIFM Sales'] = cake.get('DIFM Sale_Date_y', 0).astype(int)
-    cake['Web DIY Sales'] = cake.get('DIY Sale_Date_x', 0).astype(int)
-    cake['Phone DIY Sales'] = cake.get('DIY Sale_Date_y', 0).astype(int)
-    cake['DIFM Web Installs'] = cake.get('DIFM Install_Date_x', 0).astype(int)
-    cake['DIFM Phone Installs'] = cake.get('DIFM Install_Date_y', 0).astype(int)
-
-    cake['Total DIFM Sales'] = cake['Web DIFM Sales'] + cake['Phone DIFM Sales']
-    cake['Total DIY Sales'] = cake['Web DIY Sales'] + cake['Phone DIY Sales']
-    cake['Total DIFM Installs'] = cake['DIFM Web Installs'] + cake['DIFM Phone Installs']
-
-    cake['Revenue'] = 1080 * cake['Total DIFM Installs'] + 300 * cake['Total DIY Sales']
-    cake['Profit/Loss'] = cake['Revenue'] - cake['Cost']
-    cake['Projected Installs'] = cake.apply(calculate_projected_installs, axis=1)
-    cake['Projected Revenue'] = 1080 * cake['Projected Installs'] + 300 * cake['Total DIY Sales']
-    cake['Projected Profit/Loss'] = cake['Projected Revenue'] - cake['Cost']
-    cake['Projected Margin'] = np.where(cake['Projected Revenue'] == 0, -1, cake['Projected Profit/Loss'] / cake['Projected Revenue'])
-    cake['eCPL'] = np.where(cake['Leads'] == 0, 0, cake['Projected Revenue'] / cake['Leads'])
-    return cake
+    try:
+        st.write("DEBUG: Starting merge_and_compute")
+        st.write("Initial shapes - Cake:", cake.shape, "Web:", web.shape, "Phone:", phone.shape)
+        
+        # Create copies to avoid modifying originals
+        cake = cake.copy()
+        web = web.copy()
+        phone = phone.copy()
+        
+        # Set indexes for merging
+        st.write("DEBUG: Setting indexes for merge")
+        web = web.set_index('Affiliate_Code')
+        phone = phone.set_index('PID')
+        
+        # Debug info before merge
+        st.write("DEBUG: Cake columns before merge:", cake.columns.tolist())
+        st.write("DEBUG: Web columns before merge:", web.columns.tolist())
+        st.write("DEBUG: Phone columns before merge:", phone.columns.tolist())
+        
+        # Perform merges
+        st.write("DEBUG: Performing merges")
+        cake = cake.merge(web, how='left', left_on='Concatenated', right_index=True)
+        cake = cake.merge(phone, how='left', left_on='PID', right_index=True)
+        
+        # Fill NaN values with 0
+        st.write("DEBUG: Filling NaN values")
+        cake = cake.fillna(0)
+        
+        # Convert columns to appropriate types
+        st.write("DEBUG: Converting column types")
+        
+        # Helper function to safely convert to integer
+        def safe_convert_to_int(series):
+            try:
+                return series.fillna(0).astype(int)
+            except Exception as e:
+                st.write(f"DEBUG: Error converting column {series.name}: {str(e)}")
+                return series.fillna(0).astype(float).astype(int)
+        
+        # Process DIFM Sales columns
+        st.write("DEBUG: Processing DIFM Sales columns")
+        cake['Web DIFM Sales'] = safe_convert_to_int(cake.get('DIFM Sale_Date_x', pd.Series([0])))
+        cake['Phone DIFM Sales'] = safe_convert_to_int(cake.get('DIFM Sale_Date_y', pd.Series([0])))
+        
+        # Process DIY Sales columns
+        st.write("DEBUG: Processing DIY Sales columns")
+        cake['Web DIY Sales'] = safe_convert_to_int(cake.get('DIY Sale_Date_x', pd.Series([0])))
+        cake['Phone DIY Sales'] = safe_convert_to_int(cake.get('DIY Sale_Date_y', pd.Series([0])))
+        
+        # Process Install columns
+        st.write("DEBUG: Processing Install columns")
+        cake['DIFM Web Installs'] = safe_convert_to_int(cake.get('DIFM Install_Date_x', pd.Series([0])))
+        cake['DIFM Phone Installs'] = safe_convert_to_int(cake.get('DIFM Install_Date_y', pd.Series([0])))
+        
+        # Calculate totals
+        st.write("DEBUG: Calculating totals")
+        cake['Total DIFM Sales'] = cake['Web DIFM Sales'] + cake['Phone DIFM Sales']
+        cake['Total DIY Sales'] = cake['Web DIY Sales'] + cake['Phone DIY Sales']
+        cake['Total DIFM Installs'] = cake['DIFM Web Installs'] + cake['DIFM Phone Installs']
+        
+        # Calculate revenue and profit metrics
+        st.write("DEBUG: Calculating revenue and profit metrics")
+        cake['Revenue'] = 1080 * cake['Total DIFM Installs'] + 300 * cake['Total DIY Sales']
+        cake['Profit/Loss'] = cake['Revenue'] - cake['Cost']
+        cake['Projected Installs'] = cake.apply(calculate_projected_installs, axis=1)
+        cake['Projected Revenue'] = 1080 * cake['Projected Installs'] + 300 * cake['Total DIY Sales']
+        cake['Projected Profit/Loss'] = cake['Projected Revenue'] - cake['Cost']
+        
+        # Calculate ratios
+        st.write("DEBUG: Calculating ratios")
+        cake['Projected Margin'] = np.where(cake['Projected Revenue'] == 0, -1, 
+                                          cake['Projected Profit/Loss'] / cake['Projected Revenue'])
+        cake['eCPL'] = np.where(cake['Leads'] == 0, 0, 
+                               cake['Projected Revenue'] / cake['Leads'])
+        
+        st.write("DEBUG: Merge and compute completed successfully")
+        return cake
+        
+    except Exception as e:
+        st.error(f"Error in merge_and_compute: {str(e)}")
+        st.error("Full error details:")
+        import traceback
+        st.error(traceback.format_exc())
+        raise
 
 def show_bob_analysis():
     st.title("ADT Partner Optimization Analysis")
