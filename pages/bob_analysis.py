@@ -17,47 +17,21 @@ TFN_SHEET_URL = "https://docs.google.com/spreadsheets/d/10BHN_-Wz_ZPmi7rezNtqiDP
 
 def clean_affiliate_code(code):
     if pd.isna(code): return ''
-    
-    # Split by underscore
-    parts = code.split('_')
+    parts = code.split('_', 1)  # Split on first underscore only
     if len(parts) < 2: return ''
-    
-    # For codes like "32015_41899_601493"
-    # parts[0] = "32015"
-    # parts[1] = "41899"
-    # parts[2] = "601493"
-    
-    # Get the PID (second part)
-    pid = ''.join(c for c in parts[1] if c.isdigit())
-    
-    # If there's a third part (SubID)
-    if len(parts) > 2:
-        subid = parts[2]
-        # If SubID contains any letters, don't include it
-        if any(c.isalpha() for c in subid):
-            return f"{pid}_"
-        else:
-            # Keep only numeric characters in SubID
-            subid = ''.join(c for c in subid if c.isdigit())
-            if subid:  # Only include if we have digits
-                return f"{pid}_{subid}"
-    
-    # If we only have PID or SubID was invalid
-    return f"{pid}_"
+    second = parts[1]
+    if '_' in second:
+        seg = second.split('_')[0]
+        return f"{seg}_" if seg.isdigit() else ''
+    return f"{second}_" if second.isdigit() else ''
 
 def proportional_allocation(row, web_val, total_web_val, total_phone_val):
     if row[total_web_val] == 0 or pd.isna(row[total_web_val]): return 0
     return round(row[total_phone_val] * (row[web_val] / row[total_web_val]))
 
 def calculate_projected_installs(row):
-    try:
-        if pd.isna(row['Total DIFM Sales']):
-            return 0
-        pct = 0.5 if str(row['Concatenated']).startswith('4790') else 0.7
-        return int(round(row['Total DIFM Sales'] * pct))
-    except Exception as e:
-        st.write(f"DEBUG: Error in calculate_projected_installs for row: {row}")
-        return 0
+    pct = 0.5 if str(row['Concatenated']).startswith('4790') else 0.7
+    return int(round(row['Total DIFM Sales'] * pct))
 
 def get_current_rates(conversion_df):
     conversion_df['Conversion Date'] = pd.to_datetime(conversion_df['Conversion Date'], errors='coerce')
@@ -77,246 +51,60 @@ def load_combined_resi_tfn_data(sheet_url):
     base_url = sheet_url.split("/edit")[0]
     def sheet_csv_url(sheet_name):
         return f"{base_url}/gviz/tq?tqx=out:csv&sheet={sheet_name.replace(' ', '%20')}"
-    
-    # Load both sheets
     resi_df = pd.read_csv(sheet_csv_url("RESI TFN Sheet"))
     display_df = pd.read_csv(sheet_csv_url("Display TFN Sheet"))
-    
-    # Debug the raw data
-    st.write("### Raw TFN Data Sample")
-    st.write("RESI Sheet Sample:")
-    st.write(resi_df.head())
-    st.write("\nDisplay Sheet Sample:")
-    st.write(display_df.head())
-    
-    # Combine the sheets
     combined_df = pd.concat([
-        resi_df[['PID', 'TFN']],  # Only take these columns
-        display_df[['Partner ID', 'TFN']].rename(columns={'Partner ID': 'PID'})  # Rename to match
+        resi_df.rename(columns={"PID": "PID", "TFN": "TFN"}),
+        display_df.rename(columns={"Partner ID": "PID", "TFN": "TFN"})
     ], ignore_index=True)
-    
-    # Clean TFN numbers - remove all non-numeric characters
-    combined_df['Clean_TFN'] = combined_df['TFN'].fillna('').astype(str)
-    combined_df['Clean_TFN'] = combined_df['Clean_TFN'].str.replace(r'[^0-9]', '', regex=True)
-    
-    # Clean PID - ensure it's a string of integers
-    combined_df['PID'] = combined_df['PID'].fillna('')
+    combined_df['Clean_TFN'] = combined_df['TFN'].astype(str).str.replace(r'[^0-9]', '', regex=True)
     combined_df['PID'] = combined_df['PID'].astype(str)
-    combined_df['PID'] = combined_df['PID'].apply(lambda x: str(int(float(x))) if x.strip() and not pd.isna(x) else '')
-    
-    # Remove any rows with empty TFNs or PIDs
-    combined_df = combined_df[
-        (combined_df['Clean_TFN'].str.strip() != '') & 
-        (combined_df['PID'].str.strip() != '')
-    ]
-    
-    # Debug the specific case
-    st.write("\n### TFN Mapping Debug")
-    st.write("Looking for specific TFN: 8442069696")
-    specific_tfn = combined_df[combined_df['Clean_TFN'] == '8442069696']
-    if not specific_tfn.empty:
-        st.write("Found matching record:")
-        st.write(specific_tfn)
-    else:
-        st.write("TFN 8442069696 not found in mapping!")
-    
-    # Show full mapping
-    st.write("\nFull TFN to PID mapping:")
-    st.write(combined_df[['Clean_TFN', 'PID']].head(10))
-    
     return combined_df[['Clean_TFN', 'PID']]
 
 def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
-    try:
-        # 1. Process Athena data first
-        athena_df['Lead_Creation_Date'] = pd.to_datetime(athena_df['Lead_Creation_Date'], errors='coerce')
-        athena_df = athena_df[
-            (athena_df['Lead_Creation_Date'] >= start_date) &
-            (athena_df['Lead_Creation_Date'] <= end_date)
-        ]
-        athena_df = athena_df[
-            (athena_df['Ln_of_Busn'].str.lower() != 'health') &
-            (athena_df['DNIS_BUSN_SEG_CD'].str.lower() != 'us: health') &
-            (athena_df['Sale_Date'].notna()) &
-            (athena_df['Ordr_Type'].str.upper().isin(['NEW', 'RESALE']))
-        ]
-        
-        # 2. Process TFN data
-        athena_df['Affiliate_Code'] = athena_df['Affiliate_Code'].apply(clean_affiliate_code)
-        athena_df['Lead_DNIS'] = athena_df['Lead_DNIS'].fillna('').astype(str)
-        tfn_map = dict(zip(tfn_df['Clean_TFN'], tfn_df['PID']))
-        athena_df['PID'] = athena_df['Lead_DNIS'].apply(lambda x: tfn_map.get(x) if x.isdigit() else None)
-        
-        # 3. Process leads data - print debugging info
-        st.write("Leads DataFrame Info:")
-        st.write(leads_df.info())
-        st.write("\nLeads DataFrame Head:")
-        st.write(leads_df.head())
-        
-        # Convert column names to lowercase and strip whitespace
-        leads_df.columns = [col.strip().lower() for col in leads_df.columns]
-        
-        # Find required columns
-        required_columns = {
-            'subid': None,
-            'pid': None,
-            'phone': None
-        }
-        
-        # Map actual column names to required names
-        for col in leads_df.columns:
-            col_lower = col.lower()
-            if col_lower == 'subid':
-                required_columns['subid'] = col
-            elif col_lower == 'pid':
-                required_columns['pid'] = col
-            elif col_lower == 'phone':
-                required_columns['phone'] = col
-        
-        # Check if we found all required columns
-        missing_columns = [name for name, col in required_columns.items() if col is None]
-        if missing_columns:
-            raise ValueError(f"Missing required columns: {', '.join(missing_columns)}. Found columns: {', '.join(leads_df.columns)}")
-        
-        # Create working copy of leads DataFrame
-        leads_working = leads_df.copy()
-        
-        # Handle each column separately with explicit error handling
-        try:
-            # Handle SubID
-            leads_working[required_columns['subid']] = leads_working[required_columns['subid']].fillna('')
-            leads_working[required_columns['subid']] = leads_working[required_columns['subid']].astype(str)
-            
-            # Handle PID
-            leads_working[required_columns['pid']] = leads_working[required_columns['pid']].fillna('')
-            leads_working[required_columns['pid']] = leads_working[required_columns['pid']].astype(str)
-            
-            # Handle Phone
-            leads_working[required_columns['phone']] = leads_working[required_columns['phone']].fillna('')
-            leads_working[required_columns['phone']] = leads_working[required_columns['phone']].astype(str)
-            leads_working[required_columns['phone']] = leads_working[required_columns['phone']].str.replace(r'[^0-9]', '', regex=True)
-            
-            # Create concatenated field
-            leads_working['Concatenated'] = leads_working.apply(
-                lambda r: f"{r[required_columns['pid']]}_{r[required_columns['subid']]}" 
-                if str(r[required_columns['subid']]).strip() 
-                else f"{r[required_columns['pid']]}_",
-                axis=1
-            )
-            
-            # Create phone mapping
-            phone_map = dict(zip(
-                leads_working[required_columns['phone']],
-                leads_working['Concatenated']
-            ))
-            
-            # Clean Athena phone numbers
-            athena_df['Primary_Phone_Customer_ANI'] = athena_df['Primary_Phone_Customer_ANI'].fillna('')
-            athena_df['Primary_Phone_Customer_ANI'] = athena_df['Primary_Phone_Customer_ANI'].astype(str)
-            athena_df['Primary_Phone_Customer_ANI'] = athena_df['Primary_Phone_Customer_ANI'].str.replace(r'[^0-9]', '', regex=True)
-            
-            # Apply phone mapping
-            def fill_code(row):
-                if row['Affiliate_Code'] == '' and 'WEB' in str(row['Lead_DNIS']):
-                    return phone_map.get(row['Primary_Phone_Customer_ANI'], '')
-                return row['Affiliate_Code']
-            
-            athena_df['Affiliate_Code'] = athena_df.apply(fill_code, axis=1)
-            
-            return athena_df
-            
-        except Exception as e:
-            st.error(f"Error processing columns: {str(e)}")
-            st.write("Column types:")
-            st.write(leads_working.dtypes)
-            raise
-            
-    except Exception as e:
-        st.error(f"Error in clean_athena: {str(e)}")
-        st.error("Full error details:")
-        import traceback
-        st.error(traceback.format_exc())
-        raise
+    # Filter Athena data
+    athena_df['Lead_Creation_Date'] = pd.to_datetime(athena_df['Lead_Creation_Date'], errors='coerce')
+    athena_df = athena_df[
+        (athena_df['Lead_Creation_Date'] >= start_date) &
+        (athena_df['Lead_Creation_Date'] <= end_date)
+    ]
+    athena_df = athena_df[
+        (athena_df['Ln_of_Busn'].str.lower() != 'health') &
+        (athena_df['DNIS_BUSN_SEG_CD'].str.lower() != 'us: health') &
+        (athena_df['Sale_Date'].notna()) &
+        (athena_df['Ordr_Type'].str.upper().isin(['NEW', 'RESALE']))
+    ]
+    
+    # Clean Affiliate_Code
+    athena_df['Affiliate_Code'] = athena_df['Affiliate_Code'].apply(clean_affiliate_code)
+    
+    # Match TFNs to PIDs
+    athena_df['Lead_DNIS'] = athena_df['Lead_DNIS'].astype(str)
+    tfn_map = dict(zip(tfn_df['Clean_TFN'], tfn_df['PID']))
+    athena_df['PID'] = athena_df['Lead_DNIS'].apply(lambda x: tfn_map.get(x) if x.isdigit() else None)
+    
+    # Process leads data
+    leads_df.columns = [col.lower() for col in leads_df.columns]
+    leads_df['subid'] = leads_df['subid'].apply(lambda x: str(x) if str(x).isdigit() else '')
+    leads_df['pid'] = leads_df['pid'].astype(str)
+    leads_df['Concatenated'] = leads_df.apply(lambda r: f"{r['pid']}_{r['subid']}" if r['subid'] else f"{r['pid']}_", axis=1)
+    leads_df['phone'] = leads_df['phone'].astype(str).str.replace(r'[^0-9]', '', regex=True)
+    phone_map = dict(zip(leads_df['phone'], leads_df['Concatenated']))
+    
+    # Match phone numbers for WEB leads
+    athena_df['Primary_Phone_Customer_ANI'] = athena_df['Primary_Phone_Customer_ANI'].astype(str).str.replace(r'[^0-9]', '', regex=True)
+    def fill_code(row):
+        if row['Affiliate_Code'] == '' and 'WEB' in row['Lead_DNIS']:
+            return phone_map.get(row['Primary_Phone_Customer_ANI'], '')
+        return row['Affiliate_Code']
+    athena_df['Affiliate_Code'] = athena_df.apply(fill_code, axis=1)
+    
+    return athena_df
 
 def generate_pivots(athena_df):
-    # Add debugging before filtering
-    st.write("### Pre-filtering Data Summary")
-    st.write(f"Total records before filtering: {len(athena_df)}")
-    
-    # First, separate web and phone records
-    web_df = athena_df[athena_df['Lead_DNIS'].str.contains("WEB", na=False, case=False)].copy()
-    phone_df = athena_df[~athena_df['Lead_DNIS'].str.contains("WEB", na=False, case=False)].copy()
-    
-    # Debug phone numbers before cleaning
-    st.write("\n### Phone Number Debug")
-    st.write("Sample of Phone Lead_DNIS values before cleaning:")
-    st.write(phone_df['Lead_DNIS'].head())
-    
-    # Clean phone Lead_DNIS for matching
-    phone_df['Clean_DNIS'] = phone_df['Lead_DNIS'].fillna('').astype(str)
-    phone_df['Clean_DNIS'] = phone_df['Clean_DNIS'].str.replace(r'[^0-9]', '', regex=True)
-    
-    # Debug cleaned phone numbers
-    st.write("\nSample of Cleaned Phone Lead_DNIS values:")
-    st.write(phone_df[['Lead_DNIS', 'Clean_DNIS']].head())
-    
-    # Load and prepare TFN data
-    try:
-        tfn_df = load_combined_resi_tfn_data(TFN_SHEET_URL)
-        st.write("\n### TFN Data Summary")
-        st.write(f"Total TFN records: {len(tfn_df)}")
-        
-        # Create TFN to PID mapping
-        tfn_map = dict(zip(tfn_df['Clean_TFN'], tfn_df['PID']))
-        
-        # Debug specific TFN mapping
-        st.write("\n### Checking specific TFN mapping")
-        test_number = '8442069696'
-        st.write(f"Mapping for {test_number}: {tfn_map.get(test_number, 'Not found')}")
-        
-        # Match PIDs for phone records
-        phone_df['Matched_PID'] = phone_df['Clean_DNIS'].map(tfn_map)
-        
-        # Debug matching results
-        st.write("\n### Phone Matching Results")
-        st.write(f"Total phone records: {len(phone_df)}")
-        st.write(f"Records with matched PIDs: {phone_df['Matched_PID'].notna().sum()}")
-        
-        # Show sample of matched and unmatched records
-        st.write("\nSample of matched records:")
-        st.dataframe(phone_df[phone_df['Matched_PID'].notna()][['Lead_DNIS', 'Clean_DNIS', 'Matched_PID']].head())
-        st.write("\nSample of unmatched records:")
-        st.dataframe(phone_df[phone_df['Matched_PID'].isna()][['Lead_DNIS', 'Clean_DNIS']].head())
-        
-        # Filter to only include matched records
-        phone_df = phone_df[phone_df['Matched_PID'].notna()]
-        
-    except Exception as e:
-        st.error(f"Error loading TFN data: {str(e)}")
-        st.error("Full error details:")
-        import traceback
-        st.error(traceback.format_exc())
-        return pd.DataFrame(), pd.DataFrame()
-    
-    # Clean Affiliate_Code for web records
-    web_df['Affiliate_Code'] = web_df['Affiliate_Code'].apply(clean_affiliate_code)
-    
-    # Debug info about the filtered dataframes
-    st.write("\n### Web Data Summary")
-    st.write(f"Total web records: {len(web_df)}")
-    st.write("Sample of web records:")
-    st.dataframe(web_df[['Affiliate_Code', 'Lead_DNIS', 'Sale_Date', 'Install_Date', 'INSTALL_METHOD']].head())
-    
-    st.write("\n### Phone Data Summary")
-    st.write(f"Total matched phone records: {len(phone_df)}")
-    st.write("Sample of phone records:")
-    st.dataframe(phone_df[['Matched_PID', 'Lead_DNIS', 'Clean_DNIS', 'Sale_Date', 'Install_Date', 'INSTALL_METHOD']].head())
-    
-    # Create empty DataFrames with correct columns if no data
-    if len(web_df) == 0:
-        web_df = pd.DataFrame(columns=['Affiliate_Code', 'Sale_Date', 'Install_Date', 'INSTALL_METHOD'])
-    if len(phone_df) == 0:
-        phone_df = pd.DataFrame(columns=['Matched_PID', 'Sale_Date', 'Install_Date', 'INSTALL_METHOD'])
+    # Split web and phone data
+    web_df = athena_df[athena_df['Lead_DNIS'].str.contains("WEB", na=False)]
+    phone_df = athena_df[~athena_df['Lead_DNIS'].str.contains("WEB", na=False) & athena_df['PID'].notna()]
     
     # Create pivots
     web_pivot = pd.pivot_table(
@@ -330,143 +118,99 @@ def generate_pivots(athena_df):
     
     phone_pivot = pd.pivot_table(
         phone_df, 
-        index='Matched_PID', 
+        index='PID', 
         values=['Sale_Date', 'Install_Date'], 
         columns='INSTALL_METHOD', 
         aggfunc='count', 
         fill_value=0
     ) if len(phone_df) > 0 else pd.DataFrame()
     
-    # Flatten column names only if we have data
+    # Format column names
     if len(web_pivot) > 0:
         web_pivot.columns = [f"{val} {col}" for col, val in web_pivot.columns]
     if len(phone_pivot) > 0:
         phone_pivot.columns = [f"{val} {col}" for col, val in phone_pivot.columns]
     
-    # Display the pivots
-    st.write("\n### Web Pivot Table")
-    st.dataframe(web_pivot)
-    
-    st.write("\n### Phone Pivot Table")
-    st.dataframe(phone_pivot)
+    # Debug info
+    st.write("\n### Data Summary")
+    st.write(f"Web records: {len(web_df)}")
+    st.write(f"Phone records: {len(phone_df)}")
     
     return web_pivot.reset_index() if len(web_pivot) > 0 else pd.DataFrame(), phone_pivot.reset_index() if len(phone_pivot) > 0 else pd.DataFrame()
 
 def clean_conversion(conversion_df):
+    # Filter out specific offer IDs
     conversion_df = conversion_df[~conversion_df['Offer ID'].isin([31908, 31989])]
+    
+    # Clean Sub ID and create Concatenated
     conversion_df['Sub ID'] = conversion_df['Sub ID'].apply(lambda x: str(x) if str(x).isdigit() else '')
     conversion_df['Affiliate ID'] = conversion_df['Affiliate ID'].astype(str)
     conversion_df['Concatenated'] = conversion_df.apply(lambda r: f"{r['Affiliate ID']}_{r['Sub ID']}" if r['Sub ID'] else f"{r['Affiliate ID']}_", axis=1)
+    
+    # Create Cake pivot
     cake = conversion_df.groupby('Concatenated').agg({
         'Affiliate ID': lambda x: str(x.iloc[0]),
         'Paid': 'sum',
         'Concatenated': 'count'
     }).rename(columns={'Affiliate ID': 'PID', 'Paid': 'Cost', 'Concatenated': 'Leads'}).reset_index()
+    
     return cake
 
 def merge_and_compute(cake, web, phone):
-    try:
-        st.write("DEBUG: Starting merge_and_compute")
-        st.write("Initial shapes - Cake:", cake.shape, "Web:", web.shape, "Phone:", phone.shape)
-        
-        # Create copies to avoid modifying originals
-        cake = cake.copy()
-        web = web.copy()
-        phone = phone.copy()
-        
-        # Set indexes for merging
-        st.write("DEBUG: Setting indexes for merge")
-        web = web.set_index('Affiliate_Code')
-        phone = phone.set_index('PID')
-        
-        # Debug info before merge
-        st.write("DEBUG: Cake columns before merge:", cake.columns.tolist())
-        st.write("DEBUG: Web columns before merge:", web.columns.tolist())
-        st.write("DEBUG: Phone columns before merge:", phone.columns.tolist())
-        
-        # Perform merges
-        st.write("DEBUG: Performing merges")
-        cake = cake.merge(web, how='left', left_on='Concatenated', right_index=True)
-        cake = cake.merge(phone, how='left', left_on='PID', right_index=True)
-        
-        # Fill NaN values with 0
-        st.write("DEBUG: Filling NaN values")
-        cake = cake.fillna(0)
-        
-        # Helper function to safely convert to integer
-        def safe_convert_to_int(series):
-            try:
-                return series.fillna(0).astype(float).astype(int)
-            except Exception as e:
-                st.write(f"DEBUG: Error converting column {series.name}: {str(e)}")
-                return pd.Series([0] * len(series))
-        
-        # Process DIFM Sales columns
-        st.write("DEBUG: Processing DIFM Sales columns")
-        cake['Web DIFM Sales'] = safe_convert_to_int(cake.get('DIFM Sale_Date', pd.Series([0] * len(cake))))
-        cake['Phone DIFM Sales'] = safe_convert_to_int(cake.get('DIFM Sale_Date', pd.Series([0] * len(cake))))
-        cake['Total DIFM Sales'] = cake['Web DIFM Sales'] + cake['Phone DIFM Sales']
-        
-        # Process DIFM Install columns
-        st.write("DEBUG: Processing DIFM Install columns")
-        cake['DIFM Web Installs'] = safe_convert_to_int(cake.get('DIFM Install_Date', pd.Series([0] * len(cake))))
-        cake['DIFM Phone Installs'] = safe_convert_to_int(cake.get('DIFM Install_Date', pd.Series([0] * len(cake))))
-        cake['Total DIFM Installs'] = cake['DIFM Web Installs'] + cake['DIFM Phone Installs']
-        
-        # Process DIY Sales columns
-        st.write("DEBUG: Processing DIY Sales columns")
-        cake['DIY Web Sales'] = safe_convert_to_int(cake.get('DIY Sale_Date', pd.Series([0] * len(cake))))
-        cake['DIY Phone Sales'] = safe_convert_to_int(cake.get('DIY Sale_Date', pd.Series([0] * len(cake))))
-        cake['Total DIY Sales'] = cake['DIY Web Sales'] + cake['DIY Phone Sales']
-        
-        # Calculate revenue and profit metrics
-        st.write("DEBUG: Calculating revenue and profit metrics")
-        cake['Revenue'] = 1080 * cake['Total DIFM Installs'] + 300 * cake['Total DIY Sales']
-        cake['Profit/Loss'] = cake['Revenue'] - cake['Cost']
-        cake['Projected Installs'] = cake.apply(calculate_projected_installs, axis=1)
-        cake['Projected Revenue'] = 1080 * cake['Projected Installs'] + 300 * cake['Total DIY Sales']
-        cake['Projected Profit/Loss'] = cake['Projected Revenue'] - cake['Cost']
-        
-        # Calculate ratios
-        st.write("DEBUG: Calculating ratios")
-        cake['Projected Margin'] = np.where(cake['Projected Revenue'] == 0, float('nan'), 
-                                          cake['Projected Profit/Loss'] / cake['Projected Revenue'])
-        cake['eCPL'] = np.where(cake['Leads'] == 0, 0, 
-                               cake['Projected Revenue'] / cake['Leads'])
-        
-        # Add Current Rate column (default to 0 if not available)
-        cake['Current Rate'] = 0
-        
-        # Format numeric columns
-        cake['Revenue'] = cake['Revenue'].apply(lambda x: f"${x:,.2f}")
-        cake['Profit/Loss'] = cake['Profit/Loss'].apply(lambda x: f"${x:,.2f}")
-        cake['Projected Revenue'] = cake['Projected Revenue'].apply(lambda x: f"${x:,.2f}")
-        cake['Projected Profit/Loss'] = cake['Projected Profit/Loss'].apply(lambda x: f"${x:,.2f}")
-        cake['Cost'] = cake['Cost'].apply(lambda x: f"${x:,.2f}")
-        cake['eCPL'] = cake['eCPL'].apply(lambda x: f"${x:,.2f}")
-        cake['Projected Margin'] = cake['Projected Margin'].apply(lambda x: f"{x:.2%}" if pd.notnull(x) else "-")
-        
-        # Reorder columns to match the report
-        columns = [
-            'Concatenated', 'PID', 'Leads', 'Cost',
-            'Web DIFM Sales', 'Phone DIFM Sales', 'Total DIFM Sales',
-            'DIFM Web Installs', 'DIFM Phone Installs', 'Total DIFM Installs',
-            'DIY Web Sales', 'DIY Phone Sales', 'Total DIY Sales',
-            'Revenue', 'Profit/Loss',
-            'Projected Installs', 'Projected Revenue', 'Projected Profit/Loss',
-            'Projected Margin', 'Current Rate', 'eCPL'
-        ]
-        cake = cake[columns]
-        
-        st.write("DEBUG: Merge and compute completed successfully")
-        return cake
-        
-    except Exception as e:
-        st.error(f"Error in merge_and_compute: {str(e)}")
-        st.error("Full error details:")
-        import traceback
-        st.error(traceback.format_exc())
-        raise
+    # Prepare for merge
+    cake = cake.copy()
+    web = web.set_index('Affiliate_Code')
+    phone = phone.set_index('PID')
+    
+    # Merge data
+    cake = cake.merge(web, how='left', left_on='Concatenated', right_index=True)
+    cake = cake.merge(phone, how='left', left_on='PID', right_index=True)
+    cake.fillna(0, inplace=True)
+    
+    # Extract metrics
+    cake['Web DIFM Sales'] = cake.get('DIFM Sale_Date_x', 0).astype(int)
+    cake['Phone DIFM Sales'] = cake.get('DIFM Sale_Date_y', 0).astype(int)
+    cake['Web DIY Sales'] = cake.get('DIY Sale_Date_x', 0).astype(int)
+    cake['Phone DIY Sales'] = cake.get('DIY Sale_Date_y', 0).astype(int)
+    cake['DIFM Web Installs'] = cake.get('DIFM Install_Date_x', 0).astype(int)
+    cake['DIFM Phone Installs'] = cake.get('DIFM Install_Date_y', 0).astype(int)
+    
+    # Calculate totals
+    cake['Total DIFM Sales'] = cake['Web DIFM Sales'] + cake['Phone DIFM Sales']
+    cake['Total DIY Sales'] = cake['Web DIY Sales'] + cake['Phone DIY Sales']
+    cake['Total DIFM Installs'] = cake['DIFM Web Installs'] + cake['DIFM Phone Installs']
+    
+    # Calculate revenue metrics
+    cake['Revenue'] = 1080 * cake['Total DIFM Installs'] + 300 * cake['Total DIY Sales']
+    cake['Profit/Loss'] = cake['Revenue'] - cake['Cost']
+    cake['Projected Installs'] = cake.apply(calculate_projected_installs, axis=1)
+    cake['Projected Revenue'] = 1080 * cake['Projected Installs'] + 300 * cake['Total DIY Sales']
+    cake['Projected Profit/Loss'] = cake['Projected Revenue'] - cake['Cost']
+    cake['Projected Margin'] = np.where(cake['Projected Revenue'] == 0, -1, cake['Projected Profit/Loss'] / cake['Projected Revenue'])
+    cake['eCPL'] = np.where(cake['Leads'] == 0, 0, cake['Projected Revenue'] / cake['Leads'])
+    
+    # Format numeric columns
+    cake['Revenue'] = cake['Revenue'].apply(lambda x: f"${x:,.2f}")
+    cake['Profit/Loss'] = cake['Profit/Loss'].apply(lambda x: f"${x:,.2f}")
+    cake['Projected Revenue'] = cake['Projected Revenue'].apply(lambda x: f"${x:,.2f}")
+    cake['Projected Profit/Loss'] = cake['Projected Profit/Loss'].apply(lambda x: f"${x:,.2f}")
+    cake['Cost'] = cake['Cost'].apply(lambda x: f"${x:,.2f}")
+    cake['eCPL'] = cake['eCPL'].apply(lambda x: f"${x:,.2f}")
+    cake['Projected Margin'] = cake['Projected Margin'].apply(lambda x: f"{x:.2%}" if x != -1 else "-")
+    
+    # Reorder columns
+    columns = [
+        'Concatenated', 'PID', 'Leads', 'Cost',
+        'Web DIFM Sales', 'Phone DIFM Sales', 'Total DIFM Sales',
+        'DIFM Web Installs', 'DIFM Phone Installs', 'Total DIFM Installs',
+        'DIY Web Sales', 'DIY Phone Sales', 'Total DIY Sales',
+        'Revenue', 'Profit/Loss',
+        'Projected Installs', 'Projected Revenue', 'Projected Profit/Loss',
+        'Projected Margin', 'Current Rate', 'eCPL'
+    ]
+    cake = cake[columns]
+    
+    return cake
 
 def compare_with_reference(computed_df):
     try:
