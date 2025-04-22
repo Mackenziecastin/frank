@@ -17,13 +17,7 @@ TFN_SHEET_URL = "https://docs.google.com/spreadsheets/d/10BHN_-Wz_ZPmi7rezNtqiDP
 
 def clean_affiliate_code(code):
     if pd.isna(code): return ''
-    parts = code.split('_', 1)
-    if len(parts) < 2: return ''
-    second = parts[1]
-    if '_' in second:
-        seg = second.split('_')[0]
-        return f"{seg}_" if seg.isdigit() else ''
-    return f"{second}_" if second.isdigit() else ''
+    return str(code)  # Simply return the full code without any modification
 
 def proportional_allocation(row, web_val, total_web_val, total_phone_val):
     if row[total_web_val] == 0 or pd.isna(row[total_web_val]): return 0
@@ -180,16 +174,26 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
         raise
 
 def generate_pivots(athena_df):
-    web_df = athena_df[athena_df['Lead_DNIS'].str.contains("WEB", na=False)]
-    phone_df = athena_df[~athena_df['Lead_DNIS'].str.contains("WEB", na=False) & athena_df['PID'].notna()]
+    # Add debugging before filtering
+    st.write("### Pre-filtering Data Summary")
+    st.write(f"Total records before filtering: {len(athena_df)}")
+    st.write("Sample of Lead_DNIS values:")
+    st.write(athena_df['Lead_DNIS'].value_counts().head())
+    st.write("\nSample of PID values:")
+    st.write(athena_df['PID'].value_counts().head())
+    
+    # Separate web and phone with more detailed conditions
+    web_df = athena_df[athena_df['Lead_DNIS'].str.contains("WEB", na=False, case=False)]
+    # Changed phone filtering logic - now just anything that's not web
+    phone_df = athena_df[~athena_df['Lead_DNIS'].str.contains("WEB", na=False, case=False)]
     
     # Debug info about the filtered dataframes
-    st.write("### Web Data Summary")
+    st.write("\n### Web Data Summary")
     st.write(f"Total web records: {len(web_df)}")
     st.write("Sample of web records:")
     st.dataframe(web_df[['Affiliate_Code', 'Lead_DNIS', 'Sale_Date', 'Install_Date', 'INSTALL_METHOD']].head())
     
-    st.write("### Phone Data Summary")
+    st.write("\n### Phone Data Summary")
     st.write(f"Total phone records: {len(phone_df)}")
     st.write("Sample of phone records:")
     st.dataframe(phone_df[['PID', 'Lead_DNIS', 'Sale_Date', 'Install_Date', 'INSTALL_METHOD']].head())
@@ -217,10 +221,10 @@ def generate_pivots(athena_df):
     phone_pivot.columns = [f"{val} {col}" for col, val in phone_pivot.columns]
     
     # Display the pivots
-    st.write("### Web Pivot Table")
+    st.write("\n### Web Pivot Table")
     st.dataframe(web_pivot)
     
-    st.write("### Phone Pivot Table")
+    st.write("\n### Phone Pivot Table")
     st.dataframe(phone_pivot)
     
     return web_pivot.reset_index(), phone_pivot.reset_index()
