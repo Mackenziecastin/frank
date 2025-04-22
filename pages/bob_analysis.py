@@ -21,17 +21,13 @@ def clean_affiliate_code(code):
     parts = code.split('_')
     if len(parts) < 2: return ''
     
-    # Remove the first part (e.g., '32015' from '32015_41899_601493')
-    parts = parts[1:]
-    
-    # Get the PID (first part after removal)
-    pid = parts[0]
-    # Keep only numeric characters in PID
+    # Get the PID and SubID parts (after removing first part)
+    pid = parts[1]  # This should be the 41899 part
     pid = ''.join(c for c in pid if c.isdigit())
     
-    # Check if there's a SubID part (second part after removal)
-    if len(parts) > 1:
-        subid = parts[1]
+    # Check if there's a SubID part
+    if len(parts) > 2:
+        subid = parts[2]
         # If SubID contains any letters, don't include it
         if any(c.isalpha() for c in subid):
             return f"{pid}_"
@@ -209,12 +205,11 @@ def generate_pivots(athena_df):
     # Clean Affiliate_Code first
     athena_df['Affiliate_Code'] = athena_df['Affiliate_Code'].apply(clean_affiliate_code)
     
-    # Clean phone numbers in athena_df for matching
-    athena_df['Clean_ANI'] = athena_df['Primary_Phone_Customer_ANI'].fillna('').astype(str).str.replace(r'[^0-9]', '', regex=True)
-    
     # Load and prepare TFN data
     try:
         tfn_df = load_combined_resi_tfn_data(TFN_SHEET_URL)
+        # Clean TFN numbers
+        tfn_df['Clean_TFN'] = tfn_df['Clean_TFN'].astype(str).str.replace(r'[^0-9]', '', regex=True)
         st.write("\n### TFN Data Summary")
         st.write(f"Total TFN records: {len(tfn_df)}")
         st.write("Sample of TFN mappings:")
@@ -223,21 +218,36 @@ def generate_pivots(athena_df):
         st.error(f"Error loading TFN data: {str(e)}")
         return pd.DataFrame(), pd.DataFrame()
     
-    # Separate web and phone, and match phone records with TFNs
+    # Separate web and phone
     web_df = athena_df[athena_df['Lead_DNIS'].str.contains("WEB", na=False, case=False)]
     phone_df = athena_df[~athena_df['Lead_DNIS'].str.contains("WEB", na=False, case=False)].copy()
     
-    # Match phone records with TFNs to get PIDs
+    # Clean and match phone numbers for phone data
     phone_df['Lead_DNIS'] = phone_df['Lead_DNIS'].fillna('').astype(str)
     phone_df['Clean_DNIS'] = phone_df['Lead_DNIS'].str.replace(r'[^0-9]', '', regex=True)
     
     # Create TFN to PID mapping
     tfn_map = dict(zip(tfn_df['Clean_TFN'], tfn_df['PID']))
     
-    # Assign PIDs based on Lead_DNIS
+    # Debug TFN mapping
+    st.write("\n### TFN Mapping Sample")
+    st.write("First 5 entries in TFN map:")
+    st.write(dict(list(tfn_map.items())[:5]))
+    
+    # Debug phone numbers before matching
+    st.write("\n### Phone Numbers Before Matching")
+    st.write("Sample of Clean_DNIS values:")
+    st.write(phone_df['Clean_DNIS'].head())
+    
+    # Match PIDs
     phone_df['Matched_PID'] = phone_df['Clean_DNIS'].map(tfn_map)
     
-    # Filter phone_df to only include records with matched PIDs
+    # Debug matching results
+    st.write("\n### Matching Results")
+    st.write(f"Total phone records before matching: {len(phone_df)}")
+    st.write(f"Records with matched PIDs: {phone_df['Matched_PID'].notna().sum()}")
+    
+    # Filter to only include matched records
     phone_df = phone_df[phone_df['Matched_PID'].notna()]
     
     # Debug info about the filtered dataframes
