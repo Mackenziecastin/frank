@@ -321,16 +321,52 @@ def compare_with_reference(computed_df):
             ref_numeric[col] = ref_numeric[col].str.replace('$', '').str.replace(',', '').astype(float)
         ref_numeric['Projected Margin'] = ref_numeric['Projected Margin'].replace('-', float('nan')).str.rstrip('%').astype(float) / 100
         
-        # Compare key metrics
+        # Compare web sales row by row
+        st.write("### Detailed Web Sales Comparison")
+        st.write("Comparing web sales numbers for each Concatenated value...")
+        
+        # Merge the dataframes on Concatenated to compare row by row
+        comparison = pd.merge(
+            numeric_df[['Concatenated', 'Web DIFM Sales', 'DIFM Web Installs', 'DIY Web Sales']],
+            ref_numeric[['Concatenated', 'Web DIFM Sales', 'DIFM Web Installs', 'DIY Web Sales']],
+            on='Concatenated',
+            how='outer',
+            suffixes=('_computed', '_reference')
+        )
+        
+        # Find rows with differences
+        differences = comparison[
+            (comparison['Web DIFM Sales_computed'] != comparison['Web DIFM Sales_reference']) |
+            (comparison['DIFM Web Installs_computed'] != comparison['DIFM Web Installs_reference']) |
+            (comparison['DIY Web Sales_computed'] != comparison['DIY Web Sales_reference'])
+        ]
+        
+        if len(differences) > 0:
+            st.write(f"Found {len(differences)} rows with differences in web sales/installs")
+            st.write("Sample of differences (first 10 rows):")
+            st.dataframe(differences.head(10))
+            
+            # Show summary of differences
+            st.write("Summary of differences:")
+            st.write(f"Total Web DIFM Sales - Computed: {numeric_df['Web DIFM Sales'].sum():,}")
+            st.write(f"Total Web DIFM Sales - Reference: {ref_numeric['Web DIFM Sales'].sum():,}")
+            st.write(f"Total DIFM Web Installs - Computed: {numeric_df['DIFM Web Installs'].sum():,}")
+            st.write(f"Total DIFM Web Installs - Reference: {ref_numeric['DIFM Web Installs'].sum():,}")
+            st.write(f"Total DIY Web Sales - Computed: {numeric_df['DIY Web Sales'].sum():,}")
+            st.write(f"Total DIY Web Sales - Reference: {ref_numeric['DIY Web Sales'].sum():,}")
+        else:
+            st.success("No differences found in web sales/installs numbers!")
+        
+        # Continue with other comparisons...
         metrics = [
-            'Leads', 'Web DIFM Sales', 'Phone DIFM Sales', 'Total DIFM Sales',
-            'DIFM Web Installs', 'DIFM Phone Installs', 'Total DIFM Installs',
-            'DIY Web Sales', 'DIY Phone Sales', 'Total DIY Sales',
+            'Leads', 'Phone DIFM Sales', 'Total DIFM Sales',
+            'DIFM Phone Installs', 'Total DIFM Installs',
+            'DIY Phone Sales', 'Total DIY Sales',
             'Projected Installs'
         ]
         
         st.write("### Comparison with Reference Report")
-        st.write("Checking key metrics for differences...")
+        st.write("Checking other key metrics for differences...")
         
         for metric in metrics:
             computed_sum = numeric_df[metric].sum()
