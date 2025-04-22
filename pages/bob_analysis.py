@@ -226,67 +226,40 @@ def merge_and_compute(cake, web, phone):
         
         # Debug after merges
         st.write("\nDEBUG: Data sample after merges:")
-        st.write("Sample rows with NaN values in Total DIFM Sales:")
-        st.write(cake[cake['DIFM Sale_Date_x'].isna()][['Concatenated', 'PID', 'DIFM Sale_Date_x', 'DIFM Sale_Date_y']].head())
+        st.write("All columns after merge:", cake.columns.tolist())
         
         # Fill NaN values with 0
         st.write("\nDEBUG: Filling NaN values")
         cake = cake.fillna(0)
         
-        # Debug after filling NaN
-        st.write("\nDEBUG: Checking for any remaining NaN values:")
-        for column in cake.columns:
-            nan_count = cake[column].isna().sum()
-            if nan_count > 0:
-                st.write(f"Column {column} has {nan_count} NaN values")
-        
-        # Convert columns to appropriate types
-        st.write("\nDEBUG: Converting column types")
-        
         # Helper function to safely convert to integer
         def safe_convert_to_int(series):
             try:
-                if series.isna().any():
-                    st.write(f"DEBUG: Found NaN values in {series.name} before conversion")
-                    st.write("Sample of rows with NaN:")
-                    st.write(series[series.isna()].head())
                 return series.fillna(0).astype(float).astype(int)
             except Exception as e:
                 st.write(f"DEBUG: Error converting column {series.name}: {str(e)}")
-                st.write("Sample of problematic values:")
-                st.write(series.head())
                 return pd.Series([0] * len(series))
         
         # Process DIFM Sales columns
         st.write("\nDEBUG: Processing DIFM Sales columns")
-        cake['Web DIFM Sales'] = safe_convert_to_int(cake.get('DIFM Sale_Date_x', pd.Series([0] * len(cake))))
-        cake['Phone DIFM Sales'] = safe_convert_to_int(cake.get('DIFM Sale_Date_y', pd.Series([0] * len(cake))))
+        cake['Web DIFM Sales'] = safe_convert_to_int(cake.get('DIFM Sale_Date', pd.Series([0] * len(cake))))
+        cake['Phone DIFM Sales'] = safe_convert_to_int(cake.get('DIFM Sale_Date', pd.Series([0] * len(cake))))
         
         # Process DIY Sales columns
         st.write("\nDEBUG: Processing DIY Sales columns")
-        cake['Web DIY Sales'] = safe_convert_to_int(cake.get('DIY Sale_Date_x', pd.Series([0] * len(cake))))
-        cake['Phone DIY Sales'] = safe_convert_to_int(cake.get('DIY Sale_Date_y', pd.Series([0] * len(cake))))
+        cake['Web DIY Sales'] = safe_convert_to_int(cake.get('DIY Sale_Date', pd.Series([0] * len(cake))))
+        cake['Phone DIY Sales'] = safe_convert_to_int(cake.get('DIY Sale_Date', pd.Series([0] * len(cake))))
         
         # Process Install columns
         st.write("\nDEBUG: Processing Install columns")
-        cake['DIFM Web Installs'] = safe_convert_to_int(cake.get('DIFM Install_Date_x', pd.Series([0] * len(cake))))
-        cake['DIFM Phone Installs'] = safe_convert_to_int(cake.get('DIFM Install_Date_y', pd.Series([0] * len(cake))))
+        cake['DIFM Web Installs'] = safe_convert_to_int(cake.get('DIFM Install_Date', pd.Series([0] * len(cake))))
+        cake['DIFM Phone Installs'] = safe_convert_to_int(cake.get('DIFM Install_Date', pd.Series([0] * len(cake))))
         
         # Calculate totals
         st.write("\nDEBUG: Calculating totals")
         cake['Total DIFM Sales'] = cake['Web DIFM Sales'] + cake['Phone DIFM Sales']
         cake['Total DIY Sales'] = cake['Web DIY Sales'] + cake['Phone DIY Sales']
         cake['Total DIFM Installs'] = cake['DIFM Web Installs'] + cake['DIFM Phone Installs']
-        
-        # Debug totals
-        st.write("\nDEBUG: Checking totals for NaN values:")
-        for col in ['Total DIFM Sales', 'Total DIY Sales', 'Total DIFM Installs']:
-            if col in cake.columns:
-                nan_count = cake[col].isna().sum()
-                if nan_count > 0:
-                    st.write(f"{col} has {nan_count} NaN values")
-                    st.write("Sample of rows with NaN:")
-                    st.write(cake[cake[col].isna()][['Concatenated', col]].head())
         
         # Calculate revenue and profit metrics
         st.write("\nDEBUG: Calculating revenue and profit metrics")
@@ -295,8 +268,7 @@ def merge_and_compute(cake, web, phone):
         
         # Debug before projected installs
         st.write("\nDEBUG: Data before projected installs calculation:")
-        st.write("Sample of rows that might cause issues:")
-        st.write(cake[cake['Total DIFM Sales'].isna() | (cake['Total DIFM Sales'] == 0)][['Concatenated', 'Total DIFM Sales']].head())
+        st.write("Sample of data:", cake[['Concatenated', 'Total DIFM Sales']].head())
         
         cake['Projected Installs'] = cake.apply(calculate_projected_installs, axis=1)
         cake['Projected Revenue'] = 1080 * cake['Projected Installs'] + 300 * cake['Total DIY Sales']
