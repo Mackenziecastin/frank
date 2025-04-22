@@ -17,15 +17,20 @@ TFN_SHEET_URL = "https://docs.google.com/spreadsheets/d/10BHN_-Wz_ZPmi7rezNtqiDP
 
 def clean_affiliate_code(code):
     if pd.isna(code): return ''
+    
     # Split by underscore
     parts = code.split('_')
     if len(parts) < 2: return ''
     
-    # Get the PID and SubID parts (after removing first part)
-    pid = parts[1]  # This should be the 41899 part
-    pid = ''.join(c for c in pid if c.isdigit())
+    # For codes like "32015_41899_601493"
+    # parts[0] = "32015"
+    # parts[1] = "41899"
+    # parts[2] = "601493"
     
-    # Check if there's a SubID part
+    # Get the PID (second part)
+    pid = ''.join(c for c in parts[1] if c.isdigit())
+    
+    # If there's a third part (SubID)
     if len(parts) > 2:
         subid = parts[2]
         # If SubID contains any letters, don't include it
@@ -34,9 +39,10 @@ def clean_affiliate_code(code):
         else:
             # Keep only numeric characters in SubID
             subid = ''.join(c for c in subid if c.isdigit())
-            return f"{pid}_{subid}"
+            if subid:  # Only include if we have digits
+                return f"{pid}_{subid}"
     
-    # If no SubID part, add underscore
+    # If we only have PID or SubID was invalid
     return f"{pid}_"
 
 def proportional_allocation(row, web_val, total_web_val, total_phone_val):
@@ -226,8 +232,8 @@ def generate_pivots(athena_df):
     phone_df['Lead_DNIS'] = phone_df['Lead_DNIS'].fillna('').astype(str)
     phone_df['Clean_DNIS'] = phone_df['Lead_DNIS'].str.replace(r'[^0-9]', '', regex=True)
     
-    # Create TFN to PID mapping
-    tfn_map = dict(zip(tfn_df['Clean_TFN'], tfn_df['PID']))
+    # Create TFN to PID mapping - convert PIDs to integers
+    tfn_map = {k: str(int(float(v))) for k, v in zip(tfn_df['Clean_TFN'], tfn_df['PID'])}
     
     # Debug TFN mapping
     st.write("\n### TFN Mapping Sample")
