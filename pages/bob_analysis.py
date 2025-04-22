@@ -74,11 +74,32 @@ def clean_athena(athena_df, tfn_df, leads_df):
     tfn_map = dict(zip(tfn_df['Clean_TFN'], tfn_df['PID']))
     athena_df['PID'] = athena_df['Lead_DNIS'].apply(lambda x: tfn_map.get(x) if x.isdigit() else None)
     
-    # Leads report processing
-    leads_df['subID'] = leads_df['subID'].apply(lambda x: str(x) if str(x).isdigit() else '')
-    leads_df['PID'] = leads_df['PID'].astype(str)
-    leads_df['Concatenated'] = leads_df.apply(lambda r: f"{r['PID']}_{r['subID']}" if r['subID'] else f"{r['PID']}_", axis=1)
-    phone_map = dict(zip(leads_df['phone'].astype(str), leads_df['Concatenated']))
+    # Leads report processing - handle different column name formats
+    # Check for column name variations
+    sub_id_col = next((col for col in leads_df.columns if col in ['Subid', 'subID', 'sub_id', 'sub id', 'SubID']), None)
+    pid_col = next((col for col in leads_df.columns if col in ['PID', 'pid', 'partner_id', 'partner id', 'PartnerID']), None)
+    phone_col = next((col for col in leads_df.columns if col in ['Phone', 'phone', 'phone_number', 'phone number']), None)
+    
+    if not all([sub_id_col, pid_col, phone_col]):
+        missing_cols = []
+        if not sub_id_col:
+            missing_cols.append("Subid/SubID")
+        if not pid_col:
+            missing_cols.append("PID/PartnerID")
+        if not phone_col:
+            missing_cols.append("Phone")
+        raise ValueError(f"Missing required columns: {', '.join(missing_cols)}. Found columns: {', '.join(leads_df.columns)}")
+    
+    # Clean and process the data with the correct column names
+    leads_df[sub_id_col] = leads_df[sub_id_col].apply(lambda x: str(x) if str(x).isdigit() else '')
+    leads_df[pid_col] = leads_df[pid_col].astype(str)
+    leads_df['Concatenated'] = leads_df.apply(
+        lambda r: f"{r[pid_col]}_{r[sub_id_col]}" if r[sub_id_col] else f"{r[pid_col]}_", 
+        axis=1
+    )
+    
+    # Create phone mapping using the correct column name
+    phone_map = dict(zip(leads_df[phone_col].astype(str), leads_df['Concatenated']))
     athena_df['Primary_Phone_Customer_ANI'] = athena_df['Primary_Phone_Customer_ANI'].astype(str)
     
     def fill_code(row):
@@ -167,7 +188,7 @@ def show_bob_analysis():
         database_leads_file = st.file_uploader(
             "3. Database Leads (CSV)", 
             type=['csv'],
-            help="Upload the Database Leads file for affiliate code matchback"
+            help="Upload the Database Leads file for affiliate code matchback. Required columns: Subid, PID, Phone"
         )
     
     if athena_file and cake_conversion_file and database_leads_file:
@@ -176,6 +197,10 @@ def show_bob_analysis():
             athena_df = pd.read_csv(athena_file)
             conversion_df = pd.read_csv(cake_conversion_file)
             leads_df = pd.read_csv(database_leads_file)
+            
+            # Print column names for debugging
+            st.write("Database Leads columns found:", leads_df.columns.tolist())
+            
             tfn_df = load_combined_resi_tfn_data(TFN_SHEET_URL)
             
             # Step 1: Clean Athena + Leads Report
@@ -238,6 +263,9 @@ def show_bob_analysis():
         except Exception as e:
             st.error(f"Error processing data: {str(e)}")
             st.error("Please check your input files and try again.")
+            # Add more detailed error information
+            st.error("Required columns in Database Leads file: Subid, PID, Phone")
+            st.error("Current columns found:", leads_df.columns.tolist() if 'leads_df' in locals() else "No file loaded")
 
 if __name__ == "__main__":
     show_bob_analysis() 
