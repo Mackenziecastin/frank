@@ -62,45 +62,7 @@ def load_combined_resi_tfn_data(sheet_url):
 
 def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     try:
-        # Print initial data types
-        st.write("Initial column types in leads_df:")
-        st.write(leads_df.dtypes)
-        
-        # Convert all columns to string and print the result
-        for col in leads_df.columns:
-            try:
-                leads_df[col] = leads_df[col].fillna('').astype(str)
-            except Exception as e:
-                st.error(f"Error converting column {col}: {str(e)}")
-        
-        st.write("Column types after conversion:")
-        st.write(leads_df.dtypes)
-        
-        # Convert column names to lowercase for case-insensitive comparison
-        leads_df.columns = leads_df.columns.str.strip()
-        column_map = {col: col.lower() for col in leads_df.columns}
-        leads_df = leads_df.rename(columns=column_map)
-        
-        st.write("Column names after lowercase conversion:", leads_df.columns.tolist())
-        
-        # Find the correct column names (case-insensitive)
-        sub_id_col = next((col for col in leads_df.columns if col.lower() == 'subid'), None)
-        pid_col = next((col for col in leads_df.columns if col.lower() == 'pid'), None)
-        phone_col = next((col for col in leads_df.columns if col.lower() == 'phone'), None)
-        
-        st.write(f"Found columns - Subid: {sub_id_col}, PID: {pid_col}, Phone: {phone_col}")
-        
-        if not all([sub_id_col, pid_col, phone_col]):
-            missing_cols = []
-            if not sub_id_col:
-                missing_cols.append("Subid")
-            if not pid_col:
-                missing_cols.append("PID")
-            if not phone_col:
-                missing_cols.append("Phone")
-            raise ValueError(f"Missing required columns: {', '.join(missing_cols)}. Found columns: {', '.join(leads_df.columns)}")
-        
-        # Process Athena data first
+        # 1. Process Athena data first
         athena_df['Lead_Creation_Date'] = pd.to_datetime(athena_df['Lead_Creation_Date'], errors='coerce')
         athena_df = athena_df[
             (athena_df['Lead_Creation_Date'] >= start_date) &
@@ -113,42 +75,96 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
             (athena_df['Ordr_Type'].str.upper().isin(['NEW', 'RESALE']))
         ]
         
-        # Clean and process the data with the correct column names
-        leads_df[sub_id_col] = leads_df[sub_id_col].fillna('')
-        leads_df[pid_col] = leads_df[pid_col].fillna('')
-        leads_df[phone_col] = leads_df[phone_col].fillna('')
-        
-        # Show sample of data before processing
-        st.write("Sample of leads data before processing:")
-        st.write(leads_df[[sub_id_col, pid_col, phone_col]].head())
-        
-        # Create concatenated field
-        leads_df['Concatenated'] = leads_df.apply(
-            lambda r: f"{str(r[pid_col])}_{str(r[sub_id_col])}" if str(r[sub_id_col]).strip() else f"{str(r[pid_col])}_",
-            axis=1
-        )
-        
-        # Clean phone numbers
-        leads_df[phone_col] = leads_df[phone_col].astype(str).str.replace(r'[^0-9]', '', regex=True)
-        athena_df['Primary_Phone_Customer_ANI'] = athena_df['Primary_Phone_Customer_ANI'].astype(str).str.replace(r'[^0-9]', '', regex=True)
-        
-        # Create phone mapping
-        phone_map = dict(zip(leads_df[phone_col], leads_df['Concatenated']))
-        
-        # Process affiliate codes
+        # 2. Process TFN data
         athena_df['Affiliate_Code'] = athena_df['Affiliate_Code'].apply(clean_affiliate_code)
-        athena_df['Lead_DNIS'] = athena_df['Lead_DNIS'].astype(str)
+        athena_df['Lead_DNIS'] = athena_df['Lead_DNIS'].fillna('').astype(str)
         tfn_map = dict(zip(tfn_df['Clean_TFN'], tfn_df['PID']))
         athena_df['PID'] = athena_df['Lead_DNIS'].apply(lambda x: tfn_map.get(x) if x.isdigit() else None)
         
-        def fill_code(row):
-            if row['Affiliate_Code'] == '' and 'WEB' in row['Lead_DNIS']:
-                return phone_map.get(row['Primary_Phone_Customer_ANI'], '')
-            return row['Affiliate_Code']
+        # 3. Process leads data - print debugging info
+        st.write("Leads DataFrame Info:")
+        st.write(leads_df.info())
+        st.write("\nLeads DataFrame Head:")
+        st.write(leads_df.head())
         
-        athena_df['Affiliate_Code'] = athena_df.apply(fill_code, axis=1)
-        return athena_df
+        # Convert column names to lowercase and strip whitespace
+        leads_df.columns = [col.strip().lower() for col in leads_df.columns]
         
+        # Find required columns
+        required_columns = {
+            'subid': None,
+            'pid': None,
+            'phone': None
+        }
+        
+        # Map actual column names to required names
+        for col in leads_df.columns:
+            col_lower = col.lower()
+            if col_lower == 'subid':
+                required_columns['subid'] = col
+            elif col_lower == 'pid':
+                required_columns['pid'] = col
+            elif col_lower == 'phone':
+                required_columns['phone'] = col
+        
+        # Check if we found all required columns
+        missing_columns = [name for name, col in required_columns.items() if col is None]
+        if missing_columns:
+            raise ValueError(f"Missing required columns: {', '.join(missing_columns)}. Found columns: {', '.join(leads_df.columns)}")
+        
+        # Create working copy of leads DataFrame
+        leads_working = leads_df.copy()
+        
+        # Handle each column separately with explicit error handling
+        try:
+            # Handle SubID
+            leads_working[required_columns['subid']] = leads_working[required_columns['subid']].fillna('')
+            leads_working[required_columns['subid']] = leads_working[required_columns['subid']].astype(str)
+            
+            # Handle PID
+            leads_working[required_columns['pid']] = leads_working[required_columns['pid']].fillna('')
+            leads_working[required_columns['pid']] = leads_working[required_columns['pid']].astype(str)
+            
+            # Handle Phone
+            leads_working[required_columns['phone']] = leads_working[required_columns['phone']].fillna('')
+            leads_working[required_columns['phone']] = leads_working[required_columns['phone']].astype(str)
+            leads_working[required_columns['phone']] = leads_working[required_columns['phone']].str.replace(r'[^0-9]', '', regex=True)
+            
+            # Create concatenated field
+            leads_working['Concatenated'] = leads_working.apply(
+                lambda r: f"{r[required_columns['pid']]}_{r[required_columns['subid']]}" 
+                if str(r[required_columns['subid']]).strip() 
+                else f"{r[required_columns['pid']]}_",
+                axis=1
+            )
+            
+            # Create phone mapping
+            phone_map = dict(zip(
+                leads_working[required_columns['phone']],
+                leads_working['Concatenated']
+            ))
+            
+            # Clean Athena phone numbers
+            athena_df['Primary_Phone_Customer_ANI'] = athena_df['Primary_Phone_Customer_ANI'].fillna('')
+            athena_df['Primary_Phone_Customer_ANI'] = athena_df['Primary_Phone_Customer_ANI'].astype(str)
+            athena_df['Primary_Phone_Customer_ANI'] = athena_df['Primary_Phone_Customer_ANI'].str.replace(r'[^0-9]', '', regex=True)
+            
+            # Apply phone mapping
+            def fill_code(row):
+                if row['Affiliate_Code'] == '' and 'WEB' in str(row['Lead_DNIS']):
+                    return phone_map.get(row['Primary_Phone_Customer_ANI'], '')
+                return row['Affiliate_Code']
+            
+            athena_df['Affiliate_Code'] = athena_df.apply(fill_code, axis=1)
+            
+            return athena_df
+            
+        except Exception as e:
+            st.error(f"Error processing columns: {str(e)}")
+            st.write("Column types:")
+            st.write(leads_working.dtypes)
+            raise
+            
     except Exception as e:
         st.error(f"Error in clean_athena: {str(e)}")
         st.error("Full error details:")
