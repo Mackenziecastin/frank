@@ -218,14 +218,22 @@ def generate_pivots(athena_df):
     # Add debugging before filtering
     st.write("### Pre-filtering Data Summary")
     st.write(f"Total records before filtering: {len(athena_df)}")
-    st.write("Sample of Lead_DNIS values:")
-    st.write(athena_df['Lead_DNIS'].value_counts().head())
-    st.write("\nSample of Primary_Phone_Customer_ANI values:")
-    st.write(athena_df['Primary_Phone_Customer_ANI'].value_counts().head())
     
-    # Clean Affiliate_Code first
-    athena_df['Affiliate_Code'] = athena_df['Affiliate_Code'].apply(clean_affiliate_code)
+    # First, separate web and phone records
+    web_df = athena_df[athena_df['Lead_DNIS'].str.contains("WEB", na=False, case=False)].copy()
+    phone_df = athena_df[~athena_df['Lead_DNIS'].str.contains("WEB", na=False, case=False)].copy()
     
+    st.write("\nSample of Phone Lead_DNIS values before cleaning:")
+    st.write(phone_df['Lead_DNIS'].head())
+    
+    # Clean phone Lead_DNIS for matching
+    phone_df['Clean_DNIS'] = phone_df['Lead_DNIS'].fillna('').astype(str)
+    phone_df['Clean_DNIS'] = phone_df['Clean_DNIS'].str.replace(r'[^0-9]', '', regex=True)
+    
+    st.write("\nSample of Cleaned Phone Lead_DNIS values:")
+    st.write(phone_df['Clean_DNIS'].head())
+    
+    # Load and prepare TFN data
     try:
         tfn_df = load_combined_resi_tfn_data(TFN_SHEET_URL)
         st.write("\n### TFN Data Summary")
@@ -233,13 +241,26 @@ def generate_pivots(athena_df):
         st.write("Sample of TFN mappings:")
         st.dataframe(tfn_df.head())
         
-        # Create TFN to PID mapping (no need for additional cleaning since it's done in load_combined_resi_tfn_data)
+        # Create TFN to PID mapping
         tfn_map = dict(zip(tfn_df['Clean_TFN'], tfn_df['PID']))
         
         # Debug TFN mapping
         st.write("\n### TFN Mapping Sample")
         st.write("First 5 entries in TFN map:")
         st.write(dict(list(tfn_map.items())[:5]))
+        
+        # Match PIDs for phone records
+        phone_df['Matched_PID'] = phone_df['Clean_DNIS'].map(tfn_map)
+        
+        # Debug matching results
+        st.write("\n### Phone Matching Results")
+        st.write(f"Total phone records: {len(phone_df)}")
+        st.write(f"Records with matched PIDs: {phone_df['Matched_PID'].notna().sum()}")
+        st.write("\nSample of matched records:")
+        st.dataframe(phone_df[['Lead_DNIS', 'Clean_DNIS', 'Matched_PID']].head())
+        
+        # Filter to only include matched records
+        phone_df = phone_df[phone_df['Matched_PID'].notna()]
         
     except Exception as e:
         st.error(f"Error loading TFN data: {str(e)}")
@@ -248,24 +269,8 @@ def generate_pivots(athena_df):
         st.error(traceback.format_exc())
         return pd.DataFrame(), pd.DataFrame()
     
-    # Separate web and phone
-    web_df = athena_df[athena_df['Lead_DNIS'].str.contains("WEB", na=False, case=False)].copy()
-    phone_df = athena_df[~athena_df['Lead_DNIS'].str.contains("WEB", na=False, case=False)].copy()
-    
-    # Clean and match phone numbers for phone data
-    phone_df['Lead_DNIS'] = phone_df['Lead_DNIS'].fillna('').astype(str)
-    phone_df['Clean_DNIS'] = phone_df['Lead_DNIS'].str.replace(r'[^0-9]', '', regex=True)
-    
-    # Match PIDs
-    phone_df['Matched_PID'] = phone_df['Clean_DNIS'].map(tfn_map)
-    
-    # Debug matching results
-    st.write("\n### Matching Results")
-    st.write(f"Total phone records before matching: {len(phone_df)}")
-    st.write(f"Records with matched PIDs: {phone_df['Matched_PID'].notna().sum()}")
-    
-    # Filter to only include matched records
-    phone_df = phone_df[phone_df['Matched_PID'].notna()]
+    # Clean Affiliate_Code for web records
+    web_df['Affiliate_Code'] = web_df['Affiliate_Code'].apply(clean_affiliate_code)
     
     # Debug info about the filtered dataframes
     st.write("\n### Web Data Summary")
@@ -274,7 +279,7 @@ def generate_pivots(athena_df):
     st.dataframe(web_df[['Affiliate_Code', 'Lead_DNIS', 'Sale_Date', 'Install_Date', 'INSTALL_METHOD']].head())
     
     st.write("\n### Phone Data Summary")
-    st.write(f"Total phone records: {len(phone_df)}")
+    st.write(f"Total matched phone records: {len(phone_df)}")
     st.write("Sample of phone records:")
     st.dataframe(phone_df[['Matched_PID', 'Lead_DNIS', 'Clean_DNIS', 'Sale_Date', 'Install_Date', 'INSTALL_METHOD']].head())
     
@@ -315,10 +320,6 @@ def generate_pivots(athena_df):
     
     st.write("\n### Phone Pivot Table")
     st.dataframe(phone_pivot)
-    
-    # Add debugging for final Affiliate_Code values
-    st.write("\n### Sample of Final Affiliate_Code Values")
-    st.write(web_df['Affiliate_Code'].value_counts().head())
     
     return web_pivot.reset_index() if len(web_pivot) > 0 else pd.DataFrame(), phone_pivot.reset_index() if len(phone_pivot) > 0 else pd.DataFrame()
 
