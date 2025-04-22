@@ -24,16 +24,24 @@ def clean_affiliate_code(code):
     # Remove the first part (e.g., '32015' from '32015_41899_601493')
     parts = parts[1:]
     
-    # Clean the remaining parts to remove any non-numeric characters
-    cleaned_parts = []
-    for part in parts:
-        # Keep only numeric characters
-        numeric_part = ''.join(c for c in part if c.isdigit())
-        if numeric_part:
-            cleaned_parts.append(numeric_part)
+    # Get the PID (first part after removal)
+    pid = parts[0]
+    # Keep only numeric characters in PID
+    pid = ''.join(c for c in pid if c.isdigit())
     
-    # Join back with underscore
-    return '_'.join(cleaned_parts)
+    # Check if there's a SubID part (second part after removal)
+    if len(parts) > 1:
+        subid = parts[1]
+        # If SubID contains any letters, don't include it
+        if any(c.isalpha() for c in subid):
+            return f"{pid}_"
+        else:
+            # Keep only numeric characters in SubID
+            subid = ''.join(c for c in subid if c.isdigit())
+            return f"{pid}_{subid}"
+    
+    # If no SubID part, add underscore
+    return f"{pid}_"
 
 def proportional_allocation(row, web_val, total_web_val, total_phone_val):
     if row[total_web_val] == 0 or pd.isna(row[total_web_val]): return 0
@@ -195,30 +203,53 @@ def generate_pivots(athena_df):
     st.write(f"Total records before filtering: {len(athena_df)}")
     st.write("Sample of Lead_DNIS values:")
     st.write(athena_df['Lead_DNIS'].value_counts().head())
-    st.write("\nSample of PID values:")
-    st.write(athena_df['PID'].value_counts().head())
+    st.write("\nSample of Primary_Phone_Customer_ANI values:")
+    st.write(athena_df['Primary_Phone_Customer_ANI'].value_counts().head())
     
     # Clean Affiliate_Code first
     athena_df['Affiliate_Code'] = athena_df['Affiliate_Code'].apply(clean_affiliate_code)
     
-    # Separate web and phone
+    # Clean phone numbers in athena_df for matching
+    athena_df['Clean_ANI'] = athena_df['Primary_Phone_Customer_ANI'].fillna('').astype(str).str.replace(r'[^0-9]', '', regex=True)
+    
+    # Load and prepare TFN data
+    try:
+        tfn_df = load_combined_resi_tfn_data(TFN_SHEET_URL)
+        st.write("\n### TFN Data Summary")
+        st.write(f"Total TFN records: {len(tfn_df)}")
+        st.write("Sample of TFN mappings:")
+        st.dataframe(tfn_df.head())
+    except Exception as e:
+        st.error(f"Error loading TFN data: {str(e)}")
+        return pd.DataFrame(), pd.DataFrame()
+    
+    # Separate web and phone, and match phone records with TFNs
     web_df = athena_df[athena_df['Lead_DNIS'].str.contains("WEB", na=False, case=False)]
-    phone_df = athena_df[
-        (~athena_df['Lead_DNIS'].str.contains("WEB", na=False, case=False)) & 
-        (athena_df['PID'].notna()) &  # Only include records with valid PIDs
-        (athena_df['PID'] != '')  # Ensure PID is not empty string
-    ]
+    phone_df = athena_df[~athena_df['Lead_DNIS'].str.contains("WEB", na=False, case=False)].copy()
+    
+    # Match phone records with TFNs to get PIDs
+    phone_df['Lead_DNIS'] = phone_df['Lead_DNIS'].fillna('').astype(str)
+    phone_df['Clean_DNIS'] = phone_df['Lead_DNIS'].str.replace(r'[^0-9]', '', regex=True)
+    
+    # Create TFN to PID mapping
+    tfn_map = dict(zip(tfn_df['Clean_TFN'], tfn_df['PID']))
+    
+    # Assign PIDs based on Lead_DNIS
+    phone_df['Matched_PID'] = phone_df['Clean_DNIS'].map(tfn_map)
+    
+    # Filter phone_df to only include records with matched PIDs
+    phone_df = phone_df[phone_df['Matched_PID'].notna()]
     
     # Debug info about the filtered dataframes
     st.write("\n### Web Data Summary")
     st.write(f"Total web records: {len(web_df)}")
     st.write("Sample of web records:")
-    st.dataframe(web_df[['Affiliate_Code', 'Lead_DNIS', 'Sale_Date', 'Install_Date', 'INSTALL_METHOD', 'PID']].head())
+    st.dataframe(web_df[['Affiliate_Code', 'Lead_DNIS', 'Sale_Date', 'Install_Date', 'INSTALL_METHOD']].head())
     
     st.write("\n### Phone Data Summary")
     st.write(f"Total phone records: {len(phone_df)}")
     st.write("Sample of phone records:")
-    st.dataframe(phone_df[['PID', 'Lead_DNIS', 'Sale_Date', 'Install_Date', 'INSTALL_METHOD']].head())
+    st.dataframe(phone_df[['Matched_PID', 'Lead_DNIS', 'Clean_DNIS', 'Sale_Date', 'Install_Date', 'INSTALL_METHOD']].head())
     
     # Create pivots
     web_pivot = pd.pivot_table(
@@ -229,9 +260,10 @@ def generate_pivots(athena_df):
         aggfunc='count', 
         fill_value=0
     )
+    
     phone_pivot = pd.pivot_table(
         phone_df, 
-        index='PID', 
+        index='Matched_PID', 
         values=['Sale_Date', 'Install_Date'], 
         columns='INSTALL_METHOD', 
         aggfunc='count', 
