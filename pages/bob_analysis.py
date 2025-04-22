@@ -282,21 +282,59 @@ def show_bob_analysis():
     
     if athena_file and cake_conversion_file and database_leads_file:
         try:
-            # Load and process data
-            athena_df = pd.read_csv(athena_file)
-            conversion_df = pd.read_csv(cake_conversion_file)
-            leads_df = pd.read_csv(database_leads_file)
+            # Load and process data with debugging
+            st.write("DEBUG: Starting data loading...")
             
-            # Print column names for debugging
-            st.write("Database Leads columns found:", leads_df.columns.tolist())
+            try:
+                athena_df = pd.read_csv(athena_file)
+                st.write("DEBUG: Successfully loaded Athena file")
+                st.write("Athena columns:", athena_df.columns.tolist())
+            except Exception as e:
+                st.error(f"Error loading Athena file: {str(e)}")
+                return
             
-            tfn_df = load_combined_resi_tfn_data(TFN_SHEET_URL)
+            try:
+                conversion_df = pd.read_csv(cake_conversion_file)
+                st.write("DEBUG: Successfully loaded Conversion file")
+                st.write("Conversion columns:", conversion_df.columns.tolist())
+            except Exception as e:
+                st.error(f"Error loading Conversion file: {str(e)}")
+                return
+            
+            try:
+                leads_df = pd.read_csv(database_leads_file)
+                st.write("DEBUG: Successfully loaded Database Leads file")
+                st.write("Database Leads columns:", leads_df.columns.tolist())
+                st.write("Database Leads data types:")
+                st.write(leads_df.dtypes)
+                st.write("First few rows of Database Leads:")
+                st.write(leads_df.head())
+            except Exception as e:
+                st.error(f"Error loading Database Leads file: {str(e)}")
+                return
+            
+            st.write("DEBUG: Loading TFN data...")
+            try:
+                tfn_df = load_combined_resi_tfn_data(TFN_SHEET_URL)
+                st.write("DEBUG: Successfully loaded TFN data")
+            except Exception as e:
+                st.error(f"Error loading TFN data: {str(e)}")
+                return
             
             # Display date range being analyzed
             st.info(f"Analyzing leads created from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
             
             # Step 1: Clean Athena + Leads Report
-            athena_df = clean_athena(athena_df, tfn_df, leads_df, start_date, end_date)
+            st.write("DEBUG: Starting clean_athena function...")
+            try:
+                athena_df = clean_athena(athena_df, tfn_df, leads_df, start_date, end_date)
+                st.write("DEBUG: Successfully cleaned Athena data")
+            except Exception as e:
+                st.error("Error in clean_athena function")
+                st.error(f"Error details: {str(e)}")
+                import traceback
+                st.error(f"Full traceback:\n{traceback.format_exc()}")
+                return
             
             # Display record counts
             total_leads = len(athena_df)
@@ -307,13 +345,31 @@ def show_bob_analysis():
             st.write(f"Total leads created in date range: {total_leads:,}")
             
             # Step 2: Generate Web + Phone Pivots
-            web_pivot, phone_pivot = generate_pivots(athena_df)
+            st.write("DEBUG: Generating pivots...")
+            try:
+                web_pivot, phone_pivot = generate_pivots(athena_df)
+                st.write("DEBUG: Successfully generated pivots")
+            except Exception as e:
+                st.error(f"Error generating pivots: {str(e)}")
+                return
             
             # Step 3: Clean Conversion Report
-            cake_df = clean_conversion(conversion_df)
+            st.write("DEBUG: Cleaning conversion report...")
+            try:
+                cake_df = clean_conversion(conversion_df)
+                st.write("DEBUG: Successfully cleaned conversion report")
+            except Exception as e:
+                st.error(f"Error cleaning conversion report: {str(e)}")
+                return
             
             # Step 4-5: Merge and Compute Final Metrics
-            final_df = merge_and_compute(cake_df, web_pivot, phone_pivot)
+            st.write("DEBUG: Merging and computing metrics...")
+            try:
+                final_df = merge_and_compute(cake_df, web_pivot, phone_pivot)
+                st.write("DEBUG: Successfully computed metrics")
+            except Exception as e:
+                st.error(f"Error computing metrics: {str(e)}")
+                return
             
             # Display optimization report
             st.subheader("Partner Optimization Report")
@@ -363,11 +419,11 @@ def show_bob_analysis():
         except Exception as e:
             st.error(f"Error processing data: {str(e)}")
             st.error("Please check your input files and try again.")
-            # Add more detailed error information
             st.error("Required columns in Database Leads file: Subid, PID, Phone")
-            # Fix: Combine the message and columns into a single string
             columns_found = leads_df.columns.tolist() if 'leads_df' in locals() else ["No file loaded"]
             st.error(f"Current columns found: {', '.join(str(col) for col in columns_found)}")
+            import traceback
+            st.error(f"Full traceback:\n{traceback.format_exc()}")
 
 if __name__ == "__main__":
     show_bob_analysis() 
