@@ -216,6 +216,15 @@ def generate_pivots(athena_df):
         tfn_df = load_combined_resi_tfn_data(TFN_SHEET_URL)
         # Clean TFN numbers
         tfn_df['Clean_TFN'] = tfn_df['Clean_TFN'].astype(str).str.replace(r'[^0-9]', '', regex=True)
+        # Convert PID to proper format and handle NaN
+        tfn_df['PID'] = tfn_df['PID'].apply(lambda x: str(int(float(x))) if pd.notna(x) and str(x).strip() != '' else '')
+        
+        # Remove any empty TFNs or PIDs
+        tfn_df = tfn_df[
+            (tfn_df['Clean_TFN'].str.strip() != '') & 
+            (tfn_df['PID'].str.strip() != '')
+        ]
+        
         st.write("\n### TFN Data Summary")
         st.write(f"Total TFN records: {len(tfn_df)}")
         st.write("Sample of TFN mappings:")
@@ -224,6 +233,14 @@ def generate_pivots(athena_df):
         st.error(f"Error loading TFN data: {str(e)}")
         return pd.DataFrame(), pd.DataFrame()
     
+    # Create TFN to PID mapping
+    tfn_map = dict(zip(tfn_df['Clean_TFN'], tfn_df['PID']))
+    
+    # Debug TFN mapping
+    st.write("\n### TFN Mapping Sample")
+    st.write("First 5 entries in TFN map:")
+    st.write(dict(list(tfn_map.items())[:5]))
+    
     # Separate web and phone
     web_df = athena_df[athena_df['Lead_DNIS'].str.contains("WEB", na=False, case=False)]
     phone_df = athena_df[~athena_df['Lead_DNIS'].str.contains("WEB", na=False, case=False)].copy()
@@ -231,19 +248,6 @@ def generate_pivots(athena_df):
     # Clean and match phone numbers for phone data
     phone_df['Lead_DNIS'] = phone_df['Lead_DNIS'].fillna('').astype(str)
     phone_df['Clean_DNIS'] = phone_df['Lead_DNIS'].str.replace(r'[^0-9]', '', regex=True)
-    
-    # Create TFN to PID mapping - convert PIDs to integers
-    tfn_map = {k: str(int(float(v))) for k, v in zip(tfn_df['Clean_TFN'], tfn_df['PID'])}
-    
-    # Debug TFN mapping
-    st.write("\n### TFN Mapping Sample")
-    st.write("First 5 entries in TFN map:")
-    st.write(dict(list(tfn_map.items())[:5]))
-    
-    # Debug phone numbers before matching
-    st.write("\n### Phone Numbers Before Matching")
-    st.write("Sample of Clean_DNIS values:")
-    st.write(phone_df['Clean_DNIS'].head())
     
     # Match PIDs
     phone_df['Matched_PID'] = phone_df['Clean_DNIS'].map(tfn_map)
