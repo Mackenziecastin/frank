@@ -182,10 +182,47 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
 def generate_pivots(athena_df):
     web_df = athena_df[athena_df['Lead_DNIS'].str.contains("WEB", na=False)]
     phone_df = athena_df[~athena_df['Lead_DNIS'].str.contains("WEB", na=False) & athena_df['PID'].notna()]
-    web_pivot = pd.pivot_table(web_df, index='Affiliate_Code', values=['Sale_Date', 'Install_Date'], columns='INSTALL_METHOD', aggfunc='count', fill_value=0)
-    phone_pivot = pd.pivot_table(phone_df, index='PID', values=['Sale_Date', 'Install_Date'], columns='INSTALL_METHOD', aggfunc='count', fill_value=0)
+    
+    # Debug info about the filtered dataframes
+    st.write("### Web Data Summary")
+    st.write(f"Total web records: {len(web_df)}")
+    st.write("Sample of web records:")
+    st.dataframe(web_df[['Affiliate_Code', 'Lead_DNIS', 'Sale_Date', 'Install_Date', 'INSTALL_METHOD']].head())
+    
+    st.write("### Phone Data Summary")
+    st.write(f"Total phone records: {len(phone_df)}")
+    st.write("Sample of phone records:")
+    st.dataframe(phone_df[['PID', 'Lead_DNIS', 'Sale_Date', 'Install_Date', 'INSTALL_METHOD']].head())
+    
+    # Create pivots
+    web_pivot = pd.pivot_table(
+        web_df, 
+        index='Affiliate_Code', 
+        values=['Sale_Date', 'Install_Date'], 
+        columns='INSTALL_METHOD', 
+        aggfunc='count', 
+        fill_value=0
+    )
+    phone_pivot = pd.pivot_table(
+        phone_df, 
+        index='PID', 
+        values=['Sale_Date', 'Install_Date'], 
+        columns='INSTALL_METHOD', 
+        aggfunc='count', 
+        fill_value=0
+    )
+    
+    # Flatten column names
     web_pivot.columns = [f"{val} {col}" for col, val in web_pivot.columns]
     phone_pivot.columns = [f"{val} {col}" for col, val in phone_pivot.columns]
+    
+    # Display the pivots
+    st.write("### Web Pivot Table")
+    st.dataframe(web_pivot)
+    
+    st.write("### Phone Pivot Table")
+    st.dataframe(phone_pivot)
+    
     return web_pivot.reset_index(), phone_pivot.reset_index()
 
 def clean_conversion(conversion_df):
