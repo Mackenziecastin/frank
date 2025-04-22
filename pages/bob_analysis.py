@@ -270,6 +270,9 @@ def merge_and_compute(cake, web, phone):
         cake['eCPL'] = np.where(cake['Leads'] == 0, 0, 
                                cake['Projected Revenue'] / cake['Leads'])
         
+        # Add Current Rate column (default to 0 if not available)
+        cake['Current Rate'] = 0
+        
         # Format numeric columns
         cake['Revenue'] = cake['Revenue'].apply(lambda x: f"${x:,.2f}")
         cake['Profit/Loss'] = cake['Profit/Loss'].apply(lambda x: f"${x:,.2f}")
