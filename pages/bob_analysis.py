@@ -23,16 +23,20 @@ def clean_affiliate_code(code):
     if len(parts) < 2: return ''
     remainder = parts[1]
     
-    # Step 2: If there are more underscores, only keep the first numeric part
+    # Step 2: If there are more underscores, check if the first part is numeric
     if '_' in remainder:
+        first_part = remainder.split('_')[0]
+        # If first part is numeric, keep it, otherwise find first numeric part
+        if first_part.isdigit():
+            return f"{first_part}_"
+        # If it contains non-numeric characters, look for first numeric part
         subparts = remainder.split('_')
-        # Find the first numeric part
         for part in subparts:
             if part.isdigit():
                 return f"{part}_"
         return ''  # No numeric part found
     
-    # If no more underscores, check if the part is numeric
+    # If no more underscores, check if the remainder is numeric
     return f"{remainder}_" if remainder.isdigit() else ''
 
 def proportional_allocation(row, web_val, total_web_val, total_phone_val):
@@ -280,7 +284,7 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     # Debug original Affiliate_Codes
     st.write("\n### Affiliate Code Cleaning Debug")
     st.write("Sample of original Affiliate_Codes:")
-    sample_codes = athena_df['Affiliate_Code'].head(10).tolist()
+    sample_codes = athena_df['Affiliate_Code'].head(20).tolist()
     st.write(sample_codes)
     
     # Filter Athena data
@@ -300,13 +304,19 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     athena_df['Original_Code'] = athena_df['Affiliate_Code']  # Keep original for reference
     athena_df['Affiliate_Code'] = athena_df['Affiliate_Code'].apply(clean_affiliate_code)
     
-    # Show cleaning results
+    # Show cleaning results with examples of different cases
     st.write("\nAffiliate Code Cleaning Results:")
     cleaning_examples = pd.DataFrame({
-        'Original': athena_df['Original_Code'].head(10),
-        'Cleaned': athena_df['Affiliate_Code'].head(10)
+        'Original': athena_df['Original_Code'],
+        'Cleaned': athena_df['Affiliate_Code']
     })
-    st.write(cleaning_examples)
+    # Show examples of different cases
+    st.write("Numeric subID (should keep):")
+    st.write(cleaning_examples[cleaning_examples['Original'].str.contains('_\d+$', na=False)].head())
+    st.write("\nNon-numeric subID (should clean):")
+    st.write(cleaning_examples[cleaning_examples['Original'].str.contains('_[^\d_]+', na=False)].head())
+    st.write("\nMultiple underscores (should handle appropriately):")
+    st.write(cleaning_examples[cleaning_examples['Original'].str.count('_') > 1].head())
     
     # Handle Lead_DNIS and PID matching
     athena_df['Lead_DNIS'] = athena_df['Lead_DNIS'].fillna('').astype(str)
