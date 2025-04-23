@@ -743,7 +743,7 @@ def allocate_phone_metrics(cake_df, phone_df):
     
     return cake_df
 
-def merge_and_compute(cake, web, phone):
+def merge_and_compute(cake, web, phone, conversion_df):
     # Debug info
     st.write("\n### Merge Debug Info")
     st.write("Cake columns:", cake.columns.tolist())
@@ -751,7 +751,7 @@ def merge_and_compute(cake, web, phone):
     st.write("Phone columns:", phone.columns.tolist())
     
     # Get current rates
-    current_rates = get_current_rates(conversion_df)  # This will be passed from the main function
+    current_rates = get_current_rates(conversion_df)
     
     # Prepare for merge
     cake = cake.copy()
@@ -1084,7 +1084,7 @@ def show_bob_analysis():
             # Step 4-5: Merge and Compute Final Metrics
             st.write("DEBUG: Merging and computing metrics...")
             try:
-                final_df = merge_and_compute(cake_df, web_pivot, phone_pivot)
+                final_df = merge_and_compute(cake_df, web_pivot, phone_pivot, conversion_df)
                 st.write("DEBUG: Successfully computed metrics")
             except Exception as e:
                 st.error(f"Error computing metrics: {str(e)}")
