@@ -477,72 +477,75 @@ def merge_and_compute(cake, web, phone):
     phone = phone.copy() if not phone.empty else pd.DataFrame()
     
     # Ensure required columns exist in web DataFrame
+    web_cols = ['Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs', 'DIY Web Installs']
+    phone_cols = ['Phone DIFM Sales', 'Phone DIY Sales', 'DIFM Phone Installs', 'DIY Phone Installs']
+    
     if not web.empty:
         web = web.set_index('Affiliate_Code')
-        for col in ['Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs', 'DIY Web Installs']:
+        for col in web_cols:
             if col not in web.columns:
                 web[col] = 0
+    else:
+        web = pd.DataFrame(columns=['Affiliate_Code'] + web_cols)
+        web = web.set_index('Affiliate_Code')
     
-    # Ensure required columns exist in phone DataFrame
     if not phone.empty:
         phone = phone.set_index('PID')
-        for col in ['Phone DIFM Sales', 'Phone DIY Sales', 'DIFM Phone Installs', 'DIY Phone Installs']:
+        for col in phone_cols:
             if col not in phone.columns:
                 phone[col] = 0
+    else:
+        phone = pd.DataFrame(columns=['PID'] + phone_cols)
+        phone = phone.set_index('PID')
+    
+    # Debug before merge
+    st.write("\nBefore merge:")
+    st.write("Web DataFrame:")
+    st.write(web.head().to_dict('records'))
+    st.write("Phone DataFrame:")
+    st.write(phone.head().to_dict('records'))
     
     # Merge data
     if not web.empty:
         cake = cake.merge(web, how='left', left_on='Concatenated', right_index=True)
     if not phone.empty:
         cake = cake.merge(phone, how='left', left_on='PID', right_index=True)
-    cake.fillna(0, inplace=True)
+    
+    # Fill NaN values with 0
+    cake = cake.fillna(0)
+    
+    # Debug after merge
+    st.write("\nAfter merge:")
+    st.write("Cake columns:", cake.columns.tolist())
+    st.write("Sample of merged data:")
+    st.write(cake.head().to_dict('records'))
     
     # Extract metrics with safe column access
-    cake['Web DIFM Sales'] = cake.get('Web DIFM Sales', 0).astype(int)
-    cake['Phone DIFM Sales'] = cake.get('Phone DIFM Sales', 0).astype(int)
-    cake['Web DIY Sales'] = cake.get('Web DIY Sales', 0).astype(int)
-    cake['Phone DIY Sales'] = cake.get('Phone DIY Sales', 0).astype(int)
-    cake['DIFM Web Installs'] = cake.get('DIFM Web Installs', 0).astype(int)
-    cake['DIFM Phone Installs'] = cake.get('DIFM Phone Installs', 0).astype(int)
+    metrics = {
+        'Web DIFM Sales': 'Web DIFM Sales',
+        'Phone DIFM Sales': 'Phone DIFM Sales',
+        'Web DIY Sales': 'Web DIY Sales',
+        'Phone DIY Sales': 'Phone DIY Sales',
+        'DIFM Web Installs': 'DIFM Web Installs',
+        'DIFM Phone Installs': 'DIFM Phone Installs'
+    }
+    
+    # Safely get or create each metric column
+    for new_col, source_col in metrics.items():
+        cake[new_col] = cake.get(source_col, 0).astype(int)
     
     # Calculate totals
     cake['Total DIFM Sales'] = cake['Web DIFM Sales'] + cake['Phone DIFM Sales']
     cake['Total DIY Sales'] = cake['Web DIY Sales'] + cake['Phone DIY Sales']
     cake['Total DIFM Installs'] = cake['DIFM Web Installs'] + cake['DIFM Phone Installs']
     
-    # Calculate revenue metrics
-    cake['Revenue'] = 1080 * cake['Total DIFM Installs'] + 300 * cake['Total DIY Sales']
-    cake['Profit/Loss'] = cake['Revenue'] - cake['Cost']
-    cake['Projected Installs'] = cake.apply(calculate_projected_installs, axis=1)
-    cake['Projected Revenue'] = 1080 * cake['Projected Installs'] + 300 * cake['Total DIY Sales']
-    cake['Projected Profit/Loss'] = cake['Projected Revenue'] - cake['Cost']
-    cake['Projected Margin'] = np.where(cake['Projected Revenue'] == 0, -1, cake['Projected Profit/Loss'] / cake['Projected Revenue'])
-    cake['eCPL'] = np.where(cake['Leads'] == 0, 0, cake['Projected Revenue'] / cake['Leads'])
-    
-    # Format numeric columns
-    cake['Revenue'] = cake['Revenue'].apply(lambda x: f"${x:,.2f}")
-    cake['Profit/Loss'] = cake['Profit/Loss'].apply(lambda x: f"${x:,.2f}")
-    cake['Projected Revenue'] = cake['Projected Revenue'].apply(lambda x: f"${x:,.2f}")
-    cake['Projected Profit/Loss'] = cake['Projected Profit/Loss'].apply(lambda x: f"${x:,.2f}")
-    cake['Cost'] = cake['Cost'].apply(lambda x: f"${x:,.2f}")
-    cake['eCPL'] = cake['eCPL'].apply(lambda x: f"${x:,.2f}")
-    cake['Projected Margin'] = cake['Projected Margin'].apply(lambda x: f"{x:.2%}" if x != -1 else "-")
-    
-    # Add Current Rate column if not present
-    if 'Current Rate' not in cake.columns:
-        cake['Current Rate'] = 0
-    
-    # Reorder columns
-    columns = [
-        'Concatenated', 'PID', 'Leads', 'Cost',
-        'Web DIFM Sales', 'Phone DIFM Sales', 'Total DIFM Sales',
-        'DIFM Web Installs', 'DIFM Phone Installs', 'Total DIFM Installs',
-        'DIY Web Sales', 'DIY Phone Sales', 'Total DIY Sales',
-        'Revenue', 'Profit/Loss',
-        'Projected Installs', 'Projected Revenue', 'Projected Profit/Loss',
-        'Projected Margin', 'Current Rate', 'eCPL'
-    ]
-    cake = cake[columns]
+    # Debug final metrics
+    st.write("\nFinal metrics check:")
+    st.write("Sample of final metrics:")
+    metric_cols = ['Web DIFM Sales', 'Phone DIFM Sales', 'Web DIY Sales', 'Phone DIY Sales',
+                  'DIFM Web Installs', 'DIFM Phone Installs', 'Total DIFM Sales', 'Total DIY Sales',
+                  'Total DIFM Installs']
+    st.write(cake[metric_cols].head().to_dict('records'))
     
     return cake
 
