@@ -56,6 +56,12 @@ def load_combined_resi_tfn_data(sheet_url):
     resi_df = pd.read_csv(sheet_csv_url("RESI TFN Sheet"))
     display_df = pd.read_csv(sheet_csv_url("Display TFN Sheet"))
     
+    # Debug raw data
+    st.write("\nRaw RESI TFN Sheet sample:")
+    st.write(resi_df.head())
+    st.write("\nRaw Display TFN Sheet sample:")
+    st.write(display_df.head())
+    
     # Combine sheets
     combined_df = pd.concat([
         resi_df.rename(columns={"PID": "PID", "TFN": "TFN"}),
@@ -70,6 +76,12 @@ def load_combined_resi_tfn_data(sheet_url):
     combined_df['PID'] = combined_df['PID'].apply(
         lambda x: str(int(float(x))) if pd.notnull(x) and str(x).strip() != '' else ''
     )
+    
+    # Debug specific TFN
+    st.write("\nLooking for specific TFN mapping:")
+    st.write(combined_df[combined_df['Clean_TFN'] == '8446778720'])
+    st.write("\nAll TFNs containing '8446778720':")
+    st.write(combined_df[combined_df['Clean_TFN'].str.contains('8446778720', na=False)])
     
     # Debug cleaned data
     st.write("\nCleaned TFN mapping sample:")
@@ -105,10 +117,21 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     # Create TFN mapping dictionary
     tfn_map = dict(zip(tfn_df['Clean_TFN'], tfn_df['PID']))
     
+    # Debug specific mapping
+    st.write("\nChecking specific TFN in mapping:")
+    st.write(f"Is '8446778720' in TFN map? {'8446778720' in tfn_map}")
+    if '8446778720' in tfn_map:
+        st.write(f"Mapped PID for 8446778720: {tfn_map['8446778720']}")
+    
     # Get non-WEB records for debugging
     non_web_records = athena_df[~athena_df['Lead_DNIS'].str.contains("WEB", na=False)]
     st.write("\nSample of non-WEB Lead_DNIS values to match:")
     st.write(non_web_records['Lead_DNIS'].head(10))
+    
+    # Debug specific DNIS
+    st.write("\nLooking for specific DNIS in Athena data:")
+    matching_records = athena_df[athena_df['Lead_DNIS'].str.contains('8446778720', na=False)]
+    st.write(matching_records[['Lead_DNIS', 'PID']].head())
     
     # Match PIDs for non-WEB records
     def match_pid(row):
@@ -117,9 +140,11 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
             # Extract only numeric characters for matching
             numeric_dnis = ''.join(c for c in dnis if c.isdigit())
             matched_pid = tfn_map.get(numeric_dnis, '')
-            # Debug individual matches
-            if numeric_dnis:
-                st.write(f"Matching DNIS: {dnis} (numeric: {numeric_dnis}) -> PID: {matched_pid}")
+            # Debug specific number
+            if numeric_dnis == '8446778720':
+                st.write(f"Found target DNIS: {dnis}")
+                st.write(f"Numeric version: {numeric_dnis}")
+                st.write(f"Matched PID: {matched_pid}")
             return matched_pid
         return None
     
