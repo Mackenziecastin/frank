@@ -17,7 +17,23 @@ TFN_SHEET_URL = "https://docs.google.com/spreadsheets/d/10BHN_-Wz_ZPmi7rezNtqiDP
 
 def clean_affiliate_code(code):
     if pd.isna(code): return ''
-    return str(code)  # Keep the original format, don't modify it
+    
+    # Step 1: Remove everything before the first underscore
+    parts = code.split('_', 1)
+    if len(parts) < 2: return ''
+    remainder = parts[1]
+    
+    # Step 2: If there are more underscores, only keep the first numeric part
+    if '_' in remainder:
+        subparts = remainder.split('_')
+        # Find the first numeric part
+        for part in subparts:
+            if part.isdigit():
+                return f"{part}_"
+        return ''  # No numeric part found
+    
+    # If no more underscores, check if the part is numeric
+    return f"{remainder}_" if remainder.isdigit() else ''
 
 def proportional_allocation(row, web_val, total_web_val, total_phone_val):
     if row[total_web_val] == 0 or pd.isna(row[total_web_val]): return 0
@@ -261,6 +277,12 @@ def load_combined_resi_tfn_data(sheet_url):
         raise
 
 def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
+    # Debug original Affiliate_Codes
+    st.write("\n### Affiliate Code Cleaning Debug")
+    st.write("Sample of original Affiliate_Codes:")
+    sample_codes = athena_df['Affiliate_Code'].head(10).tolist()
+    st.write(sample_codes)
+    
     # Filter Athena data
     athena_df['Lead_Creation_Date'] = pd.to_datetime(athena_df['Lead_Creation_Date'], errors='coerce')
     athena_df = athena_df[
@@ -274,8 +296,17 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
         (athena_df['Ordr_Type'].str.upper().isin(['NEW', 'RESALE']))
     ]
     
-    # Keep original Affiliate_Code format
+    # Clean Affiliate_Code and show examples
+    athena_df['Original_Code'] = athena_df['Affiliate_Code']  # Keep original for reference
     athena_df['Affiliate_Code'] = athena_df['Affiliate_Code'].apply(clean_affiliate_code)
+    
+    # Show cleaning results
+    st.write("\nAffiliate Code Cleaning Results:")
+    cleaning_examples = pd.DataFrame({
+        'Original': athena_df['Original_Code'].head(10),
+        'Cleaned': athena_df['Affiliate_Code'].head(10)
+    })
+    st.write(cleaning_examples)
     
     # Handle Lead_DNIS and PID matching
     athena_df['Lead_DNIS'] = athena_df['Lead_DNIS'].fillna('').astype(str)
