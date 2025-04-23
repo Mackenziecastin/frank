@@ -539,13 +539,44 @@ def merge_and_compute(cake, web, phone):
     cake['Total DIY Sales'] = cake['Web DIY Sales'] + cake['Phone DIY Sales']
     cake['Total DIFM Installs'] = cake['DIFM Web Installs'] + cake['DIFM Phone Installs']
     
+    # Calculate revenue metrics
+    cake['Revenue'] = 1080 * cake['Total DIFM Installs'] + 300 * cake['Total DIY Sales']
+    cake['Profit/Loss'] = cake['Revenue'] - cake['Cost']
+    cake['Projected Installs'] = cake.apply(calculate_projected_installs, axis=1)
+    cake['Projected Revenue'] = 1080 * cake['Projected Installs'] + 300 * cake['Total DIY Sales']
+    cake['Projected Profit/Loss'] = cake['Projected Revenue'] - cake['Cost']
+    cake['Projected Margin'] = np.where(cake['Projected Revenue'] == 0, -1, cake['Projected Profit/Loss'] / cake['Projected Revenue'])
+    cake['eCPL'] = np.where(cake['Leads'] == 0, 0, cake['Projected Revenue'] / cake['Leads'])
+    
+    # Format numeric columns
+    cake['Revenue'] = cake['Revenue'].apply(lambda x: f"${x:,.2f}")
+    cake['Profit/Loss'] = cake['Profit/Loss'].apply(lambda x: f"${x:,.2f}")
+    cake['Projected Revenue'] = cake['Projected Revenue'].apply(lambda x: f"${x:,.2f}")
+    cake['Projected Profit/Loss'] = cake['Projected Profit/Loss'].apply(lambda x: f"${x:,.2f}")
+    cake['Cost'] = cake['Cost'].apply(lambda x: f"${x:,.2f}")
+    cake['eCPL'] = cake['eCPL'].apply(lambda x: f"${x:,.2f}")
+    cake['Projected Margin'] = cake['Projected Margin'].apply(lambda x: f"{x:.2%}" if x != -1 else "-")
+    
+    # Add Current Rate column if not present
+    if 'Current Rate' not in cake.columns:
+        cake['Current Rate'] = 0
+    
+    # Reorder columns
+    columns = [
+        'Concatenated', 'PID', 'Leads', 'Cost',
+        'Web DIFM Sales', 'Phone DIFM Sales', 'Total DIFM Sales',
+        'DIFM Web Installs', 'DIFM Phone Installs', 'Total DIFM Installs',
+        'Web DIY Sales', 'Phone DIY Sales', 'Total DIY Sales',
+        'Revenue', 'Profit/Loss',
+        'Projected Installs', 'Projected Revenue', 'Projected Profit/Loss',
+        'Projected Margin', 'Current Rate', 'eCPL'
+    ]
+    cake = cake[columns]
+    
     # Debug final metrics
     st.write("\nFinal metrics check:")
     st.write("Sample of final metrics:")
-    metric_cols = ['Web DIFM Sales', 'Phone DIFM Sales', 'Web DIY Sales', 'Phone DIY Sales',
-                  'DIFM Web Installs', 'DIFM Phone Installs', 'Total DIFM Sales', 'Total DIY Sales',
-                  'Total DIFM Installs']
-    st.write(cake[metric_cols].head().to_dict('records'))
+    st.write(cake[columns].head().to_dict('records'))
     
     return cake
 
