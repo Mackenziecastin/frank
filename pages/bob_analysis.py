@@ -62,20 +62,14 @@ def load_combined_resi_tfn_data(sheet_url):
         display_df.rename(columns={"Partner ID": "PID", "TFN": "TFN"})
     ], ignore_index=True)
     
-    # Clean TFNs
-    combined_df['Clean_TFN'] = combined_df['TFN'].astype(str).str.replace(r'[^0-9]', '', regex=True)
+    # Clean TFNs - keep empty values as blank strings
+    combined_df['Clean_TFN'] = combined_df['TFN'].fillna('').astype(str)
+    combined_df.loc[combined_df['Clean_TFN'].str.strip() != '', 'Clean_TFN'] = combined_df.loc[combined_df['Clean_TFN'].str.strip() != '', 'Clean_TFN'].str.replace(r'[^0-9]', '', regex=True)
     
     # Clean PIDs - handle NaN and float formatting
-    combined_df['PID'] = combined_df['PID'].fillna('')
     combined_df['PID'] = combined_df['PID'].apply(
         lambda x: str(int(float(x))) if pd.notnull(x) and str(x).strip() != '' else ''
     )
-    
-    # Remove rows with empty TFNs or PIDs
-    combined_df = combined_df[
-        (combined_df['Clean_TFN'].str.strip() != '') & 
-        (combined_df['PID'] != '')
-    ]
     
     # Debug cleaned data
     st.write("\nCleaned TFN mapping sample:")
