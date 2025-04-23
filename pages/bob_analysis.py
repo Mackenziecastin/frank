@@ -56,22 +56,26 @@ def load_combined_resi_tfn_data(sheet_url):
     resi_df = pd.read_csv(sheet_csv_url("RESI TFN Sheet"))
     display_df = pd.read_csv(sheet_csv_url("Display TFN Sheet"))
     
-    # Debug raw data
-    st.write("\n### TFN Data Debug")
-    st.write("RESI Sheet sample:")
-    st.write(resi_df.head())
-    st.write("\nDisplay Sheet sample:")
-    st.write(display_df.head())
-    
-    # Combine and clean
+    # Combine sheets
     combined_df = pd.concat([
         resi_df.rename(columns={"PID": "PID", "TFN": "TFN"}),
         display_df.rename(columns={"Partner ID": "PID", "TFN": "TFN"})
     ], ignore_index=True)
     
-    # Clean TFNs - ensure consistent format
+    # Clean TFNs
     combined_df['Clean_TFN'] = combined_df['TFN'].astype(str).str.replace(r'[^0-9]', '', regex=True)
-    combined_df['PID'] = combined_df['PID'].astype(str).str.strip()
+    
+    # Clean PIDs - handle NaN and float formatting
+    combined_df['PID'] = combined_df['PID'].fillna('')
+    combined_df['PID'] = combined_df['PID'].apply(
+        lambda x: str(int(float(x))) if pd.notnull(x) and str(x).strip() != '' else ''
+    )
+    
+    # Remove rows with empty TFNs or PIDs
+    combined_df = combined_df[
+        (combined_df['Clean_TFN'].str.strip() != '') & 
+        (combined_df['PID'] != '')
+    ]
     
     # Debug cleaned data
     st.write("\nCleaned TFN mapping sample:")
@@ -96,31 +100,28 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     # Clean Affiliate_Code
     athena_df['Affiliate_Code'] = athena_df['Affiliate_Code'].apply(clean_affiliate_code)
     
-    # Clean and match TFNs
+    # Handle Lead_DNIS and PID matching
     athena_df['Lead_DNIS'] = athena_df['Lead_DNIS'].fillna('').astype(str)
-    athena_df['Clean_DNIS'] = athena_df['Lead_DNIS'].str.replace(r'[^0-9]', '', regex=True)
+    
+    # Create TFN mapping
+    tfn_map = dict(zip(tfn_df['Clean_TFN'], tfn_df['PID']))
+    
+    # Match PIDs only for non-WEB Lead_DNIS values
+    def match_pid(dnis):
+        if 'WEB' not in dnis:
+            # Extract only numeric characters for matching
+            numeric_dnis = ''.join(c for c in dnis if c.isdigit())
+            return tfn_map.get(numeric_dnis)
+        return None
+    
+    athena_df['PID'] = athena_df['Lead_DNIS'].apply(match_pid)
     
     # Debug TFN matching
     st.write("\n### TFN Matching Debug")
     st.write("Sample of Lead_DNIS values:")
     st.write(athena_df['Lead_DNIS'].head())
-    st.write("\nSample of Clean_DNIS values:")
-    st.write(athena_df['Clean_DNIS'].head())
-    
-    # Create TFN mapping
-    tfn_map = dict(zip(tfn_df['Clean_TFN'], tfn_df['PID']))
-    st.write("\nTFN mapping sample:")
-    st.write(dict(list(tfn_map.items())[:5]))
-    
-    # Match PIDs
-    athena_df['PID'] = athena_df['Clean_DNIS'].map(tfn_map)
-    
-    # Debug PID matching results
-    st.write("\nPID matching results:")
-    st.write(f"Total records: {len(athena_df)}")
-    st.write(f"Records with matched PIDs: {athena_df['PID'].notna().sum()}")
-    st.write("\nSample of matched records:")
-    st.write(athena_df[athena_df['PID'].notna()][['Lead_DNIS', 'Clean_DNIS', 'PID']].head())
+    st.write("\nSample of matched PIDs:")
+    st.write(athena_df[athena_df['PID'].notna()][['Lead_DNIS', 'PID']].head())
     
     # Process leads data
     leads_df.columns = [col.lower() for col in leads_df.columns]
@@ -151,7 +152,7 @@ def generate_pivots(athena_df):
     st.write(f"Phone records: {len(phone_df)}")
     st.write("\nSample of phone records:")
     if len(phone_df) > 0:
-        st.write(phone_df[['Lead_DNIS', 'Clean_DNIS', 'PID', 'INSTALL_METHOD']].head())
+        st.write(phone_df[['Lead_DNIS', 'PID', 'INSTALL_METHOD']].head())
     
     # Initialize empty DataFrames
     web_pivot = pd.DataFrame(columns=['Affiliate_Code'])
