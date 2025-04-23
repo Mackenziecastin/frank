@@ -51,14 +51,32 @@ def load_combined_resi_tfn_data(sheet_url):
     base_url = sheet_url.split("/edit")[0]
     def sheet_csv_url(sheet_name):
         return f"{base_url}/gviz/tq?tqx=out:csv&sheet={sheet_name.replace(' ', '%20')}"
+    
+    # Load both sheets
     resi_df = pd.read_csv(sheet_csv_url("RESI TFN Sheet"))
     display_df = pd.read_csv(sheet_csv_url("Display TFN Sheet"))
+    
+    # Debug raw data
+    st.write("\n### TFN Data Debug")
+    st.write("RESI Sheet sample:")
+    st.write(resi_df.head())
+    st.write("\nDisplay Sheet sample:")
+    st.write(display_df.head())
+    
+    # Combine and clean
     combined_df = pd.concat([
         resi_df.rename(columns={"PID": "PID", "TFN": "TFN"}),
         display_df.rename(columns={"Partner ID": "PID", "TFN": "TFN"})
     ], ignore_index=True)
+    
+    # Clean TFNs - ensure consistent format
     combined_df['Clean_TFN'] = combined_df['TFN'].astype(str).str.replace(r'[^0-9]', '', regex=True)
-    combined_df['PID'] = combined_df['PID'].astype(str)
+    combined_df['PID'] = combined_df['PID'].astype(str).str.strip()
+    
+    # Debug cleaned data
+    st.write("\nCleaned TFN mapping sample:")
+    st.write(combined_df[['Clean_TFN', 'PID']].head(10))
+    
     return combined_df[['Clean_TFN', 'PID']]
 
 def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
@@ -78,10 +96,31 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     # Clean Affiliate_Code
     athena_df['Affiliate_Code'] = athena_df['Affiliate_Code'].apply(clean_affiliate_code)
     
-    # Match TFNs to PIDs
-    athena_df['Lead_DNIS'] = athena_df['Lead_DNIS'].astype(str)
+    # Clean and match TFNs
+    athena_df['Lead_DNIS'] = athena_df['Lead_DNIS'].fillna('').astype(str)
+    athena_df['Clean_DNIS'] = athena_df['Lead_DNIS'].str.replace(r'[^0-9]', '', regex=True)
+    
+    # Debug TFN matching
+    st.write("\n### TFN Matching Debug")
+    st.write("Sample of Lead_DNIS values:")
+    st.write(athena_df['Lead_DNIS'].head())
+    st.write("\nSample of Clean_DNIS values:")
+    st.write(athena_df['Clean_DNIS'].head())
+    
+    # Create TFN mapping
     tfn_map = dict(zip(tfn_df['Clean_TFN'], tfn_df['PID']))
-    athena_df['PID'] = athena_df['Lead_DNIS'].apply(lambda x: tfn_map.get(x) if x.isdigit() else None)
+    st.write("\nTFN mapping sample:")
+    st.write(dict(list(tfn_map.items())[:5]))
+    
+    # Match PIDs
+    athena_df['PID'] = athena_df['Clean_DNIS'].map(tfn_map)
+    
+    # Debug PID matching results
+    st.write("\nPID matching results:")
+    st.write(f"Total records: {len(athena_df)}")
+    st.write(f"Records with matched PIDs: {athena_df['PID'].notna().sum()}")
+    st.write("\nSample of matched records:")
+    st.write(athena_df[athena_df['PID'].notna()][['Lead_DNIS', 'Clean_DNIS', 'PID']].head())
     
     # Process leads data
     leads_df.columns = [col.lower() for col in leads_df.columns]
@@ -112,42 +151,39 @@ def generate_pivots(athena_df):
     st.write(f"Phone records: {len(phone_df)}")
     st.write("\nSample of phone records:")
     if len(phone_df) > 0:
-        st.write(phone_df[['Lead_DNIS', 'PID', 'INSTALL_METHOD']].head())
+        st.write(phone_df[['Lead_DNIS', 'Clean_DNIS', 'PID', 'INSTALL_METHOD']].head())
     
-    # Create empty DataFrames if no data
-    if len(web_df) == 0:
-        return pd.DataFrame(columns=['Affiliate_Code']), pd.DataFrame(columns=['PID'])
-    if len(phone_df) == 0:
-        phone_pivot = pd.DataFrame(columns=['PID'])
-        return web_pivot.reset_index() if len(web_df) > 0 else pd.DataFrame(columns=['Affiliate_Code']), phone_pivot
+    # Initialize empty DataFrames
+    web_pivot = pd.DataFrame(columns=['Affiliate_Code'])
+    phone_pivot = pd.DataFrame(columns=['PID'])
     
-    # Create web pivot
-    web_pivot = pd.pivot_table(
-        web_df, 
-        index='Affiliate_Code', 
-        values=['Sale_Date', 'Install_Date'], 
-        columns='INSTALL_METHOD', 
-        aggfunc='count', 
-        fill_value=0
-    )
-    
-    # Create phone pivot
-    phone_pivot = pd.pivot_table(
-        phone_df, 
-        index='PID', 
-        values=['Sale_Date', 'Install_Date'], 
-        columns='INSTALL_METHOD', 
-        aggfunc='count', 
-        fill_value=0
-    )
-    
-    # Format column names
-    if len(web_pivot) > 0:
+    # Create web pivot if we have data
+    if len(web_df) > 0:
+        web_pivot = pd.pivot_table(
+            web_df, 
+            index='Affiliate_Code', 
+            values=['Sale_Date', 'Install_Date'], 
+            columns='INSTALL_METHOD', 
+            aggfunc='count', 
+            fill_value=0
+        )
         web_pivot.columns = [f"{val} {col}" for col, val in web_pivot.columns]
-    if len(phone_pivot) > 0:
-        phone_pivot.columns = [f"{val} {col}" for col, val in phone_pivot.columns]
+        web_pivot = web_pivot.reset_index()
     
-    return web_pivot.reset_index(), phone_pivot.reset_index()
+    # Create phone pivot if we have data
+    if len(phone_df) > 0:
+        phone_pivot = pd.pivot_table(
+            phone_df, 
+            index='PID', 
+            values=['Sale_Date', 'Install_Date'], 
+            columns='INSTALL_METHOD', 
+            aggfunc='count', 
+            fill_value=0
+        )
+        phone_pivot.columns = [f"{val} {col}" for col, val in phone_pivot.columns]
+        phone_pivot = phone_pivot.reset_index()
+    
+    return web_pivot, phone_pivot
 
 def clean_conversion(conversion_df):
     # Filter out specific offer IDs
