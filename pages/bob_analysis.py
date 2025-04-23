@@ -98,9 +98,43 @@ def load_combined_resi_tfn_data(sheet_url):
         st.write("\nLoading Display TFN Sheet...")
         display_df = pd.read_csv(sheet_csv_url("Display TFN Sheet"), header=0, na_values=['', 'nan', 'NaN', 'None'])
         
-        # Convert PID to integer type immediately after loading
-        display_df['PID'] = pd.to_numeric(display_df['PID'], errors='coerce').fillna('').astype(str).replace('\.0$', '', regex=True)
+        # Debug raw column names
+        st.write("Raw Display Sheet column names:", display_df.columns.tolist())
         
+        # Try to find PID and TFN columns - they might have different names
+        pid_column = None
+        tfn_column = None
+        
+        # Common variations of column names
+        pid_variations = ['PID', 'Pid', 'pid', 'Partner ID', 'PartnerID', 'ID']
+        tfn_variations = ['TFN', 'Tfn', 'tfn', 'Phone Number', 'Phone #', 'PhoneNumber', 'Phone']
+        
+        for col in display_df.columns:
+            # Debug each column name and its first few values
+            st.write(f"Column '{col}' first few values:", display_df[col].head().tolist())
+            
+            # Check if this column might be PID or TFN
+            if any(pid_var in col for pid_var in pid_variations):
+                pid_column = col
+            if any(tfn_var in col for tfn_var in tfn_variations):
+                tfn_column = col
+        
+        st.write(f"Found PID column: {pid_column}")
+        st.write(f"Found TFN column: {tfn_column}")
+        
+        if pid_column is None or tfn_column is None:
+            st.error("Could not find required columns in Display TFN Sheet")
+            st.error(f"Available columns: {display_df.columns.tolist()}")
+            raise ValueError(f"Missing required columns in Display TFN Sheet. Need PID and TFN, found: {display_df.columns.tolist()}")
+        
+        # Rename columns to standard names
+        display_df = display_df.rename(columns={
+            pid_column: 'PID',
+            tfn_column: 'TFN'
+        })
+        
+        # Now proceed with the cleaning
+        display_df['PID'] = pd.to_numeric(display_df['PID'], errors='coerce').fillna('').astype(str).replace('\.0$', '', regex=True)
         display_df = display_df.fillna('')
         
         st.write("Display Sheet Columns:", [col for col in display_df.columns.tolist() if col])
