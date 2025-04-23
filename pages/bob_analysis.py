@@ -71,26 +71,39 @@ def load_combined_resi_tfn_data(sheet_url):
         resi_df = pd.read_csv(sheet_csv_url("RESI TFN Sheet"))
         st.write("Successfully loaded RESI TFN Sheet")
         st.write("RESI Sheet Columns:", resi_df.columns.tolist())
-        st.write("RESI Sheet Shape:", resi_df.shape)
-        st.write("RESI Sheet Sample:")
-        st.write(resi_df.head(20))
-        
-        # Search for specific number in RESI sheet
-        st.write("\nSearching for 8446778720 in RESI sheet:")
-        st.write("Raw TFN values containing 8446778720:")
-        matching_rows = resi_df[resi_df['TFN'].astype(str).str.contains('8446778720', na=False)]
-        st.write(matching_rows)
+        st.write("RESI Sheet first few rows to check column names and data:")
+        st.write(resi_df.head())
         
         # Load Display sheet
         st.write("\nAttempting to load Display TFN Sheet...")
         display_df = pd.read_csv(sheet_csv_url("Display TFN Sheet"))
         st.write("Successfully loaded Display TFN Sheet")
         st.write("Display Sheet Columns:", display_df.columns.tolist())
-        st.write("Display Sheet Shape:", display_df.shape)
+        st.write("Display Sheet first few rows:")
+        st.write(display_df.head())
         
-        # Combine sheets
+        # Search for the number in any column of RESI sheet
+        st.write("\nSearching for 8446778720 in any column of RESI sheet:")
+        for col in resi_df.columns:
+            matches = resi_df[resi_df[col].astype(str).str.contains('8446778720', na=False)]
+            if not matches.empty:
+                st.write(f"Found matches in column '{col}':")
+                st.write(matches)
+        
+        # Get the actual column names for TFN and PID
+        tfn_col = next((col for col in resi_df.columns if 'tfn' in col.lower()), None)
+        pid_col = next((col for col in resi_df.columns if 'pid' in col.lower()), None)
+        
+        st.write("\nIdentified columns:")
+        st.write(f"TFN column: {tfn_col}")
+        st.write(f"PID column: {pid_col}")
+        
+        if not tfn_col or not pid_col:
+            raise ValueError(f"Could not find TFN or PID columns. Available columns: {resi_df.columns.tolist()}")
+        
+        # Combine sheets with correct column names
         combined_df = pd.concat([
-            resi_df.rename(columns={"PID": "PID", "TFN": "TFN"}),
+            resi_df.rename(columns={pid_col: "PID", tfn_col: "TFN"}),
             display_df.rename(columns={"Partner ID": "PID", "TFN": "TFN"})
         ], ignore_index=True)
         
