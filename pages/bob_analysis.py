@@ -65,11 +65,18 @@ def load_combined_resi_tfn_data(sheet_url):
         st.write("\nLoading RESI TFN Sheet...")
         resi_df = pd.read_csv(sheet_csv_url("RESI TFN Sheet"), header=0, na_values=['', 'nan', 'NaN', 'None'])
         
+        # Convert PID to integer type immediately after loading
+        resi_df['PID'] = pd.to_numeric(resi_df['PID'], errors='coerce').fillna('').astype(str).replace('\.0$', '', regex=True)
+        
         # Clean the dataframe - replace NaN with empty string
         resi_df = resi_df.fillna('')
         
         st.write("RESI Sheet Columns:", [col for col in resi_df.columns.tolist() if col])
         st.write("RESI Sheet first few rows (non-empty rows only):")
+        
+        # Debug PID format right after loading
+        st.write("\nPID format check after initial load:")
+        st.write(resi_df[['Partner Name', 'PID', 'Code', 'Phone #']].head().to_dict('records'))
         
         # Filter rows that have data
         non_empty_mask = (resi_df['PID'].astype(str).str.strip().ne('')) & (resi_df['Phone #'].astype(str).str.strip().ne(''))
@@ -83,13 +90,17 @@ def load_combined_resi_tfn_data(sheet_url):
                 if pd.isna(value) or value == '' or value == 'nan':
                     clean_record[key] = ''
                 else:
-                    clean_record[key] = str(value).strip()
+                    clean_record[key] = str(value).strip().rstrip('.0')  # Ensure we remove any trailing .0
             clean_records.append(clean_record)
         st.write(clean_records)
         
         # Load Display sheet with first row as headers
         st.write("\nLoading Display TFN Sheet...")
         display_df = pd.read_csv(sheet_csv_url("Display TFN Sheet"), header=0, na_values=['', 'nan', 'NaN', 'None'])
+        
+        # Convert PID to integer type immediately after loading
+        display_df['PID'] = pd.to_numeric(display_df['PID'], errors='coerce').fillna('').astype(str).replace('\.0$', '', regex=True)
+        
         display_df = display_df.fillna('')
         
         st.write("Display Sheet Columns:", [col for col in display_df.columns.tolist() if col])
