@@ -70,10 +70,22 @@ def load_combined_resi_tfn_data(sheet_url):
         
         st.write("RESI Sheet Columns:", [col for col in resi_df.columns.tolist() if col])
         st.write("RESI Sheet first few rows (non-empty rows only):")
-        # Only show rows that have either PID or Phone # filled
-        sample_rows = resi_df[resi_df['PID'].astype(str).str.strip() != '' | 
-                            resi_df['Phone #'].astype(str).str.strip() != ''].head()
-        st.write(sample_rows[['Partner Name', 'PID', 'Code', 'Phone #']].to_dict('records'))
+        
+        # Filter rows that have data
+        non_empty_mask = (resi_df['PID'].astype(str).str.strip().ne('')) & (resi_df['Phone #'].astype(str).str.strip().ne(''))
+        sample_rows = resi_df[non_empty_mask].head()
+        
+        # Convert to records and clean up the output
+        clean_records = []
+        for record in sample_rows[['Partner Name', 'PID', 'Code', 'Phone #']].to_dict('records'):
+            clean_record = {}
+            for key, value in record.items():
+                if pd.isna(value) or value == '' or value == 'nan':
+                    clean_record[key] = ''
+                else:
+                    clean_record[key] = str(value).strip()
+            clean_records.append(clean_record)
+        st.write(clean_records)
         
         # Load Display sheet with first row as headers
         st.write("\nLoading Display TFN Sheet...")
@@ -82,16 +94,35 @@ def load_combined_resi_tfn_data(sheet_url):
         
         st.write("Display Sheet Columns:", [col for col in display_df.columns.tolist() if col])
         st.write("Display Sheet first few rows (non-empty rows only):")
-        sample_rows = display_df[display_df['PID'].astype(str).str.strip() != '' | 
-                               display_df['TFN'].astype(str).str.strip() != ''].head()
-        st.write(sample_rows[['PID', 'TFN']].to_dict('records'))
+        non_empty_mask = (display_df['PID'].astype(str).str.strip().ne('')) & (display_df['TFN'].astype(str).str.strip().ne(''))
+        sample_rows = display_df[non_empty_mask].head()
+        
+        # Convert to records and clean up the output
+        clean_records = []
+        for record in sample_rows[['PID', 'TFN']].to_dict('records'):
+            clean_record = {}
+            for key, value in record.items():
+                if pd.isna(value) or value == '' or value == 'nan':
+                    clean_record[key] = ''
+                else:
+                    clean_record[key] = str(value).strip()
+            clean_records.append(clean_record)
+        st.write(clean_records)
         
         # Search for the number in RESI sheet
         st.write("\nSearching for 8446778720 in RESI sheet:")
         matches = resi_df[resi_df['Phone #'].astype(str).str.contains('8446778720', na=False)]
         if not matches.empty:
-            st.write("Found matches:")
-            st.write(matches[['Partner Name', 'PID', 'Code', 'Phone #']].to_dict('records'))
+            clean_records = []
+            for record in matches[['Partner Name', 'PID', 'Code', 'Phone #']].to_dict('records'):
+                clean_record = {}
+                for key, value in record.items():
+                    if pd.isna(value) or value == '' or value == 'nan':
+                        clean_record[key] = ''
+                    else:
+                        clean_record[key] = str(value).strip()
+                clean_records.append(clean_record)
+            st.write(clean_records)
         
         # Get the actual column names for TFN and PID
         tfn_col = 'Phone #'  # From the actual header row
@@ -103,12 +134,12 @@ def load_combined_resi_tfn_data(sheet_url):
         
         # Filter out rows with empty PIDs or phone numbers before combining
         resi_df = resi_df[
-            (resi_df[pid_col].astype(str).str.strip() != '') & 
-            (resi_df[tfn_col].astype(str).str.strip() != '')
+            resi_df[pid_col].astype(str).str.strip().ne('') & 
+            resi_df[tfn_col].astype(str).str.strip().ne('')
         ]
         display_df = display_df[
-            (display_df['PID'].astype(str).str.strip() != '') & 
-            (display_df['TFN'].astype(str).str.strip() != '')
+            display_df['PID'].astype(str).str.strip().ne('') & 
+            display_df['TFN'].astype(str).str.strip().ne('')
         ]
         
         # Combine sheets with correct column names
@@ -135,19 +166,41 @@ def load_combined_resi_tfn_data(sheet_url):
         
         # Remove any rows where either Clean_TFN or PID is empty after cleaning
         combined_df = combined_df[
-            (combined_df['Clean_TFN'].str.strip() != '') & 
-            (combined_df['PID'].str.strip() != '')
+            combined_df['Clean_TFN'].str.strip().ne('') & 
+            combined_df['PID'].str.strip().ne('')
         ]
         
         # Debug final mapping
         st.write("\nFinal TFN mapping check:")
         st.write("Total records in mapping:", len(combined_df))
         st.write("Sample of final mapping:")
-        st.write(combined_df[['Clean_TFN', 'PID']].head(20).to_dict('records'))
+        clean_records = []
+        for record in combined_df[['Clean_TFN', 'PID']].head(20).to_dict('records'):
+            clean_record = {}
+            for key, value in record.items():
+                if pd.isna(value) or value == '' or value == 'nan':
+                    clean_record[key] = ''
+                else:
+                    clean_record[key] = str(value).strip()
+            clean_records.append(clean_record)
+        st.write(clean_records)
+        
         st.write("\nChecking for 8446778720:")
-        st.write(combined_df[combined_df['Clean_TFN'] == '8446778720'].to_dict('records'))
+        matches = combined_df[combined_df['Clean_TFN'] == '8446778720']
+        if not matches.empty:
+            clean_records = []
+            for record in matches[['Clean_TFN', 'PID']].to_dict('records'):
+                clean_record = {}
+                for key, value in record.items():
+                    if pd.isna(value) or value == '' or value == 'nan':
+                        clean_record[key] = ''
+                    else:
+                        clean_record[key] = str(value).strip()
+                clean_records.append(clean_record)
+            st.write(clean_records)
+        
         st.write("\nAll unique PIDs in mapping:")
-        st.write(sorted(combined_df['PID'].unique().tolist()))
+        st.write(sorted([str(pid).strip() for pid in combined_df['PID'].unique().tolist() if str(pid).strip()]))
         
         return combined_df[['Clean_TFN', 'PID']]
         
