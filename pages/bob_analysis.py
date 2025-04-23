@@ -57,7 +57,7 @@ def load_combined_resi_tfn_data(sheet_url):
             url += "1629976834"
         # Display TFN Sheet gid
         elif sheet_name == "Display TFN Sheet":
-            url += "0"  # default first sheet
+            url += "383243987"  # Correct GID for Display TFN Sheet
         return url
     
     try:
@@ -96,6 +96,7 @@ def load_combined_resi_tfn_data(sheet_url):
         
         # Load Display sheet with first row as headers
         st.write("\nLoading Display TFN Sheet...")
+        st.write("URL being used:", sheet_csv_url("Display TFN Sheet"))  # Debug URL
         display_df = pd.read_csv(sheet_csv_url("Display TFN Sheet"), header=0, na_values=['', 'nan', 'NaN', 'None'])
         
         # Debug raw column names
