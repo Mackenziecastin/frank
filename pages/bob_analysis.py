@@ -37,8 +37,16 @@ def clean_affiliate_code(code):
 
 def proportional_allocation(row, web_val, total_web_val, total_phone_val):
     """Allocate phone metrics proportionally based on web totals."""
-    if row[total_web_val] == 0 or pd.isna(row[total_web_val]): return 0
-    return round(row[total_phone_val] * (row[web_val] / row[total_web_val]))
+    try:
+        # Convert all values to float
+        web_value = float(row[web_val])
+        total_web = float(row[total_web_val])
+        total_phone = float(total_phone_val)
+        
+        if total_web == 0 or pd.isna(total_web): return 0
+        return round(total_phone * (web_value / total_web))
+    except (ValueError, TypeError):
+        return 0
 
 def calculate_projected_installs(row):
     pct = 0.5 if str(row['Concatenated']).startswith('4790') else 0.7
@@ -652,9 +660,9 @@ def allocate_phone_metrics(cake_df):
         })
         
         # Step 1: Proportional Allocation
-        total_web_difm = int(pid_rows['Web DIFM Sales'].sum())
-        total_web_diy = int(pid_rows['Web DIY Sales'].sum())
-        total_web_installs = int(pid_rows['DIFM Web Installs'].sum())
+        total_web_difm = float(pid_rows['Web DIFM Sales'].sum())
+        total_web_diy = float(pid_rows['Web DIY Sales'].sum())
+        total_web_installs = float(pid_rows['DIFM Web Installs'].sum())
         
         if total_web_difm > 0 or total_web_diy > 0 or total_web_installs > 0:
             # Allocate proportionally
@@ -665,7 +673,7 @@ def allocate_phone_metrics(cake_df):
                 if total_web_difm > 0:
                     allocated = int(proportional_allocation(
                         row, 'Web DIFM Sales', 'Web DIFM Sales',
-                        pid_rows['Phone DIFM Sales'].sum()
+                        float(pid_rows['Phone DIFM Sales'].sum())
                     ))
                     cake_df.loc[idx, 'Phone DIFM Sales'] = allocated
                 
@@ -673,7 +681,7 @@ def allocate_phone_metrics(cake_df):
                 if total_web_diy > 0:
                     allocated = int(proportional_allocation(
                         row, 'Web DIY Sales', 'Web DIY Sales',
-                        pid_rows['Phone DIY Sales'].sum()
+                        float(pid_rows['Phone DIY Sales'].sum())
                     ))
                     cake_df.loc[idx, 'Phone DIY Sales'] = allocated
                 
@@ -681,7 +689,7 @@ def allocate_phone_metrics(cake_df):
                 if total_web_installs > 0:
                     allocated = int(proportional_allocation(
                         row, 'DIFM Web Installs', 'DIFM Web Installs',
-                        pid_rows['DIFM Phone Installs'].sum()
+                        float(pid_rows['DIFM Phone Installs'].sum())
                     ))
                     cake_df.loc[idx, 'DIFM Phone Installs'] = allocated
         
