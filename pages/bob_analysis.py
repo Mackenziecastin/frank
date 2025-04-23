@@ -367,9 +367,6 @@ def generate_pivots(athena_df):
     if len(phone_df) > 0:
         st.write(phone_df[['Lead_DNIS', 'PID', 'INSTALL_METHOD']].head())
     
-    # Initialize empty DataFrames with required columns
-    empty_df = pd.DataFrame(columns=['Sale_Date', 'Install_Date'])
-    
     # Create web pivot if we have data
     if len(web_df) > 0:
         web_pivot = pd.pivot_table(
@@ -380,11 +377,26 @@ def generate_pivots(athena_df):
             aggfunc='count', 
             fill_value=0
         )
-        web_pivot.columns = [f"{val} {col}" for col, val in web_pivot.columns]
+        # Rename columns to match expected format
+        web_pivot.columns = [f"{col}_{val}" for col, val in web_pivot.columns]
         web_pivot = web_pivot.reset_index()
+        
+        # Rename columns to match expected names
+        column_mapping = {
+            'Sale_Date_DIFM': 'Web DIFM Sales',
+            'Sale_Date_DIY': 'Web DIY Sales',
+            'Install_Date_DIFM': 'DIFM Web Installs',
+            'Install_Date_DIY': 'DIY Web Installs'
+        }
+        web_pivot = web_pivot.rename(columns=column_mapping)
     else:
-        web_pivot = pd.DataFrame({'Affiliate_Code': [], 'DIFM Sale_Date': [], 'DIY Sale_Date': [], 
-                                'DIFM Install_Date': [], 'DIY Install_Date': []})
+        web_pivot = pd.DataFrame({
+            'Affiliate_Code': [],
+            'Web DIFM Sales': [],
+            'Web DIY Sales': [],
+            'DIFM Web Installs': [],
+            'DIY Web Installs': []
+        })
     
     # Create phone pivot if we have data
     if len(phone_df) > 0:
@@ -396,29 +408,41 @@ def generate_pivots(athena_df):
             aggfunc='count', 
             fill_value=0
         )
-        phone_pivot.columns = [f"{val} {col}" for col, val in phone_pivot.columns]
+        # Rename columns to match expected format
+        phone_pivot.columns = [f"{col}_{val}" for col, val in phone_pivot.columns]
         phone_pivot = phone_pivot.reset_index()
+        
+        # Rename columns to match expected names
+        column_mapping = {
+            'Sale_Date_DIFM': 'Phone DIFM Sales',
+            'Sale_Date_DIY': 'Phone DIY Sales',
+            'Install_Date_DIFM': 'DIFM Phone Installs',
+            'Install_Date_DIY': 'DIY Phone Installs'
+        }
+        phone_pivot = phone_pivot.rename(columns=column_mapping)
     else:
-        phone_pivot = pd.DataFrame({'PID': [], 'DIFM Sale_Date': [], 'DIY Sale_Date': [], 
-                                  'DIFM Install_Date': [], 'DIY Install_Date': []})
+        phone_pivot = pd.DataFrame({
+            'PID': [],
+            'Phone DIFM Sales': [],
+            'Phone DIY Sales': [],
+            'DIFM Phone Installs': [],
+            'DIY Phone Installs': []
+        })
     
-    # Ensure all required columns exist in web_pivot
-    required_web_cols = ['Affiliate_Code', 'DIFM Sale_Date', 'DIY Sale_Date', 
-                        'DIFM Install_Date', 'DIY Install_Date']
-    for col in required_web_cols:
-        if col not in web_pivot.columns:
-            web_pivot[col] = 0
-    
-    # Ensure all required columns exist in phone_pivot
-    required_phone_cols = ['PID', 'DIFM Sale_Date', 'DIY Sale_Date', 
-                          'DIFM Install_Date', 'DIY Install_Date']
-    for col in required_phone_cols:
-        if col not in phone_pivot.columns:
-            phone_pivot[col] = 0
+    # Ensure all required columns exist with 0s
+    for df, cols in [
+        (web_pivot, ['Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs', 'DIY Web Installs']),
+        (phone_pivot, ['Phone DIFM Sales', 'Phone DIY Sales', 'DIFM Phone Installs', 'DIY Phone Installs'])
+    ]:
+        for col in cols:
+            if col not in df.columns:
+                df[col] = 0
     
     # Debug pivot tables
     st.write("\nWeb pivot columns:", web_pivot.columns.tolist())
-    st.write("Phone pivot columns:", phone_pivot.columns.tolist())
+    st.write("Web pivot sample:", web_pivot.head().to_dict('records'))
+    st.write("\nPhone pivot columns:", phone_pivot.columns.tolist())
+    st.write("Phone pivot sample:", phone_pivot.head().to_dict('records'))
     
     return web_pivot, phone_pivot
 
@@ -455,14 +479,14 @@ def merge_and_compute(cake, web, phone):
     # Ensure required columns exist in web DataFrame
     if not web.empty:
         web = web.set_index('Affiliate_Code')
-        for col in ['DIFM Sale_Date', 'DIY Sale_Date', 'DIFM Install_Date', 'DIY Install_Date']:
+        for col in ['Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs', 'DIY Web Installs']:
             if col not in web.columns:
                 web[col] = 0
     
     # Ensure required columns exist in phone DataFrame
     if not phone.empty:
         phone = phone.set_index('PID')
-        for col in ['DIFM Sale_Date', 'DIY Sale_Date', 'DIFM Install_Date', 'DIY Install_Date']:
+        for col in ['Phone DIFM Sales', 'Phone DIY Sales', 'DIFM Phone Installs', 'DIY Phone Installs']:
             if col not in phone.columns:
                 phone[col] = 0
     
@@ -474,12 +498,12 @@ def merge_and_compute(cake, web, phone):
     cake.fillna(0, inplace=True)
     
     # Extract metrics with safe column access
-    cake['Web DIFM Sales'] = cake.get('DIFM Sale_Date_x', 0).astype(int)
-    cake['Phone DIFM Sales'] = cake.get('DIFM Sale_Date_y', 0).astype(int)
-    cake['Web DIY Sales'] = cake.get('DIY Sale_Date_x', 0).astype(int)
-    cake['Phone DIY Sales'] = cake.get('DIY Sale_Date_y', 0).astype(int)
-    cake['DIFM Web Installs'] = cake.get('DIFM Install_Date_x', 0).astype(int)
-    cake['DIFM Phone Installs'] = cake.get('DIFM Install_Date_y', 0).astype(int)
+    cake['Web DIFM Sales'] = cake.get('Web DIFM Sales', 0).astype(int)
+    cake['Phone DIFM Sales'] = cake.get('Phone DIFM Sales', 0).astype(int)
+    cake['Web DIY Sales'] = cake.get('Web DIY Sales', 0).astype(int)
+    cake['Phone DIY Sales'] = cake.get('Phone DIY Sales', 0).astype(int)
+    cake['DIFM Web Installs'] = cake.get('DIFM Web Installs', 0).astype(int)
+    cake['DIFM Phone Installs'] = cake.get('DIFM Phone Installs', 0).astype(int)
     
     # Calculate totals
     cake['Total DIFM Sales'] = cake['Web DIFM Sales'] + cake['Phone DIFM Sales']
