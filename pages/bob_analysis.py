@@ -17,13 +17,7 @@ TFN_SHEET_URL = "https://docs.google.com/spreadsheets/d/10BHN_-Wz_ZPmi7rezNtqiDP
 
 def clean_affiliate_code(code):
     if pd.isna(code): return ''
-    parts = code.split('_', 1)  # Split on first underscore only
-    if len(parts) < 2: return ''
-    second = parts[1]
-    if '_' in second:
-        seg = second.split('_')[0]
-        return f"{seg}_" if seg.isdigit() else ''
-    return f"{second}_" if second.isdigit() else ''
+    return str(code)  # Keep the original format, don't modify it
 
 def proportional_allocation(row, web_val, total_web_val, total_phone_val):
     if row[total_web_val] == 0 or pd.isna(row[total_web_val]): return 0
@@ -280,7 +274,7 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
         (athena_df['Ordr_Type'].str.upper().isin(['NEW', 'RESALE']))
     ]
     
-    # Clean Affiliate_Code
+    # Keep original Affiliate_Code format
     athena_df['Affiliate_Code'] = athena_df['Affiliate_Code'].apply(clean_affiliate_code)
     
     # Handle Lead_DNIS and PID matching
@@ -444,6 +438,12 @@ def generate_pivots(athena_df):
         for col in numeric_cols:
             if col in web_pivot.columns:
                 web_pivot[col] = web_pivot[col].fillna(0).astype(int)
+        
+        # Sort by total sales for better visualization
+        web_pivot['Total Sales'] = web_pivot['Web DIFM Sales'] + web_pivot['Web DIY Sales']
+        web_pivot = web_pivot.sort_values('Total Sales', ascending=False)
+        web_pivot = web_pivot.drop('Total Sales', axis=1)
+        
         st.dataframe(web_pivot)
         
         # Create bar chart for web data
@@ -451,6 +451,8 @@ def generate_pivots(athena_df):
             id_vars=['Affiliate_Code'],
             value_vars=['Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs', 'DIY Web Installs']
         )
+        
+        # Create a more readable bar chart
         fig_web = px.bar(
             web_metrics,
             x='Affiliate_Code',
@@ -460,7 +462,26 @@ def generate_pivots(athena_df):
             labels={'value': 'Count', 'variable': 'Metric'},
             barmode='group'
         )
+        
+        # Rotate x-axis labels for better readability
+        fig_web.update_layout(
+            xaxis_tickangle=-45,
+            xaxis_title="Affiliate Code (PID_SubID)",
+            height=600  # Make the chart taller
+        )
+        
         st.plotly_chart(fig_web)
+        
+        # Show summary statistics
+        st.write("\nWeb Channel Summary:")
+        summary = {
+            'Total DIFM Sales': web_pivot['Web DIFM Sales'].sum(),
+            'Total DIY Sales': web_pivot['Web DIY Sales'].sum(),
+            'Total DIFM Installs': web_pivot['DIFM Web Installs'].sum(),
+            'Total DIY Installs': web_pivot['DIY Web Installs'].sum(),
+            'Unique Affiliate Codes': len(web_pivot)
+        }
+        st.write(summary)
     else:
         st.write("No web data available")
     
@@ -473,6 +494,12 @@ def generate_pivots(athena_df):
         for col in numeric_cols:
             if col in phone_pivot.columns:
                 phone_pivot[col] = phone_pivot[col].fillna(0).astype(int)
+        
+        # Sort by total sales for better visualization
+        phone_pivot['Total Sales'] = phone_pivot['Phone DIFM Sales'] + phone_pivot['Phone DIY Sales']
+        phone_pivot = phone_pivot.sort_values('Total Sales', ascending=False)
+        phone_pivot = phone_pivot.drop('Total Sales', axis=1)
+        
         st.dataframe(phone_pivot)
         
         # Create bar chart for phone data
@@ -480,6 +507,8 @@ def generate_pivots(athena_df):
             id_vars=['PID'],
             value_vars=['Phone DIFM Sales', 'Phone DIY Sales', 'DIFM Phone Installs', 'DIY Phone Installs']
         )
+        
+        # Create a more readable bar chart
         fig_phone = px.bar(
             phone_metrics,
             x='PID',
@@ -489,7 +518,25 @@ def generate_pivots(athena_df):
             labels={'value': 'Count', 'variable': 'Metric'},
             barmode='group'
         )
+        
+        # Rotate x-axis labels for better readability
+        fig_phone.update_layout(
+            xaxis_tickangle=-45,
+            height=600  # Make the chart taller
+        )
+        
         st.plotly_chart(fig_phone)
+        
+        # Show summary statistics
+        st.write("\nPhone Channel Summary:")
+        summary = {
+            'Total DIFM Sales': phone_pivot['Phone DIFM Sales'].sum(),
+            'Total DIY Sales': phone_pivot['Phone DIY Sales'].sum(),
+            'Total DIFM Installs': phone_pivot['DIFM Phone Installs'].sum(),
+            'Total DIY Installs': phone_pivot['DIY Phone Installs'].sum(),
+            'Unique PIDs': len(phone_pivot)
+        }
+        st.write(summary)
     else:
         st.write("No phone data available")
     
