@@ -680,22 +680,28 @@ def process_adt_report(uploaded_file):
         st.write("Firing pixels...")
         successful_fires = {'DIFM': 0, 'DIY': 0}
         
-        for idx, row in filtered_df.iterrows():
-            # Update progress
-            progress = (idx + 1) / total_sales
+        for idx, row in enumerate(filtered_df.iterrows()):
+            # Update progress - ensure it's between 0 and 1
+            progress = min(float(idx + 1) / max(total_sales, 1), 1.0)
             progress_bar.progress(progress)
             
+            # Get the actual row data (iterrows returns index, row)
+            _, actual_row = row
+            
             # Generate transaction ID
-            sale_date_str = row['Sale_Date'].strftime('%Y%m%d')
+            sale_date_str = actual_row['Sale_Date'].strftime('%Y%m%d')
             transaction_id = f"ADT_{sale_date_str}_{str(uuid.uuid4())[:8]}"
-            install_method = row['INSTALL_METHOD']
+            install_method = actual_row['INSTALL_METHOD']
             
             # Determine category and fire pixel
             category = 'DIFM' if 'DIFM' in str(install_method).upper() else 'DIY'
             status_text.write(f"Processing {category} sale {idx + 1} of {total_sales}...")
             
-            if fire_pixel(transaction_id, install_method, row['Sale_Date']):
+            if fire_pixel(transaction_id, install_method, actual_row['Sale_Date']):
                 successful_fires[category] += 1
+        
+        # Ensure progress bar is completed
+        progress_bar.progress(1.0)
         
         # Show summary
         st.success("Processing complete!")
