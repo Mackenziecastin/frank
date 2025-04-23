@@ -628,6 +628,11 @@ def allocate_phone_metrics(cake_df):
     """Allocate phone metrics to subIDs based on web activity."""
     st.write("\n### Phone Attribution Debug")
     
+    # Convert phone metrics to integers
+    phone_metrics = ['Phone DIFM Sales', 'Phone DIY Sales', 'DIFM Phone Installs']
+    for metric in phone_metrics:
+        cake_df[metric] = cake_df[metric].fillna(0).astype(int)
+    
     # Group by PID to handle each partner's phone metrics
     for pid in cake_df['PID'].unique():
         if pd.isna(pid) or pid == '': continue
@@ -641,15 +646,15 @@ def allocate_phone_metrics(cake_df):
             
         st.write(f"\nProcessing PID: {pid}")
         st.write("Phone metrics to allocate:", {
-            'DIFM Sales': pid_rows['Phone DIFM Sales'].sum(),
-            'DIY Sales': pid_rows['Phone DIY Sales'].sum(),
-            'DIFM Installs': pid_rows['DIFM Phone Installs'].sum()
+            'DIFM Sales': int(pid_rows['Phone DIFM Sales'].sum()),
+            'DIY Sales': int(pid_rows['Phone DIY Sales'].sum()),
+            'DIFM Installs': int(pid_rows['DIFM Phone Installs'].sum())
         })
         
         # Step 1: Proportional Allocation
-        total_web_difm = pid_rows['Web DIFM Sales'].sum()
-        total_web_diy = pid_rows['Web DIY Sales'].sum()
-        total_web_installs = pid_rows['DIFM Web Installs'].sum()
+        total_web_difm = int(pid_rows['Web DIFM Sales'].sum())
+        total_web_diy = int(pid_rows['Web DIY Sales'].sum())
+        total_web_installs = int(pid_rows['DIFM Web Installs'].sum())
         
         if total_web_difm > 0 or total_web_diy > 0 or total_web_installs > 0:
             # Allocate proportionally
@@ -658,33 +663,32 @@ def allocate_phone_metrics(cake_df):
                 
                 # Allocate DIFM Sales
                 if total_web_difm > 0:
-                    allocated = proportional_allocation(
+                    allocated = int(proportional_allocation(
                         row, 'Web DIFM Sales', 'Web DIFM Sales',
                         pid_rows['Phone DIFM Sales'].sum()
-                    )
+                    ))
                     cake_df.loc[idx, 'Phone DIFM Sales'] = allocated
                 
                 # Allocate DIY Sales
                 if total_web_diy > 0:
-                    allocated = proportional_allocation(
+                    allocated = int(proportional_allocation(
                         row, 'Web DIY Sales', 'Web DIY Sales',
                         pid_rows['Phone DIY Sales'].sum()
-                    )
+                    ))
                     cake_df.loc[idx, 'Phone DIY Sales'] = allocated
                 
                 # Allocate DIFM Installs
                 if total_web_installs > 0:
-                    allocated = proportional_allocation(
+                    allocated = int(proportional_allocation(
                         row, 'DIFM Web Installs', 'DIFM Web Installs',
                         pid_rows['DIFM Phone Installs'].sum()
-                    )
+                    ))
                     cake_df.loc[idx, 'DIFM Phone Installs'] = allocated
         
         # Step 2: Fix Under-Allocated Totals
-        phone_metrics = ['Phone DIFM Sales', 'Phone DIY Sales', 'DIFM Phone Installs']
         for metric in phone_metrics:
-            total_allocated = cake_df.loc[pid_mask, metric].sum()
-            total_available = pid_rows[metric].sum()
+            total_allocated = int(cake_df.loc[pid_mask, metric].sum())
+            total_available = int(pid_rows[metric].sum())
             
             if total_allocated < total_available:
                 remaining = total_available - total_allocated
@@ -704,11 +708,15 @@ def allocate_phone_metrics(cake_df):
             
             # Assign all phone metrics to this row
             for metric in phone_metrics:
-                total = pid_rows[metric].sum()
+                total = int(pid_rows[metric].sum())
                 cake_df.loc[max_leads_idx, metric] = total
                 # Set other rows to 0
                 other_idx = pid_rows[pid_rows.index != max_leads_idx].index
                 cake_df.loc[other_idx, metric] = 0
+    
+    # Ensure all phone metrics are integers
+    for metric in phone_metrics:
+        cake_df[metric] = cake_df[metric].fillna(0).astype(int)
     
     return cake_df
 
