@@ -61,22 +61,31 @@ def load_combined_resi_tfn_data(sheet_url):
         return url
     
     try:
-        # Load RESI sheet - using first row as headers
+        # Load RESI sheet - using row 1 as headers
         st.write("\nLoading RESI TFN Sheet...")
-        resi_df = pd.read_csv(sheet_csv_url("RESI TFN Sheet"), header=1)  # Use row 1 as headers
-        st.write("RESI Sheet Columns after using row 1 as headers:", resi_df.columns.tolist())
+        resi_df = pd.read_csv(sheet_csv_url("RESI TFN Sheet"))
+        
+        # Get the header row (row 1)
+        header_row = resi_df.iloc[1]
+        resi_df.columns = header_row
+        resi_df = resi_df.iloc[2:]  # Keep only data rows
+        
+        st.write("RESI Sheet Columns:", resi_df.columns.tolist())
         st.write("RESI Sheet first few rows:")
         st.write(resi_df.head())
         
-        # Load Display sheet - using first row as headers
+        # Load Display sheet
         st.write("\nLoading Display TFN Sheet...")
-        display_df = pd.read_csv(sheet_csv_url("Display TFN Sheet"), header=1)  # Use row 1 as headers
-        st.write("Display Sheet Columns after using row 1 as headers:", display_df.columns.tolist())
+        display_df = pd.read_csv(sheet_csv_url("Display TFN Sheet"))
+        display_df.columns = display_df.iloc[1]  # Use row 1 as headers
+        display_df = display_df.iloc[2:]  # Keep only data rows
+        
+        st.write("Display Sheet Columns:", display_df.columns.tolist())
         st.write("Display Sheet first few rows:")
         st.write(display_df.head())
         
-        # Search for the number in any column of RESI sheet
-        st.write("\nSearching for 8446778720 in any column of RESI sheet:")
+        # Search for the number in RESI sheet
+        st.write("\nSearching for 8446778720 in RESI sheet:")
         for col in resi_df.columns:
             matches = resi_df[resi_df[col].astype(str).str.contains('8446778720', na=False)]
             if not matches.empty:
@@ -84,20 +93,17 @@ def load_combined_resi_tfn_data(sheet_url):
                 st.write(matches)
         
         # Get the actual column names for TFN and PID
-        tfn_col = next((col for col in resi_df.columns if 'tfn' in str(col).lower() or 'phone' in str(col).lower()), None)
-        pid_col = next((col for col in resi_df.columns if 'pid' in str(col).lower() or 'partner' in str(col).lower()), None)
+        tfn_col = 'Partner Phone #'  # From row 1
+        pid_col = 'PID'  # From row 1
         
         st.write("\nIdentified columns:")
         st.write(f"TFN column: {tfn_col}")
         st.write(f"PID column: {pid_col}")
         
-        if not tfn_col or not pid_col:
-            raise ValueError(f"Could not find TFN or PID columns. Available columns: {resi_df.columns.tolist()}")
-        
         # Combine sheets with correct column names
         combined_df = pd.concat([
-            resi_df.rename(columns={pid_col: "PID", tfn_col: "TFN"}),
-            display_df.rename(columns={"Partner ID": "PID", "TFN": "TFN"})
+            resi_df[[pid_col, tfn_col]].rename(columns={pid_col: "PID", tfn_col: "TFN"}),
+            display_df[['PID', 'TFN']]  # Assuming these are the correct column names for Display sheet
         ], ignore_index=True)
         
         # Clean TFNs - keep empty values as blank strings
@@ -105,9 +111,16 @@ def load_combined_resi_tfn_data(sheet_url):
         combined_df.loc[combined_df['Clean_TFN'].str.strip() != '', 'Clean_TFN'] = combined_df.loc[combined_df['Clean_TFN'].str.strip() != '', 'Clean_TFN'].str.replace(r'[^0-9]', '', regex=True)
         
         # Clean PIDs - handle NaN and float formatting
-        combined_df['PID'] = combined_df['PID'].apply(
-            lambda x: str(int(float(x))) if pd.notnull(x) and str(x).strip() != '' else ''
-        )
+        def clean_pid(x):
+            try:
+                if pd.isna(x) or str(x).strip() == '':
+                    return ''
+                # Convert to float first to handle any decimal points
+                return str(int(float(str(x).strip())))
+            except (ValueError, TypeError):
+                return str(x) if str(x).strip().isdigit() else ''
+        
+        combined_df['PID'] = combined_df['PID'].apply(clean_pid)
         
         # Debug final mapping
         st.write("\nFinal TFN mapping check:")
@@ -116,6 +129,8 @@ def load_combined_resi_tfn_data(sheet_url):
         st.write(combined_df[['Clean_TFN', 'PID']].head(20))
         st.write("\nChecking for 8446778720:")
         st.write(combined_df[combined_df['Clean_TFN'] == '8446778720'])
+        st.write("\nAll unique PIDs in mapping:")
+        st.write(sorted(combined_df['PID'].unique().tolist()))
         
         return combined_df[['Clean_TFN', 'PID']]
         
