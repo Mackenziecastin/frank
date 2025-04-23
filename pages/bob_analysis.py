@@ -363,9 +363,6 @@ def generate_pivots(athena_df):
     st.write("\n### Data Summary")
     st.write(f"Web records: {len(web_df)}")
     st.write(f"Phone records: {len(phone_df)}")
-    st.write("\nSample of phone records:")
-    if len(phone_df) > 0:
-        st.write(phone_df[['Lead_DNIS', 'PID', 'INSTALL_METHOD']].head())
     
     # Create web pivot if we have data
     if len(web_df) > 0:
@@ -438,11 +435,57 @@ def generate_pivots(athena_df):
             if col not in df.columns:
                 df[col] = 0
     
+    # Display Web Pivot Table
+    st.write("\n### Web Pivot Table")
+    if not web_pivot.empty:
+        st.write("Full Web Pivot Data:")
+        st.dataframe(web_pivot.style.format("{:.0f}"))
+        
+        # Create bar chart for web data
+        web_metrics = web_pivot.melt(
+            id_vars=['Affiliate_Code'],
+            value_vars=['Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs', 'DIY Web Installs']
+        )
+        fig_web = px.bar(
+            web_metrics,
+            x='Affiliate_Code',
+            y='value',
+            color='variable',
+            title='Web Channel Metrics by Affiliate',
+            labels={'value': 'Count', 'variable': 'Metric'},
+            barmode='group'
+        )
+        st.plotly_chart(fig_web)
+    else:
+        st.write("No web data available")
+    
+    # Display Phone Pivot Table
+    st.write("\n### Phone Pivot Table")
+    if not phone_pivot.empty:
+        st.write("Full Phone Pivot Data:")
+        st.dataframe(phone_pivot.style.format("{:.0f}"))
+        
+        # Create bar chart for phone data
+        phone_metrics = phone_pivot.melt(
+            id_vars=['PID'],
+            value_vars=['Phone DIFM Sales', 'Phone DIY Sales', 'DIFM Phone Installs', 'DIY Phone Installs']
+        )
+        fig_phone = px.bar(
+            phone_metrics,
+            x='PID',
+            y='value',
+            color='variable',
+            title='Phone Channel Metrics by PID',
+            labels={'value': 'Count', 'variable': 'Metric'},
+            barmode='group'
+        )
+        st.plotly_chart(fig_phone)
+    else:
+        st.write("No phone data available")
+    
     # Debug pivot tables
     st.write("\nWeb pivot columns:", web_pivot.columns.tolist())
-    st.write("Web pivot sample:", web_pivot.head().to_dict('records'))
-    st.write("\nPhone pivot columns:", phone_pivot.columns.tolist())
-    st.write("Phone pivot sample:", phone_pivot.head().to_dict('records'))
+    st.write("Phone pivot columns:", phone_pivot.columns.tolist())
     
     return web_pivot, phone_pivot
 
