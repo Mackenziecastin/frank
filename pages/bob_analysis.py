@@ -106,7 +106,22 @@ def generate_pivots(athena_df):
     web_df = athena_df[athena_df['Lead_DNIS'].str.contains("WEB", na=False)]
     phone_df = athena_df[~athena_df['Lead_DNIS'].str.contains("WEB", na=False) & athena_df['PID'].notna()]
     
-    # Create pivots
+    # Debug info
+    st.write("\n### Data Summary")
+    st.write(f"Web records: {len(web_df)}")
+    st.write(f"Phone records: {len(phone_df)}")
+    st.write("\nSample of phone records:")
+    if len(phone_df) > 0:
+        st.write(phone_df[['Lead_DNIS', 'PID', 'INSTALL_METHOD']].head())
+    
+    # Create empty DataFrames if no data
+    if len(web_df) == 0:
+        return pd.DataFrame(columns=['Affiliate_Code']), pd.DataFrame(columns=['PID'])
+    if len(phone_df) == 0:
+        phone_pivot = pd.DataFrame(columns=['PID'])
+        return web_pivot.reset_index() if len(web_df) > 0 else pd.DataFrame(columns=['Affiliate_Code']), phone_pivot
+    
+    # Create web pivot
     web_pivot = pd.pivot_table(
         web_df, 
         index='Affiliate_Code', 
@@ -114,8 +129,9 @@ def generate_pivots(athena_df):
         columns='INSTALL_METHOD', 
         aggfunc='count', 
         fill_value=0
-    ) if len(web_df) > 0 else pd.DataFrame()
+    )
     
+    # Create phone pivot
     phone_pivot = pd.pivot_table(
         phone_df, 
         index='PID', 
@@ -123,7 +139,7 @@ def generate_pivots(athena_df):
         columns='INSTALL_METHOD', 
         aggfunc='count', 
         fill_value=0
-    ) if len(phone_df) > 0 else pd.DataFrame()
+    )
     
     # Format column names
     if len(web_pivot) > 0:
@@ -131,12 +147,7 @@ def generate_pivots(athena_df):
     if len(phone_pivot) > 0:
         phone_pivot.columns = [f"{val} {col}" for col, val in phone_pivot.columns]
     
-    # Debug info
-    st.write("\n### Data Summary")
-    st.write(f"Web records: {len(web_df)}")
-    st.write(f"Phone records: {len(phone_df)}")
-    
-    return web_pivot.reset_index() if len(web_pivot) > 0 else pd.DataFrame(), phone_pivot.reset_index() if len(phone_pivot) > 0 else pd.DataFrame()
+    return web_pivot.reset_index(), phone_pivot.reset_index()
 
 def clean_conversion(conversion_df):
     # Filter out specific offer IDs
@@ -157,17 +168,25 @@ def clean_conversion(conversion_df):
     return cake
 
 def merge_and_compute(cake, web, phone):
+    # Debug info
+    st.write("\n### Merge Debug Info")
+    st.write("Cake columns:", cake.columns.tolist())
+    st.write("Web columns:", web.columns.tolist())
+    st.write("Phone columns:", phone.columns.tolist())
+    
     # Prepare for merge
     cake = cake.copy()
-    web = web.set_index('Affiliate_Code')
-    phone = phone.set_index('PID')
+    web = web.set_index('Affiliate_Code') if not web.empty else pd.DataFrame()
+    phone = phone.set_index('PID') if not phone.empty else pd.DataFrame()
     
     # Merge data
-    cake = cake.merge(web, how='left', left_on='Concatenated', right_index=True)
-    cake = cake.merge(phone, how='left', left_on='PID', right_index=True)
+    if not web.empty:
+        cake = cake.merge(web, how='left', left_on='Concatenated', right_index=True)
+    if not phone.empty:
+        cake = cake.merge(phone, how='left', left_on='PID', right_index=True)
     cake.fillna(0, inplace=True)
     
-    # Extract metrics
+    # Extract metrics - handle both empty and non-empty cases
     cake['Web DIFM Sales'] = cake.get('DIFM Sale_Date_x', 0).astype(int)
     cake['Phone DIFM Sales'] = cake.get('DIFM Sale_Date_y', 0).astype(int)
     cake['Web DIY Sales'] = cake.get('DIY Sale_Date_x', 0).astype(int)
@@ -197,6 +216,10 @@ def merge_and_compute(cake, web, phone):
     cake['Cost'] = cake['Cost'].apply(lambda x: f"${x:,.2f}")
     cake['eCPL'] = cake['eCPL'].apply(lambda x: f"${x:,.2f}")
     cake['Projected Margin'] = cake['Projected Margin'].apply(lambda x: f"{x:.2%}" if x != -1 else "-")
+    
+    # Add Current Rate column if not present
+    if 'Current Rate' not in cake.columns:
+        cake['Current Rate'] = 0
     
     # Reorder columns
     columns = [
