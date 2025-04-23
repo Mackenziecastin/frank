@@ -57,10 +57,20 @@ def load_combined_resi_tfn_data(sheet_url):
     display_df = pd.read_csv(sheet_csv_url("Display TFN Sheet"))
     
     # Debug raw data
-    st.write("\nRaw RESI TFN Sheet sample:")
-    st.write(resi_df.head())
-    st.write("\nRaw Display TFN Sheet sample:")
-    st.write(display_df.head())
+    st.write("\nRaw RESI TFN Sheet data:")
+    st.write("Columns:", resi_df.columns.tolist())
+    st.write("Sample data:")
+    st.write(resi_df.head(20))
+    st.write("\nRaw Display TFN Sheet data:")
+    st.write("Columns:", display_df.columns.tolist())
+    st.write("Sample data:")
+    st.write(display_df.head(20))
+    
+    # Search for specific number in raw data
+    st.write("\nSearching for 8446778720 in raw RESI sheet:")
+    st.write(resi_df[resi_df['TFN'].astype(str).str.contains('8446778720', na=False)])
+    st.write("\nSearching for 8446778720 in raw Display sheet:")
+    st.write(display_df[display_df['TFN'].astype(str).str.contains('8446778720', na=False)])
     
     # Combine sheets
     combined_df = pd.concat([
@@ -70,6 +80,10 @@ def load_combined_resi_tfn_data(sheet_url):
     
     # Clean TFNs - keep empty values as blank strings
     combined_df['Clean_TFN'] = combined_df['TFN'].fillna('').astype(str)
+    # Show pre-cleaning TFN format
+    st.write("\nPre-cleaning TFN format for specific number:")
+    st.write(combined_df[combined_df['TFN'].astype(str).str.contains('8446778720', na=False)])
+    
     combined_df.loc[combined_df['Clean_TFN'].str.strip() != '', 'Clean_TFN'] = combined_df.loc[combined_df['Clean_TFN'].str.strip() != '', 'Clean_TFN'].str.replace(r'[^0-9]', '', regex=True)
     
     # Clean PIDs - handle NaN and float formatting
@@ -77,15 +91,16 @@ def load_combined_resi_tfn_data(sheet_url):
         lambda x: str(int(float(x))) if pd.notnull(x) and str(x).strip() != '' else ''
     )
     
-    # Debug specific TFN
-    st.write("\nLooking for specific TFN mapping:")
+    # Debug specific TFN after cleaning
+    st.write("\nPost-cleaning TFN search:")
+    st.write("Records with exact match:")
     st.write(combined_df[combined_df['Clean_TFN'] == '8446778720'])
-    st.write("\nAll TFNs containing '8446778720':")
+    st.write("\nRecords containing the number:")
     st.write(combined_df[combined_df['Clean_TFN'].str.contains('8446778720', na=False)])
     
-    # Debug cleaned data
-    st.write("\nCleaned TFN mapping sample:")
-    st.write(combined_df[['Clean_TFN', 'PID']].head(10))
+    # Show all unique TFNs
+    st.write("\nSample of all Clean_TFNs in mapping:")
+    st.write(combined_df['Clean_TFN'].unique()[:20])
     
     return combined_df[['Clean_TFN', 'PID']]
 
@@ -112,7 +127,7 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     # Debug TFN mapping
     st.write("\n### TFN Matching Debug")
     st.write("TFN mapping from sheet:")
-    st.write(tfn_df[['Clean_TFN', 'PID']].head(10))
+    st.write(tfn_df[['Clean_TFN', 'PID']].head(20))
     
     # Create TFN mapping dictionary
     tfn_map = dict(zip(tfn_df['Clean_TFN'], tfn_df['PID']))
@@ -131,7 +146,9 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     # Debug specific DNIS
     st.write("\nLooking for specific DNIS in Athena data:")
     matching_records = athena_df[athena_df['Lead_DNIS'].str.contains('8446778720', na=False)]
-    st.write(matching_records[['Lead_DNIS', 'PID']].head())
+    st.write("Found records with 8446778720:", len(matching_records))
+    st.write("Sample of these records (Lead_DNIS only):")
+    st.write(matching_records['Lead_DNIS'].head())
     
     # Match PIDs for non-WEB records
     def match_pid(row):
@@ -148,7 +165,7 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
             return matched_pid
         return None
     
-    # Apply PID matching and show results
+    # Apply PID matching
     athena_df['PID'] = athena_df.apply(match_pid, axis=1)
     
     # Show matching results
@@ -156,8 +173,6 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     st.write(f"Total non-WEB records: {len(non_web_records)}")
     matched_records = athena_df[athena_df['PID'].notna() & (athena_df['PID'] != '')]
     st.write(f"Successfully matched records: {len(matched_records)}")
-    st.write("\nSample of matched records:")
-    st.write(matched_records[['Lead_DNIS', 'PID']].head(10))
     
     # Process leads data
     leads_df.columns = [col.lower() for col in leads_df.columns]
