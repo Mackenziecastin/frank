@@ -6,9 +6,52 @@ import logging
 import io
 import uuid
 import re
+import subprocess
 
 # Set page config first
 st.set_page_config(page_title="ADT Pixel Firing", layout="wide")
+
+# Function to install a package
+def install_package(package):
+    try:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+# Try importing pandas, install if not available
+try:
+    import pandas as pd
+    st.sidebar.success("✓ Successfully imported pandas")
+except ImportError:
+    st.warning("Pandas not found. Attempting to install...")
+    if install_package("pandas==2.2.0"):
+        try:
+            import pandas as pd
+            st.sidebar.success("✓ Successfully installed and imported pandas")
+        except ImportError as e:
+            st.error(f"Failed to import pandas even after installation: {str(e)}")
+            st.stop()
+    else:
+        st.error("Failed to install pandas. Please contact support.")
+        st.stop()
+
+# Try importing requests, install if not available
+try:
+    import requests
+    st.sidebar.success("✓ Successfully imported requests")
+except ImportError:
+    st.warning("Requests not found. Attempting to install...")
+    if install_package("requests==2.31.0"):
+        try:
+            import requests
+            st.sidebar.success("✓ Successfully installed and imported requests")
+        except ImportError as e:
+            st.error(f"Failed to import requests even after installation: {str(e)}")
+            st.stop()
+    else:
+        st.error("Failed to install requests. Please contact support.")
+        st.stop()
 
 # Display Python environment information
 st.sidebar.write("Environment Information:")
@@ -16,31 +59,8 @@ st.sidebar.code(f"""
 Python Version: {sys.version}
 Working Directory: {os.getcwd()}
 Python Path: {sys.path}
+Pandas Version: {pd.__version__ if 'pd' in locals() else 'Not installed'}
 """)
-
-# Try importing required packages with error handling
-try:
-    import pandas as pd
-    st.sidebar.success("✓ Successfully imported pandas")
-except ImportError as e:
-    st.error("""
-    Failed to import pandas. This is a critical error.
-    
-    Technical details:
-    1. Make sure requirements.txt contains: pandas>=2.2.0
-    2. Make sure packages.txt contains: python3-dev, build-essential
-    3. Try restarting the Streamlit app
-    
-    Error: {}
-    """.format(str(e)))
-    st.stop()
-
-try:
-    import requests
-    st.sidebar.success("✓ Successfully imported requests")
-except ImportError as e:
-    st.error(f"Failed to import requests: {str(e)}")
-    st.stop()
 
 def setup_logging():
     """Set up logging to capture output"""
