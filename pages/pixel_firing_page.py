@@ -1,17 +1,49 @@
 import streamlit as st
-import pandas as pd
-import requests
-from datetime import datetime, timedelta
-import uuid
-import re
+import sys
 import os
+from datetime import datetime, timedelta
 import logging
 import io
+import uuid
+import re
 
+# Set page config first
 st.set_page_config(page_title="ADT Pixel Firing", layout="wide")
 
+# Display Python environment information
+st.sidebar.write("Environment Information:")
+st.sidebar.code(f"""
+Python Version: {sys.version}
+Working Directory: {os.getcwd()}
+Python Path: {sys.path}
+""")
+
+# Try importing required packages with error handling
+try:
+    import pandas as pd
+    st.sidebar.success("✓ Successfully imported pandas")
+except ImportError as e:
+    st.error("""
+    Failed to import pandas. This is a critical error.
+    
+    Technical details:
+    1. Make sure requirements.txt contains: pandas>=2.2.0
+    2. Make sure packages.txt contains: python3-dev, build-essential
+    3. Try restarting the Streamlit app
+    
+    Error: {}
+    """.format(str(e)))
+    st.stop()
+
+try:
+    import requests
+    st.sidebar.success("✓ Successfully imported requests")
+except ImportError as e:
+    st.error(f"Failed to import requests: {str(e)}")
+    st.stop()
+
 def setup_logging():
-    # Create a string buffer to capture log output
+    """Set up logging to capture output"""
     log_stream = io.StringIO()
     logging.basicConfig(
         stream=log_stream,
