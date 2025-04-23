@@ -50,10 +50,6 @@ def get_current_rates(conversion_df):
 def load_combined_resi_tfn_data(sheet_url):
     base_url = sheet_url.split("/edit")[0]
     
-    # Debug URLs
-    st.write("\nAccessing Google Sheets:")
-    st.write("Base URL:", base_url)
-    
     def sheet_csv_url(sheet_name):
         url = f"{base_url}/export?format=csv&gid="
         # RESI TFN Sheet gid
@@ -62,23 +58,20 @@ def load_combined_resi_tfn_data(sheet_url):
         # Display TFN Sheet gid
         elif sheet_name == "Display TFN Sheet":
             url += "0"  # default first sheet
-        st.write(f"\nURL for {sheet_name}:", url)
         return url
     
     try:
-        # Load RESI sheet
-        st.write("\nAttempting to load RESI TFN Sheet...")
-        resi_df = pd.read_csv(sheet_csv_url("RESI TFN Sheet"))
-        st.write("Successfully loaded RESI TFN Sheet")
-        st.write("RESI Sheet Columns:", resi_df.columns.tolist())
-        st.write("RESI Sheet first few rows to check column names and data:")
+        # Load RESI sheet - using first row as headers
+        st.write("\nLoading RESI TFN Sheet...")
+        resi_df = pd.read_csv(sheet_csv_url("RESI TFN Sheet"), header=1)  # Use row 1 as headers
+        st.write("RESI Sheet Columns after using row 1 as headers:", resi_df.columns.tolist())
+        st.write("RESI Sheet first few rows:")
         st.write(resi_df.head())
         
-        # Load Display sheet
-        st.write("\nAttempting to load Display TFN Sheet...")
-        display_df = pd.read_csv(sheet_csv_url("Display TFN Sheet"))
-        st.write("Successfully loaded Display TFN Sheet")
-        st.write("Display Sheet Columns:", display_df.columns.tolist())
+        # Load Display sheet - using first row as headers
+        st.write("\nLoading Display TFN Sheet...")
+        display_df = pd.read_csv(sheet_csv_url("Display TFN Sheet"), header=1)  # Use row 1 as headers
+        st.write("Display Sheet Columns after using row 1 as headers:", display_df.columns.tolist())
         st.write("Display Sheet first few rows:")
         st.write(display_df.head())
         
@@ -91,8 +84,8 @@ def load_combined_resi_tfn_data(sheet_url):
                 st.write(matches)
         
         # Get the actual column names for TFN and PID
-        tfn_col = next((col for col in resi_df.columns if 'tfn' in col.lower()), None)
-        pid_col = next((col for col in resi_df.columns if 'pid' in col.lower()), None)
+        tfn_col = next((col for col in resi_df.columns if 'tfn' in str(col).lower() or 'phone' in str(col).lower()), None)
+        pid_col = next((col for col in resi_df.columns if 'pid' in str(col).lower() or 'partner' in str(col).lower()), None)
         
         st.write("\nIdentified columns:")
         st.write(f"TFN column: {tfn_col}")
