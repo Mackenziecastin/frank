@@ -18,26 +18,22 @@ TFN_SHEET_URL = "https://docs.google.com/spreadsheets/d/10BHN_-Wz_ZPmi7rezNtqiDP
 def clean_affiliate_code(code):
     if pd.isna(code): return ''
     
-    # Step 1: Remove everything before the first underscore
-    parts = code.split('_', 1)
-    if len(parts) < 2: return ''
-    remainder = parts[1]
+    # Split into parts
+    parts = code.split('_')
+    if len(parts) < 2: return ''  # Need at least OfferID_PID
     
-    # Step 2: If there are more underscores, check if the first part is numeric
-    if '_' in remainder:
-        first_part = remainder.split('_')[0]
-        # If first part is numeric, keep it, otherwise find first numeric part
-        if first_part.isdigit():
-            return f"{first_part}_"
-        # If it contains non-numeric characters, look for first numeric part
-        subparts = remainder.split('_')
-        for part in subparts:
-            if part.isdigit():
-                return f"{part}_"
-        return ''  # No numeric part found
+    # Always keep the PID (second part)
+    pid = parts[1]
     
-    # If no more underscores, check if the remainder is numeric
-    return f"{remainder}_" if remainder.isdigit() else ''
+    # If there's a subID (third part), check if it's numeric
+    if len(parts) > 2:
+        subid = parts[2]
+        # Only include subID if it's purely numeric
+        if subid.isdigit():
+            return f"{pid}_{subid}"
+    
+    # Default case: just return PID_
+    return f"{pid}_"
 
 def proportional_allocation(row, web_val, total_web_val, total_phone_val):
     if row[total_web_val] == 0 or pd.isna(row[total_web_val]): return 0
@@ -310,13 +306,22 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
         'Original': athena_df['Original_Code'],
         'Cleaned': athena_df['Affiliate_Code']
     })
+    
     # Show examples of different cases
-    st.write("Numeric subID (should keep):")
-    st.write(cleaning_examples[cleaning_examples['Original'].str.contains('_\d+$', na=False)].head())
-    st.write("\nNon-numeric subID (should clean):")
-    st.write(cleaning_examples[cleaning_examples['Original'].str.contains('_[^\d_]+', na=False)].head())
-    st.write("\nMultiple underscores (should handle appropriately):")
-    st.write(cleaning_examples[cleaning_examples['Original'].str.count('_') > 1].head())
+    st.write("Case 1 - OfferID_PID_NumericSubID (should keep PID and subID):")
+    st.write(cleaning_examples[
+        cleaning_examples['Original'].str.contains('_\d+_\d+$', na=False)
+    ].head())
+    
+    st.write("\nCase 2 - OfferID_PID_NonNumericSubID (should keep only PID_):")
+    st.write(cleaning_examples[
+        cleaning_examples['Original'].str.contains('_\d+_[^\d]+', na=False)
+    ].head())
+    
+    st.write("\nCase 3 - OfferID_PID (should keep PID_):")
+    st.write(cleaning_examples[
+        cleaning_examples['Original'].str.count('_') == 1
+    ].head())
     
     # Handle Lead_DNIS and PID matching
     athena_df['Lead_DNIS'] = athena_df['Lead_DNIS'].fillna('').astype(str)
