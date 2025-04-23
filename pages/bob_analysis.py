@@ -157,12 +157,21 @@ def load_combined_resi_tfn_data(sheet_url):
             try:
                 if pd.isna(x) or str(x).strip() == '':
                     return ''
-                # Convert to float first to handle any decimal points
-                return str(int(float(str(x).strip())))
+                # Remove any decimal points and trailing zeros
+                numeric_str = str(x).strip()
+                if '.' in numeric_str:
+                    numeric_str = numeric_str.split('.')[0]
+                return numeric_str if numeric_str.isdigit() else ''
             except (ValueError, TypeError):
-                return str(x) if str(x).strip().isdigit() else ''
+                return ''
         
         combined_df['PID'] = combined_df['PID'].apply(clean_pid)
+        
+        # Debug PID cleaning
+        st.write("\nPID Cleaning Example:")
+        sample_pids = resi_df['PID'].head()
+        st.write("Before cleaning:", [str(x) for x in sample_pids.tolist()])
+        st.write("After cleaning:", [clean_pid(x) for x in sample_pids])
         
         # Remove any rows where either Clean_TFN or PID is empty after cleaning
         combined_df = combined_df[
