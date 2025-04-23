@@ -49,60 +49,76 @@ def get_current_rates(conversion_df):
 
 def load_combined_resi_tfn_data(sheet_url):
     base_url = sheet_url.split("/edit")[0]
+    
+    # Debug URLs
+    st.write("\nAccessing Google Sheets:")
+    st.write("Base URL:", base_url)
+    
     def sheet_csv_url(sheet_name):
-        return f"{base_url}/gviz/tq?tqx=out:csv&sheet={sheet_name.replace(' ', '%20')}"
+        url = f"{base_url}/export?format=csv&gid="
+        # RESI TFN Sheet gid
+        if sheet_name == "RESI TFN Sheet":
+            url += "1629976834"
+        # Display TFN Sheet gid
+        elif sheet_name == "Display TFN Sheet":
+            url += "0"  # default first sheet
+        st.write(f"\nURL for {sheet_name}:", url)
+        return url
     
-    # Load both sheets
-    resi_df = pd.read_csv(sheet_csv_url("RESI TFN Sheet"))
-    display_df = pd.read_csv(sheet_csv_url("Display TFN Sheet"))
-    
-    # Debug raw data
-    st.write("\nRaw RESI TFN Sheet data:")
-    st.write("Columns:", resi_df.columns.tolist())
-    st.write("Sample data:")
-    st.write(resi_df.head(20))
-    st.write("\nRaw Display TFN Sheet data:")
-    st.write("Columns:", display_df.columns.tolist())
-    st.write("Sample data:")
-    st.write(display_df.head(20))
-    
-    # Search for specific number in raw data
-    st.write("\nSearching for 8446778720 in raw RESI sheet:")
-    st.write(resi_df[resi_df['TFN'].astype(str).str.contains('8446778720', na=False)])
-    st.write("\nSearching for 8446778720 in raw Display sheet:")
-    st.write(display_df[display_df['TFN'].astype(str).str.contains('8446778720', na=False)])
-    
-    # Combine sheets
-    combined_df = pd.concat([
-        resi_df.rename(columns={"PID": "PID", "TFN": "TFN"}),
-        display_df.rename(columns={"Partner ID": "PID", "TFN": "TFN"})
-    ], ignore_index=True)
-    
-    # Clean TFNs - keep empty values as blank strings
-    combined_df['Clean_TFN'] = combined_df['TFN'].fillna('').astype(str)
-    # Show pre-cleaning TFN format
-    st.write("\nPre-cleaning TFN format for specific number:")
-    st.write(combined_df[combined_df['TFN'].astype(str).str.contains('8446778720', na=False)])
-    
-    combined_df.loc[combined_df['Clean_TFN'].str.strip() != '', 'Clean_TFN'] = combined_df.loc[combined_df['Clean_TFN'].str.strip() != '', 'Clean_TFN'].str.replace(r'[^0-9]', '', regex=True)
-    
-    # Clean PIDs - handle NaN and float formatting
-    combined_df['PID'] = combined_df['PID'].apply(
-        lambda x: str(int(float(x))) if pd.notnull(x) and str(x).strip() != '' else ''
-    )
-    
-    # Debug specific TFN after cleaning
-    st.write("\nPost-cleaning TFN search:")
-    st.write("Records with exact match:")
-    st.write(combined_df[combined_df['Clean_TFN'] == '8446778720'])
-    st.write("\nRecords containing the number:")
-    st.write(combined_df[combined_df['Clean_TFN'].str.contains('8446778720', na=False)])
-    
-    # Show all unique TFNs
-    st.write("\nSample of all Clean_TFNs in mapping:")
-    st.write(combined_df['Clean_TFN'].unique()[:20])
-    
-    return combined_df[['Clean_TFN', 'PID']]
+    try:
+        # Load RESI sheet
+        st.write("\nAttempting to load RESI TFN Sheet...")
+        resi_df = pd.read_csv(sheet_csv_url("RESI TFN Sheet"))
+        st.write("Successfully loaded RESI TFN Sheet")
+        st.write("RESI Sheet Columns:", resi_df.columns.tolist())
+        st.write("RESI Sheet Shape:", resi_df.shape)
+        st.write("RESI Sheet Sample:")
+        st.write(resi_df.head(20))
+        
+        # Search for specific number in RESI sheet
+        st.write("\nSearching for 8446778720 in RESI sheet:")
+        st.write("Raw TFN values containing 8446778720:")
+        matching_rows = resi_df[resi_df['TFN'].astype(str).str.contains('8446778720', na=False)]
+        st.write(matching_rows)
+        
+        # Load Display sheet
+        st.write("\nAttempting to load Display TFN Sheet...")
+        display_df = pd.read_csv(sheet_csv_url("Display TFN Sheet"))
+        st.write("Successfully loaded Display TFN Sheet")
+        st.write("Display Sheet Columns:", display_df.columns.tolist())
+        st.write("Display Sheet Shape:", display_df.shape)
+        
+        # Combine sheets
+        combined_df = pd.concat([
+            resi_df.rename(columns={"PID": "PID", "TFN": "TFN"}),
+            display_df.rename(columns={"Partner ID": "PID", "TFN": "TFN"})
+        ], ignore_index=True)
+        
+        # Clean TFNs - keep empty values as blank strings
+        combined_df['Clean_TFN'] = combined_df['TFN'].fillna('').astype(str)
+        combined_df.loc[combined_df['Clean_TFN'].str.strip() != '', 'Clean_TFN'] = combined_df.loc[combined_df['Clean_TFN'].str.strip() != '', 'Clean_TFN'].str.replace(r'[^0-9]', '', regex=True)
+        
+        # Clean PIDs - handle NaN and float formatting
+        combined_df['PID'] = combined_df['PID'].apply(
+            lambda x: str(int(float(x))) if pd.notnull(x) and str(x).strip() != '' else ''
+        )
+        
+        # Debug final mapping
+        st.write("\nFinal TFN mapping check:")
+        st.write("Total records in mapping:", len(combined_df))
+        st.write("Sample of final mapping:")
+        st.write(combined_df[['Clean_TFN', 'PID']].head(20))
+        st.write("\nChecking for 8446778720:")
+        st.write(combined_df[combined_df['Clean_TFN'] == '8446778720'])
+        
+        return combined_df[['Clean_TFN', 'PID']]
+        
+    except Exception as e:
+        st.error(f"Error loading TFN data: {str(e)}")
+        st.error("Full error details:")
+        import traceback
+        st.error(traceback.format_exc())
+        raise
 
 def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     # Filter Athena data
