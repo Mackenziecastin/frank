@@ -61,24 +61,17 @@ def load_combined_resi_tfn_data(sheet_url):
         return url
     
     try:
-        # Load RESI sheet - using row 1 as headers
+        # Load RESI sheet with first row as headers
         st.write("\nLoading RESI TFN Sheet...")
-        resi_df = pd.read_csv(sheet_csv_url("RESI TFN Sheet"))
-        
-        # Get the header row (row 1)
-        header_row = resi_df.iloc[1]
-        resi_df.columns = header_row
-        resi_df = resi_df.iloc[2:]  # Keep only data rows
+        resi_df = pd.read_csv(sheet_csv_url("RESI TFN Sheet"), header=0)
         
         st.write("RESI Sheet Columns:", resi_df.columns.tolist())
         st.write("RESI Sheet first few rows:")
         st.write(resi_df.head())
         
-        # Load Display sheet
+        # Load Display sheet with first row as headers
         st.write("\nLoading Display TFN Sheet...")
-        display_df = pd.read_csv(sheet_csv_url("Display TFN Sheet"))
-        display_df.columns = display_df.iloc[1]  # Use row 1 as headers
-        display_df = display_df.iloc[2:]  # Keep only data rows
+        display_df = pd.read_csv(sheet_csv_url("Display TFN Sheet"), header=0)
         
         st.write("Display Sheet Columns:", display_df.columns.tolist())
         st.write("Display Sheet first few rows:")
@@ -93,8 +86,8 @@ def load_combined_resi_tfn_data(sheet_url):
                 st.write(matches)
         
         # Get the actual column names for TFN and PID
-        tfn_col = 'Partner Phone #'  # From row 1
-        pid_col = 'PID'  # From row 1
+        tfn_col = 'Phone #'  # From the actual header row
+        pid_col = 'PID'  # From the actual header row
         
         st.write("\nIdentified columns:")
         st.write(f"TFN column: {tfn_col}")
