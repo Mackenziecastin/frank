@@ -367,9 +367,8 @@ def generate_pivots(athena_df):
     if len(phone_df) > 0:
         st.write(phone_df[['Lead_DNIS', 'PID', 'INSTALL_METHOD']].head())
     
-    # Initialize empty DataFrames
-    web_pivot = pd.DataFrame(columns=['Affiliate_Code'])
-    phone_pivot = pd.DataFrame(columns=['PID'])
+    # Initialize empty DataFrames with required columns
+    empty_df = pd.DataFrame(columns=['Sale_Date', 'Install_Date'])
     
     # Create web pivot if we have data
     if len(web_df) > 0:
@@ -383,6 +382,9 @@ def generate_pivots(athena_df):
         )
         web_pivot.columns = [f"{val} {col}" for col, val in web_pivot.columns]
         web_pivot = web_pivot.reset_index()
+    else:
+        web_pivot = pd.DataFrame({'Affiliate_Code': [], 'DIFM Sale_Date': [], 'DIY Sale_Date': [], 
+                                'DIFM Install_Date': [], 'DIY Install_Date': []})
     
     # Create phone pivot if we have data
     if len(phone_df) > 0:
@@ -396,6 +398,27 @@ def generate_pivots(athena_df):
         )
         phone_pivot.columns = [f"{val} {col}" for col, val in phone_pivot.columns]
         phone_pivot = phone_pivot.reset_index()
+    else:
+        phone_pivot = pd.DataFrame({'PID': [], 'DIFM Sale_Date': [], 'DIY Sale_Date': [], 
+                                  'DIFM Install_Date': [], 'DIY Install_Date': []})
+    
+    # Ensure all required columns exist in web_pivot
+    required_web_cols = ['Affiliate_Code', 'DIFM Sale_Date', 'DIY Sale_Date', 
+                        'DIFM Install_Date', 'DIY Install_Date']
+    for col in required_web_cols:
+        if col not in web_pivot.columns:
+            web_pivot[col] = 0
+    
+    # Ensure all required columns exist in phone_pivot
+    required_phone_cols = ['PID', 'DIFM Sale_Date', 'DIY Sale_Date', 
+                          'DIFM Install_Date', 'DIY Install_Date']
+    for col in required_phone_cols:
+        if col not in phone_pivot.columns:
+            phone_pivot[col] = 0
+    
+    # Debug pivot tables
+    st.write("\nWeb pivot columns:", web_pivot.columns.tolist())
+    st.write("Phone pivot columns:", phone_pivot.columns.tolist())
     
     return web_pivot, phone_pivot
 
@@ -426,8 +449,22 @@ def merge_and_compute(cake, web, phone):
     
     # Prepare for merge
     cake = cake.copy()
-    web = web.set_index('Affiliate_Code') if not web.empty else pd.DataFrame()
-    phone = phone.set_index('PID') if not phone.empty else pd.DataFrame()
+    web = web.copy() if not web.empty else pd.DataFrame()
+    phone = phone.copy() if not phone.empty else pd.DataFrame()
+    
+    # Ensure required columns exist in web DataFrame
+    if not web.empty:
+        web = web.set_index('Affiliate_Code')
+        for col in ['DIFM Sale_Date', 'DIY Sale_Date', 'DIFM Install_Date', 'DIY Install_Date']:
+            if col not in web.columns:
+                web[col] = 0
+    
+    # Ensure required columns exist in phone DataFrame
+    if not phone.empty:
+        phone = phone.set_index('PID')
+        for col in ['DIFM Sale_Date', 'DIY Sale_Date', 'DIFM Install_Date', 'DIY Install_Date']:
+            if col not in phone.columns:
+                phone[col] = 0
     
     # Merge data
     if not web.empty:
@@ -436,7 +473,7 @@ def merge_and_compute(cake, web, phone):
         cake = cake.merge(phone, how='left', left_on='PID', right_index=True)
     cake.fillna(0, inplace=True)
     
-    # Extract metrics - handle both empty and non-empty cases
+    # Extract metrics with safe column access
     cake['Web DIFM Sales'] = cake.get('DIFM Sale_Date_x', 0).astype(int)
     cake['Phone DIFM Sales'] = cake.get('DIFM Sale_Date_y', 0).astype(int)
     cake['Web DIY Sales'] = cake.get('DIY Sale_Date_x', 0).astype(int)
