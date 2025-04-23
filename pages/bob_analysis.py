@@ -439,7 +439,12 @@ def generate_pivots(athena_df):
     st.write("\n### Web Pivot Table")
     if not web_pivot.empty:
         st.write("Full Web Pivot Data:")
-        st.dataframe(web_pivot.style.format("{:.0f}"))
+        # Convert numeric columns to integers for display
+        numeric_cols = ['Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs', 'DIY Web Installs']
+        for col in numeric_cols:
+            if col in web_pivot.columns:
+                web_pivot[col] = web_pivot[col].fillna(0).astype(int)
+        st.dataframe(web_pivot)
         
         # Create bar chart for web data
         web_metrics = web_pivot.melt(
@@ -463,7 +468,12 @@ def generate_pivots(athena_df):
     st.write("\n### Phone Pivot Table")
     if not phone_pivot.empty:
         st.write("Full Phone Pivot Data:")
-        st.dataframe(phone_pivot.style.format("{:.0f}"))
+        # Convert numeric columns to integers for display
+        numeric_cols = ['Phone DIFM Sales', 'Phone DIY Sales', 'DIFM Phone Installs', 'DIY Phone Installs']
+        for col in numeric_cols:
+            if col in phone_pivot.columns:
+                phone_pivot[col] = phone_pivot[col].fillna(0).astype(int)
+        st.dataframe(phone_pivot)
         
         # Create bar chart for phone data
         phone_metrics = phone_pivot.melt(
