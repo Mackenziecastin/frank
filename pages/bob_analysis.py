@@ -97,25 +97,42 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     # Handle Lead_DNIS and PID matching
     athena_df['Lead_DNIS'] = athena_df['Lead_DNIS'].fillna('').astype(str)
     
-    # Create TFN mapping
+    # Debug TFN mapping
+    st.write("\n### TFN Matching Debug")
+    st.write("TFN mapping from sheet:")
+    st.write(tfn_df[['Clean_TFN', 'PID']].head(10))
+    
+    # Create TFN mapping dictionary
     tfn_map = dict(zip(tfn_df['Clean_TFN'], tfn_df['PID']))
     
-    # Match PIDs only for non-WEB Lead_DNIS values
-    def match_pid(dnis):
+    # Get non-WEB records for debugging
+    non_web_records = athena_df[~athena_df['Lead_DNIS'].str.contains("WEB", na=False)]
+    st.write("\nSample of non-WEB Lead_DNIS values to match:")
+    st.write(non_web_records['Lead_DNIS'].head(10))
+    
+    # Match PIDs for non-WEB records
+    def match_pid(row):
+        dnis = row['Lead_DNIS']
         if 'WEB' not in dnis:
             # Extract only numeric characters for matching
             numeric_dnis = ''.join(c for c in dnis if c.isdigit())
-            return tfn_map.get(numeric_dnis)
+            matched_pid = tfn_map.get(numeric_dnis, '')
+            # Debug individual matches
+            if numeric_dnis:
+                st.write(f"Matching DNIS: {dnis} (numeric: {numeric_dnis}) -> PID: {matched_pid}")
+            return matched_pid
         return None
     
-    athena_df['PID'] = athena_df['Lead_DNIS'].apply(match_pid)
+    # Apply PID matching and show results
+    athena_df['PID'] = athena_df.apply(match_pid, axis=1)
     
-    # Debug TFN matching
-    st.write("\n### TFN Matching Debug")
-    st.write("Sample of Lead_DNIS values:")
-    st.write(athena_df['Lead_DNIS'].head())
-    st.write("\nSample of matched PIDs:")
-    st.write(athena_df[athena_df['PID'].notna()][['Lead_DNIS', 'PID']].head())
+    # Show matching results
+    st.write("\nMatching Results:")
+    st.write(f"Total non-WEB records: {len(non_web_records)}")
+    matched_records = athena_df[athena_df['PID'].notna() & (athena_df['PID'] != '')]
+    st.write(f"Successfully matched records: {len(matched_records)}")
+    st.write("\nSample of matched records:")
+    st.write(matched_records[['Lead_DNIS', 'PID']].head(10))
     
     # Process leads data
     leads_df.columns = [col.lower() for col in leads_df.columns]
