@@ -437,16 +437,122 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     # Clean Customer ANI in Athena data
     athena_df['Clean_ANI'] = athena_df['Primary_Phone_Customer_ANI'].apply(clean_phone)
     
-    # Check for specific ANIs in Athena data
-    st.write("\n### Checking specific ANIs in Athena data")
-    for ani in ['2183980681', '3133102122', '7035058337']:
+    # Debug ANI cleaning
+    st.write("\n### Customer ANI Cleaning Debug")
+    st.write("Sample of original and cleaned ANIs:")
+    ani_sample = athena_df[['Primary_Phone_Customer_ANI', 'Clean_ANI']].sample(10)
+    st.write(ani_sample)
+    
+    # Check for ANIs with known issues
+    st.write("\n### Raw data check for specific ANIs")
+    target_anis = ['2183980681', '3133102122', '7035058337']
+    
+    # First, check in the raw data (without cleaning)
+    for ani in target_anis:
+        st.write(f"\nSearching for {ani} in raw Primary_Phone_Customer_ANI:")
+        contains_matches = athena_df[athena_df['Primary_Phone_Customer_ANI'].astype(str).str.contains(ani)]
+        exact_matches = athena_df[athena_df['Primary_Phone_Customer_ANI'].astype(str) == ani]
+        
+        st.write(f"Records containing '{ani}': {len(contains_matches)}")
+        st.write(f"Records with exact match '{ani}': {len(exact_matches)}")
+        
+        if len(contains_matches) > 0:
+            st.write("Sample of containing matches:")
+            st.write(contains_matches[['Primary_Phone_Customer_ANI', 'Clean_ANI', 'Lead_DNIS']].head())
+    
+    # Check if the phone numbers might be formatted differently
+    st.write("\n### Checking for possible formatting variations:")
+    possible_variations = [
+        # Original
+        target_anis,
+        # With hyphens
+        [f"{ani[:3]}-{ani[3:6]}-{ani[6:]}" for ani in target_anis],
+        # With parentheses
+        [f"({ani[:3]}) {ani[3:6]}-{ani[6:]}" for ani in target_anis],
+        # With dots
+        [f"{ani[:3]}.{ani[3:6]}.{ani[6:]}" for ani in target_anis],
+        # With plus and country code
+        [f"+1{ani}" for ani in target_anis],
+        # With country code
+        [f"1{ani}" for ani in target_anis]
+    ]
+    
+    for i, variations in enumerate(possible_variations):
+        for j, var in enumerate(variations):
+            matches = athena_df[athena_df['Primary_Phone_Customer_ANI'].astype(str).str.contains(var)]
+            if len(matches) > 0:
+                st.write(f"Found {len(matches)} records with variation {var} of ANI {target_anis[j]}")
+                st.write(matches[['Primary_Phone_Customer_ANI', 'Clean_ANI', 'Lead_DNIS']].head(2))
+    
+    # Check for shortened versions (last 10 digits)
+    st.write("\n### Checking for shortened versions (last 10 digits):")
+    for ani in target_anis:
+        if len(ani) > 10:
+            short_ani = ani[-10:]
+            matches = athena_df[athena_df['Primary_Phone_Customer_ANI'].astype(str).str.contains(short_ani)]
+            st.write(f"Records containing last 10 digits '{short_ani}': {len(matches)}")
+            if len(matches) > 0:
+                st.write(matches[['Primary_Phone_Customer_ANI', 'Clean_ANI', 'Lead_DNIS']].head(2))
+    
+    # Now, check in the cleaned data
+    st.write("\n### Checking specific ANIs in cleaned Athena data")
+    for ani in target_anis:
         ani_matches = athena_df[athena_df['Clean_ANI'] == ani]
         if not ani_matches.empty:
-            st.write(f"Found ANI {ani} in {len(ani_matches)} Athena records")
+            st.write(f"Found ANI {ani} in {len(ani_matches)} cleaned Athena records")
             st.write("Sample row:")
             st.write(ani_matches[['Clean_ANI', 'Lead_DNIS', 'Affiliate_Code', 'Original_Code']].head(1))
         else:
-            st.write(f"ANI {ani} NOT found in Athena data")
+            st.write(f"ANI {ani} NOT found in cleaned Athena data")
+            
+            # Try partial matches to see if we're missing something
+            partial_matches = athena_df[athena_df['Clean_ANI'].str.contains(ani, na=False)]
+            if not partial_matches.empty:
+                st.write(f"But found {len(partial_matches)} partial matches containing '{ani}':")
+                st.write(partial_matches[['Clean_ANI', 'Lead_DNIS']].head(5))
+    
+    # Count instances of non-numeric characters in ANIs
+    non_numeric_anis = athena_df[athena_df['Primary_Phone_Customer_ANI'].astype(str).str.contains(r'[^0-9]')]
+    st.write(f"\nRecords with non-numeric characters in ANI: {len(non_numeric_anis)}")
+    if len(non_numeric_anis) > 0:
+        st.write("Sample of records with non-numeric ANIs:")
+        st.write(non_numeric_anis[['Primary_Phone_Customer_ANI', 'Clean_ANI']].head(5))
+    
+    # Look for the target ANIs in the Database Leads file
+    st.write("\n### Checking for ANIs in the Database Leads file")
+    for ani in target_anis:
+        phone_matches = leads_df[leads_df['clean_phone'] == ani]
+        if not phone_matches.empty:
+            st.write(f"Found {ani} in {len(phone_matches)} Database records")
+            st.write("Sample row:")
+            st.write(phone_matches[['clean_phone', 'Concatenated']].head(1))
+        else:
+            st.write(f"ANI {ani} NOT found in Database Leads file")
+            
+            # Check for partial matches
+            partial_matches = leads_df[leads_df['clean_phone'].astype(str).str.contains(ani, na=False)]
+            if not partial_matches.empty:
+                st.write(f"But found {len(partial_matches)} partial matches in Database file:")
+                st.write(partial_matches[['clean_phone', 'Concatenated']].head(5))
+    
+    # Add additional search for 41610_160005
+    st.write("\n### Searching for phone numbers associated with 41610_160005")
+    affiliated_phones = leads_df[leads_df['Concatenated'] == '41610_160005']['clean_phone'].tolist()
+    
+    st.write(f"Found {len(affiliated_phones)} phone numbers associated with 41610_160005")
+    if affiliated_phones:
+        st.write("First 10 phone numbers from 41610_160005:")
+        st.write(affiliated_phones[:10])
+        
+        # Check if any of these phones exist in the Athena data
+        for phone in affiliated_phones[:10]:
+            matches = athena_df[athena_df['Clean_ANI'] == phone]
+            if not matches.empty:
+                st.write(f"Found {len(matches)} Athena records with phone {phone}")
+            # Also check for matches in original ANI format
+            orig_matches = athena_df[athena_df['Primary_Phone_Customer_ANI'].astype(str).str.contains(phone)]
+            if not matches.empty and len(orig_matches) > len(matches):
+                st.write(f"Found {len(orig_matches)} records with phone {phone} in original format")
     
     # Count blank affiliate codes in WEB records before matchback
     blank_web_mask = (
