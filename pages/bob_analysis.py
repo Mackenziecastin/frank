@@ -471,6 +471,7 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     
     # Match phone numbers for WEB leads
     def fill_code(row):
+        # Only match if the Affiliate_Code is blank or NaN
         if (row['Affiliate_Code'] == '' or pd.isna(row['Affiliate_Code'])) and 'WEB' in str(row['Lead_DNIS']):
             mapped_code = phone_map.get(row['Clean_ANI'], '')
             
@@ -481,15 +482,45 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
             return mapped_code
         return row['Affiliate_Code']
     
+    # Store original Affiliate_Codes before matchback
+    athena_df['Original_Affiliate_Code'] = athena_df['Affiliate_Code']
+    
     # Apply phone matching
     st.write("\n### Phone Matchback Debug")
     athena_df['Affiliate_Code'] = athena_df.apply(fill_code, axis=1)
+    
+    # Count matchback changes
+    changed_mask = (
+        athena_df['Lead_DNIS'].str.contains('WEB', na=False) & 
+        (athena_df['Affiliate_Code'] != athena_df['Original_Affiliate_Code'])
+    )
+    changed_count = changed_mask.sum()
+    
+    st.write(f"\nTotal WEB records with filled Affiliate_Code: {changed_count}")
+    
+    # Show examples of changed records
+    if changed_count > 0:
+        st.write("\nSample of records where Affiliate_Code was filled:")
+        changed_records = athena_df[changed_mask].head(10)
+        st.write(changed_records[['Clean_ANI', 'Lead_DNIS', 'Original_Affiliate_Code', 'Affiliate_Code']])
+        
+        # Count by INSTALL_METHOD for changed records
+        st.write("\nINSTALL_METHOD distribution for filled records:")
+        install_method_counts = athena_df[changed_mask].groupby('INSTALL_METHOD').size()
+        st.write(install_method_counts)
+        
+        # Count by new Affiliate_Code for changed records
+        st.write("\nNew Affiliate_Code distribution for filled records:")
+        code_counts = athena_df[changed_mask]['Affiliate_Code'].value_counts().head(10)
+        st.write(code_counts)
     
     # Check if target ANIs were matched correctly
     for ani in ['2183980681', '3133102122', '7035058337']:
         matched_rows = athena_df[athena_df['Clean_ANI'] == ani]
         if not matched_rows.empty:
             st.write(f"\nAfter matchback, ANI {ani} has affiliate code: {matched_rows['Affiliate_Code'].values[0]}")
+            if matched_rows['Original_Affiliate_Code'].values[0] != matched_rows['Affiliate_Code'].values[0]:
+                st.write(f"Changed from blank to: {matched_rows['Affiliate_Code'].values[0]}")
     
     # Count blank affiliate codes in WEB records after matchback
     blank_web_mask_after = (
@@ -498,42 +529,20 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     )
     blank_web_count_after = blank_web_mask_after.sum()
     
-    # Count how many WEB records got matched back
-    matched_count = blank_web_count_before - blank_web_count_after
-    
-    st.write("\n### Matchback Statistics")
-    st.write(f"Total WEB records with blank affiliate code: {blank_web_count_before}")
+    # Make sure the phone matchback is done before generating the web pivot
+    st.write("\n### Matchback Verification")
     st.write(f"Records with blank affiliate code after matchback: {blank_web_count_after}")
-    st.write(f"Total matchbacks made: {matched_count}")
     
-    if matched_count > 0:
-        matchback_success_rate = (matched_count / blank_web_count_before) * 100
-        st.write(f"Matchback success rate: {matchback_success_rate:.2f}%")
-        
-        # Show examples of successful matchbacks
-        matched_web_mask = (
-            athena_df['Lead_DNIS'].str.contains('WEB', na=False) & 
-            (athena_df['Affiliate_Code'] != '') & 
-            (~pd.isna(athena_df['Affiliate_Code']))
-        )
-        
-        st.write("\nTop PIDs from successful web matchbacks:")
-        top_matchbacks = (
-            athena_df[matched_web_mask]['Affiliate_Code']
-            .str.split('_')
-            .str[0]
-            .value_counts()
-            .head(10)
-        )
-        st.write(top_matchbacks)
-        
-        # Show installation method breakdown for matched records
-        st.write("\nInstallation method breakdown for matched records:")
-        install_counts = athena_df[matched_web_mask].groupby('INSTALL_METHOD').size()
-        st.write(install_counts)
+    # Check for 41610_160005 specifically
+    affil_41610 = athena_df[athena_df['Affiliate_Code'] == '41610_160005']
+    st.write(f"\nRecords with Affiliate_Code 41610_160005: {len(affil_41610)}")
+    if len(affil_41610) > 0:
+        st.write("INSTALL_METHOD distribution for 41610_160005:")
+        st.write(affil_41610.groupby('INSTALL_METHOD').size())
     
     # Example of the target affiliate code
-    st.write(f"\nExample matchback results for {target_affiliate}:")
+    target_affiliate = '41610_160005'
+    st.write(f"\nMatchback results for {target_affiliate}:")
     matched_target = athena_df[athena_df['Affiliate_Code'] == target_affiliate]
     st.write(f"Total matched records: {len(matched_target)}")
     
