@@ -1161,6 +1161,172 @@ def compare_with_reference(computed_df):
         import traceback
         st.error(traceback.format_exc())
 
+def verify_metrics_match(athena_df, final_df):
+    """
+    Verify that the metrics in the final optimization report match the raw Athena data.
+    """
+    st.write("\n### Verification of Metrics Between Athena and Final Report")
+    
+    # ---- Count raw metrics from Athena data ----
+    st.write("Counting raw metrics from Athena data...")
+    
+    # Web DIFM metrics
+    web_difm_sales = len(athena_df[
+        (athena_df['Lead_DNIS'].str.contains('WEB', na=False)) & 
+        (athena_df['INSTALL_METHOD'].str.contains('DIFM', na=False)) &
+        (athena_df['Sale_Date'].notna())
+    ])
+    
+    web_difm_installs = len(athena_df[
+        (athena_df['Lead_DNIS'].str.contains('WEB', na=False)) & 
+        (athena_df['INSTALL_METHOD'].str.contains('DIFM', na=False)) &
+        (athena_df['Install_Date'].notna())
+    ])
+    
+    # Web DIY metrics
+    web_diy_sales = len(athena_df[
+        (athena_df['Lead_DNIS'].str.contains('WEB', na=False)) & 
+        (athena_df['INSTALL_METHOD'].str.contains('DIY', na=False)) &
+        (athena_df['Sale_Date'].notna())
+    ])
+    
+    web_diy_installs = len(athena_df[
+        (athena_df['Lead_DNIS'].str.contains('WEB', na=False)) & 
+        (athena_df['INSTALL_METHOD'].str.contains('DIY', na=False)) &
+        (athena_df['Install_Date'].notna())
+    ])
+    
+    # Phone DIFM metrics
+    phone_difm_sales = len(athena_df[
+        (~athena_df['Lead_DNIS'].str.contains('WEB', na=False)) & 
+        (athena_df['INSTALL_METHOD'].str.contains('DIFM', na=False)) &
+        (athena_df['Sale_Date'].notna())
+    ])
+    
+    phone_difm_installs = len(athena_df[
+        (~athena_df['Lead_DNIS'].str.contains('WEB', na=False)) & 
+        (athena_df['INSTALL_METHOD'].str.contains('DIFM', na=False)) &
+        (athena_df['Install_Date'].notna())
+    ])
+    
+    # Phone DIY metrics
+    phone_diy_sales = len(athena_df[
+        (~athena_df['Lead_DNIS'].str.contains('WEB', na=False)) & 
+        (athena_df['INSTALL_METHOD'].str.contains('DIY', na=False)) &
+        (athena_df['Sale_Date'].notna())
+    ])
+    
+    phone_diy_installs = len(athena_df[
+        (~athena_df['Lead_DNIS'].str.contains('WEB', na=False)) & 
+        (athena_df['INSTALL_METHOD'].str.contains('DIY', na=False)) &
+        (athena_df['Install_Date'].notna())
+    ])
+    
+    # ---- Calculate totals from final report ----
+    st.write("Calculating totals from final optimization report...")
+    
+    # Convert the string formatted numbers back to integers for comparison
+    numeric_df = final_df.copy()
+    metrics = [
+        'Web DIFM Sales', 'DIFM Web Installs', 
+        'Web DIY Sales', 'DIY Web Installs',
+        'Phone DIFM Sales', 'DIFM Phone Installs',
+        'Phone DIY Sales', 'DIY Phone Installs',
+        'Total DIFM Sales', 'Total DIY Sales', 'Total DIFM Installs'
+    ]
+    
+    for col in metrics:
+        if col in numeric_df.columns:
+            numeric_df[col] = numeric_df[col].astype(int)
+    
+    # Sum the metrics from the final report
+    report_web_difm_sales = numeric_df['Web DIFM Sales'].sum() if 'Web DIFM Sales' in numeric_df.columns else 0
+    report_web_difm_installs = numeric_df['DIFM Web Installs'].sum() if 'DIFM Web Installs' in numeric_df.columns else 0
+    report_web_diy_sales = numeric_df['Web DIY Sales'].sum() if 'Web DIY Sales' in numeric_df.columns else 0
+    report_web_diy_installs = numeric_df['DIY Web Installs'].sum() if 'DIY Web Installs' in numeric_df.columns else 0
+    report_phone_difm_sales = numeric_df['Phone DIFM Sales'].sum() if 'Phone DIFM Sales' in numeric_df.columns else 0
+    report_phone_difm_installs = numeric_df['DIFM Phone Installs'].sum() if 'DIFM Phone Installs' in numeric_df.columns else 0
+    report_phone_diy_sales = numeric_df['Phone DIY Sales'].sum() if 'Phone DIY Sales' in numeric_df.columns else 0
+    report_phone_diy_installs = numeric_df['DIY Phone Installs'].sum() if 'DIY Phone Installs' in numeric_df.columns else 0
+    
+    # ---- Create comparison table ----
+    st.write("\nMetric Comparison Between Athena Data and Final Report:")
+    
+    comparison_data = {
+        'Metric': [
+            'Web DIFM Sales', 'Web DIFM Installs',
+            'Web DIY Sales', 'Web DIY Installs',
+            'Phone DIFM Sales', 'Phone DIFM Installs',
+            'Phone DIY Sales', 'Phone DIY Installs',
+            'Total DIFM Sales', 'Total DIY Sales', 'Total DIFM Installs'
+        ],
+        'Athena Count': [
+            web_difm_sales, web_difm_installs,
+            web_diy_sales, web_diy_installs,
+            phone_difm_sales, phone_difm_installs,
+            phone_diy_sales, phone_diy_installs,
+            web_difm_sales + phone_difm_sales,
+            web_diy_sales + phone_diy_sales,
+            web_difm_installs + phone_difm_installs
+        ],
+        'Report Sum': [
+            report_web_difm_sales, report_web_difm_installs,
+            report_web_diy_sales, report_web_diy_installs,
+            report_phone_difm_sales, report_phone_difm_installs,
+            report_phone_diy_sales, report_phone_diy_installs,
+            numeric_df['Total DIFM Sales'].sum() if 'Total DIFM Sales' in numeric_df.columns else 0,
+            numeric_df['Total DIY Sales'].sum() if 'Total DIY Sales' in numeric_df.columns else 0,
+            numeric_df['Total DIFM Installs'].sum() if 'Total DIFM Installs' in numeric_df.columns else 0
+        ]
+    }
+    
+    comparison_df = pd.DataFrame(comparison_data)
+    
+    # Add Difference and Match columns
+    comparison_df['Difference'] = comparison_df['Report Sum'] - comparison_df['Athena Count']
+    comparison_df['Match?'] = comparison_df['Difference'] == 0
+    
+    # Highlight mismatches
+    mismatches = comparison_df[comparison_df['Difference'] != 0]
+    
+    st.write(comparison_df)
+    
+    if len(mismatches) > 0:
+        st.error("⚠️ MISMATCHES DETECTED! The following metrics don't match between Athena and the final report:")
+        st.write(mismatches)
+        
+        # Print detailed debugging for mismatched metrics
+        for idx, row in mismatches.iterrows():
+            metric = row['Metric']
+            st.write(f"\nDetailed analysis for {metric}:")
+            
+            if metric == 'Web DIFM Sales':
+                # Print sample of web DIFM sales records from Athena
+                st.write("Sample of Web DIFM Sales records from Athena:")
+                sample = athena_df[
+                    (athena_df['Lead_DNIS'].str.contains('WEB', na=False)) & 
+                    (athena_df['INSTALL_METHOD'].str.contains('DIFM', na=False)) &
+                    (athena_df['Sale_Date'].notna())
+                ].sample(min(10, web_difm_sales))
+                st.write(sample[['Lead_DNIS', 'INSTALL_METHOD', 'Sale_Date', 'Affiliate_Code']])
+                
+                # Print sample from report
+                st.write("Top Web DIFM Sales from final report:")
+                st.write(numeric_df.sort_values('Web DIFM Sales', ascending=False)[['Concatenated', 'Web DIFM Sales']].head(10))
+            
+            # Handle other metrics similarly with specific debugging for each type
+            
+        # Provide possible explanations for discrepancies
+        st.write("\nPossible causes of discrepancies:")
+        st.write("1. Affiliate code matching issues - some records may not be matched correctly")
+        st.write("2. Filtering differences between raw counts and pivot tables")
+        st.write("3. Phone attribution logic may not be allocating all phone sales/installs")
+        st.write("4. Date range filter may be applied differently in different places")
+    else:
+        st.success("✅ All metrics match between Athena data and final report!")
+    
+    return comparison_df
+
 def show_bob_analysis():
     st.title("ADT Partner Optimization Analysis")
     
@@ -1333,6 +1499,9 @@ def show_bob_analysis():
                 display_df.sort_values('Projected Revenue', ascending=False),
                 use_container_width=True
             )
+            
+            # Verify metrics match between Athena and final report
+            verify_metrics_match(athena_df, final_df)
             
             # Compare with reference report
             compare_with_reference(final_df)
