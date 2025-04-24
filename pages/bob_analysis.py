@@ -367,24 +367,6 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     # Create TFN mapping dictionary
     tfn_map = dict(zip(tfn_df['Clean_TFN'], tfn_df['PID']))
     
-    # Debug specific mapping
-    st.write("\nChecking specific TFN in mapping:")
-    st.write(f"Is '8446778720' in TFN map? {'8446778720' in tfn_map}")
-    if '8446778720' in tfn_map:
-        st.write(f"Mapped PID for 8446778720: {tfn_map['8446778720']}")
-    
-    # Get non-WEB records for debugging
-    non_web_records = athena_df[~athena_df['Lead_DNIS'].str.contains("WEB", na=False)]
-    st.write("\nSample of non-WEB Lead_DNIS values to match:")
-    st.write(non_web_records['Lead_DNIS'].head(10))
-    
-    # Debug specific DNIS
-    st.write("\nLooking for specific DNIS in Athena data:")
-    matching_records = athena_df[athena_df['Lead_DNIS'].str.contains('8446778720', na=False)]
-    st.write("Found records with 8446778720:", len(matching_records))
-    st.write("Sample of these records (Lead_DNIS only):")
-    st.write(matching_records['Lead_DNIS'].head())
-    
     # Match PIDs for non-WEB records
     def match_pid(row):
         dnis = row['Lead_DNIS']
@@ -392,38 +374,110 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
             # Extract only numeric characters for matching
             numeric_dnis = ''.join(c for c in dnis if c.isdigit())
             matched_pid = tfn_map.get(numeric_dnis, '')
-            # Debug specific number
-            if numeric_dnis == '8446778720':
-                st.write(f"Found target DNIS: {dnis}")
-                st.write(f"Numeric version: {numeric_dnis}")
-                st.write(f"Matched PID: {matched_pid}")
             return matched_pid
         return None
     
     # Apply PID matching
     athena_df['PID'] = athena_df.apply(match_pid, axis=1)
     
-    # Show matching results
-    st.write("\nMatching Results:")
-    st.write(f"Total non-WEB records: {len(non_web_records)}")
-    matched_records = athena_df[athena_df['PID'].notna() & (athena_df['PID'] != '')]
-    st.write(f"Successfully matched records: {len(matched_records)}")
-    
     # Process leads data
     leads_df.columns = [col.lower() for col in leads_df.columns]
     leads_df['subid'] = leads_df['subid'].apply(lambda x: str(x) if str(x).isdigit() else '')
     leads_df['pid'] = leads_df['pid'].astype(str)
     leads_df['Concatenated'] = leads_df.apply(lambda r: f"{r['pid']}_{r['subid']}" if r['subid'] else f"{r['pid']}_", axis=1)
-    leads_df['phone'] = leads_df['phone'].astype(str).str.replace(r'[^0-9]', '', regex=True)
-    phone_map = dict(zip(leads_df['phone'], leads_df['Concatenated']))
+    
+    # Clean phone numbers - just extract digits
+    def clean_phone(phone_str):
+        phone_str = str(phone_str).strip()
+        return ''.join(c for c in phone_str if c.isdigit())
+    
+    leads_df['clean_phone'] = leads_df['phone'].apply(clean_phone)
+    
+    # Debug phone cleaning
+    st.write("\n### Phone Cleaning Debug")
+    st.write("Sample of original and cleaned phones:")
+    sample_phones = leads_df[['phone', 'clean_phone']].head(10)
+    st.write(sample_phones)
+    
+    # Create a mapping from cleaned phone to Concatenated value
+    phone_map = dict(zip(leads_df['clean_phone'], leads_df['Concatenated']))
+    st.write(f"Total unique phone mappings in database: {len(phone_map)}")
+    
+    # Clean Customer ANI in Athena data
+    athena_df['Clean_ANI'] = athena_df['Primary_Phone_Customer_ANI'].apply(clean_phone)
+    
+    # Count blank affiliate codes in WEB records before matchback
+    blank_web_mask = (
+        athena_df['Lead_DNIS'].str.contains('WEB', na=False) & 
+        ((athena_df['Affiliate_Code'] == '') | pd.isna(athena_df['Affiliate_Code']))
+    )
+    blank_web_count_before = blank_web_mask.sum()
     
     # Match phone numbers for WEB leads
-    athena_df['Primary_Phone_Customer_ANI'] = athena_df['Primary_Phone_Customer_ANI'].astype(str).str.replace(r'[^0-9]', '', regex=True)
     def fill_code(row):
-        if row['Affiliate_Code'] == '' and 'WEB' in row['Lead_DNIS']:
-            return phone_map.get(row['Primary_Phone_Customer_ANI'], '')
+        if (row['Affiliate_Code'] == '' or pd.isna(row['Affiliate_Code'])) and 'WEB' in str(row['Lead_DNIS']):
+            mapped_code = phone_map.get(row['Clean_ANI'], '')
+            return mapped_code
         return row['Affiliate_Code']
+    
+    # Apply phone matching
+    st.write("\n### Phone Matchback Debug")
     athena_df['Affiliate_Code'] = athena_df.apply(fill_code, axis=1)
+    
+    # Count blank affiliate codes in WEB records after matchback
+    blank_web_mask_after = (
+        athena_df['Lead_DNIS'].str.contains('WEB', na=False) & 
+        ((athena_df['Affiliate_Code'] == '') | pd.isna(athena_df['Affiliate_Code']))
+    )
+    blank_web_count_after = blank_web_mask_after.sum()
+    
+    # Count how many WEB records got matched back
+    matched_count = blank_web_count_before - blank_web_count_after
+    
+    st.write("\n### Matchback Statistics")
+    st.write(f"Total WEB records with blank affiliate code: {blank_web_count_before}")
+    st.write(f"Records with blank affiliate code after matchback: {blank_web_count_after}")
+    st.write(f"Total matchbacks made: {matched_count}")
+    
+    if matched_count > 0:
+        matchback_success_rate = (matched_count / blank_web_count_before) * 100
+        st.write(f"Matchback success rate: {matchback_success_rate:.2f}%")
+        
+        # Show examples of successful matchbacks
+        matched_web_mask = (
+            athena_df['Lead_DNIS'].str.contains('WEB', na=False) & 
+            (athena_df['Affiliate_Code'] != '') & 
+            (~pd.isna(athena_df['Affiliate_Code']))
+        )
+        
+        st.write("\nTop PIDs from successful web matchbacks:")
+        top_matchbacks = (
+            athena_df[matched_web_mask]['Affiliate_Code']
+            .str.split('_')
+            .str[0]
+            .value_counts()
+            .head(10)
+        )
+        st.write(top_matchbacks)
+        
+        # Show installation method breakdown for matched records
+        st.write("\nInstallation method breakdown for matched records:")
+        install_counts = athena_df[matched_web_mask].groupby('INSTALL_METHOD').size()
+        st.write(install_counts)
+    
+    # Example of a specific affiliate code (just for demonstration)
+    st.write("\nExample matchback results for 22976_160005:")
+    matched_22976 = athena_df[athena_df['Affiliate_Code'] == '22976_160005']
+    st.write(f"Total matched records: {len(matched_22976)}")
+    
+    if not matched_22976.empty:
+        st.write("Sample of matched records:")
+        st.write(matched_22976[['Clean_ANI', 'Lead_DNIS', 'INSTALL_METHOD']].head(5))
+        
+        # Count by installation method
+        install_counts = matched_22976.groupby('INSTALL_METHOD').size()
+        st.write("Installation method counts:")
+        st.write(install_counts)
     
     return athena_df
 
@@ -823,18 +877,19 @@ def merge_and_compute(cake, web, phone, conversion_df):
     cake['Projected Revenue'] = cake['Projected Revenue'].apply(lambda x: f"${x:,.2f}")
     cake['Projected Profit/Loss'] = cake['Projected Profit/Loss'].apply(lambda x: f"${x:,.2f}")
     cake['Cost'] = cake['Cost'].apply(lambda x: f"${x:,.2f}")
+    cake['Current Rate'] = cake['Current Rate'].apply(lambda x: f"${x:,.2f}")
     cake['eCPL'] = cake['eCPL'].apply(lambda x: f"${x:,.2f}")
     cake['Projected Margin'] = cake['Projected Margin'].apply(lambda x: f"{x:.2%}" if x != -1 else "-")
     
     # Reorder columns
     columns = [
-        'Concatenated', 'PID', 'Leads', 'Cost', 'Current Rate',
+        'Concatenated', 'PID', 'Leads', 'Cost',
         'Web DIFM Sales', 'Phone DIFM Sales', 'Total DIFM Sales',
         'DIFM Web Installs', 'DIFM Phone Installs', 'Total DIFM Installs',
         'Web DIY Sales', 'Phone DIY Sales', 'Total DIY Sales',
         'Revenue', 'Profit/Loss',
         'Projected Installs', 'Projected Revenue', 'Projected Profit/Loss',
-        'Projected Margin', 'eCPL'
+        'Projected Margin', 'Current Rate', 'eCPL'
     ]
     cake = cake[columns]
     
