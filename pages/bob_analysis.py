@@ -399,12 +399,54 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     sample_phones = leads_df[['phone', 'clean_phone']].head(10)
     st.write(sample_phones)
     
+    # Directly check for specific affiliate in leads data
+    target_affiliate = '41610_160005'
+    target_rows = leads_df[leads_df['Concatenated'] == target_affiliate]
+    
+    st.write(f"\n### Looking for {target_affiliate} in leads data")
+    st.write(f"Found {len(target_rows)} rows")
+    
+    if not target_rows.empty:
+        st.write("Sample of matching rows:")
+        st.write(target_rows[['Concatenated', 'clean_phone']].head(10))
+        
+        # Extract phone numbers for this affiliate
+        target_phones = target_rows['clean_phone'].tolist()
+        st.write(f"First 10 phone numbers for {target_affiliate}:")
+        st.write(target_phones[:10])
+        
+        # Check for specific phone numbers
+        specific_phones = ['2183980681', '3133102122', '7035058337']
+        for phone in specific_phones:
+            if phone in target_phones:
+                st.write(f"Found {phone} in {target_affiliate} data")
+            else:
+                st.write(f"Did NOT find {phone} in {target_affiliate} data")
+    
     # Create a mapping from cleaned phone to Concatenated value
     phone_map = dict(zip(leads_df['clean_phone'], leads_df['Concatenated']))
     st.write(f"Total unique phone mappings in database: {len(phone_map)}")
     
+    # Check if specific phone numbers are in the mapping
+    for phone in ['2183980681', '3133102122', '7035058337']:
+        if phone in phone_map:
+            st.write(f"Phone {phone} maps to: {phone_map[phone]}")
+        else:
+            st.write(f"Phone {phone} is NOT in the mapping")
+    
     # Clean Customer ANI in Athena data
     athena_df['Clean_ANI'] = athena_df['Primary_Phone_Customer_ANI'].apply(clean_phone)
+    
+    # Check for specific ANIs in Athena data
+    st.write("\n### Checking specific ANIs in Athena data")
+    for ani in ['2183980681', '3133102122', '7035058337']:
+        ani_matches = athena_df[athena_df['Clean_ANI'] == ani]
+        if not ani_matches.empty:
+            st.write(f"Found ANI {ani} in {len(ani_matches)} Athena records")
+            st.write("Sample row:")
+            st.write(ani_matches[['Clean_ANI', 'Lead_DNIS', 'Affiliate_Code', 'Original_Code']].head(1))
+        else:
+            st.write(f"ANI {ani} NOT found in Athena data")
     
     # Count blank affiliate codes in WEB records before matchback
     blank_web_mask = (
@@ -413,16 +455,41 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     )
     blank_web_count_before = blank_web_mask.sum()
     
+    # Find blank WEB records with specified ANIs
+    blank_web_with_target_ani = athena_df[
+        blank_web_mask & 
+        athena_df['Clean_ANI'].isin(['2183980681', '3133102122', '7035058337'])
+    ]
+    
+    st.write("\n### Blank WEB records with target ANIs (before matchback)")
+    st.write(f"Found {len(blank_web_with_target_ani)} records")
+    if not blank_web_with_target_ani.empty:
+        st.write(blank_web_with_target_ani[['Clean_ANI', 'Lead_DNIS', 'INSTALL_METHOD']].head())
+    
+    # Store original phone map for debugging
+    original_phone_map = phone_map.copy()
+    
     # Match phone numbers for WEB leads
     def fill_code(row):
         if (row['Affiliate_Code'] == '' or pd.isna(row['Affiliate_Code'])) and 'WEB' in str(row['Lead_DNIS']):
             mapped_code = phone_map.get(row['Clean_ANI'], '')
+            
+            # Special debug for target ANIs
+            if row['Clean_ANI'] in ['2183980681', '3133102122', '7035058337']:
+                st.write(f"Matching ANI {row['Clean_ANI']} -> {mapped_code}")
+            
             return mapped_code
         return row['Affiliate_Code']
     
     # Apply phone matching
     st.write("\n### Phone Matchback Debug")
     athena_df['Affiliate_Code'] = athena_df.apply(fill_code, axis=1)
+    
+    # Check if target ANIs were matched correctly
+    for ani in ['2183980681', '3133102122', '7035058337']:
+        matched_rows = athena_df[athena_df['Clean_ANI'] == ani]
+        if not matched_rows.empty:
+            st.write(f"\nAfter matchback, ANI {ani} has affiliate code: {matched_rows['Affiliate_Code'].values[0]}")
     
     # Count blank affiliate codes in WEB records after matchback
     blank_web_mask_after = (
@@ -465,17 +532,17 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
         install_counts = athena_df[matched_web_mask].groupby('INSTALL_METHOD').size()
         st.write(install_counts)
     
-    # Example of a specific affiliate code (just for demonstration)
-    st.write("\nExample matchback results for 22976_160005:")
-    matched_22976 = athena_df[athena_df['Affiliate_Code'] == '22976_160005']
-    st.write(f"Total matched records: {len(matched_22976)}")
+    # Example of the target affiliate code
+    st.write(f"\nExample matchback results for {target_affiliate}:")
+    matched_target = athena_df[athena_df['Affiliate_Code'] == target_affiliate]
+    st.write(f"Total matched records: {len(matched_target)}")
     
-    if not matched_22976.empty:
+    if not matched_target.empty:
         st.write("Sample of matched records:")
-        st.write(matched_22976[['Clean_ANI', 'Lead_DNIS', 'INSTALL_METHOD']].head(5))
+        st.write(matched_target[['Clean_ANI', 'Lead_DNIS', 'INSTALL_METHOD']].head(5))
         
         # Count by installation method
-        install_counts = matched_22976.groupby('INSTALL_METHOD').size()
+        install_counts = matched_target.groupby('INSTALL_METHOD').size()
         st.write("Installation method counts:")
         st.write(install_counts)
     
