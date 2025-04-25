@@ -410,6 +410,9 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     DataFrame
         Cleaned Athena data with matched PIDs
     """
+    # Display column names for debugging
+    st.write("Available columns in Athena data:", athena_df.columns.tolist())
+    
     # Filter by date range
     if start_date and end_date:
         st.write(f"Filtering data between {start_date} and {end_date}")
@@ -420,10 +423,51 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
         if isinstance(end_date, str):
             end_date = pd.to_datetime(end_date)
         
-        # Filter the dataframe
-        athena_df['Date'] = pd.to_datetime(athena_df['Date'])
-        athena_df = athena_df[(athena_df['Date'] >= start_date) & (athena_df['Date'] <= end_date)]
-        st.write(f"Records after date filtering: {len(athena_df)}")
+        # Specifically use Lead_Creation_Date as requested
+        if 'Lead_Creation_Date' in athena_df.columns:
+            date_column = 'Lead_Creation_Date'
+            st.write(f"Using '{date_column}' as the date filter column")
+            
+            try:
+                # Convert the date column to datetime
+                athena_df[date_column] = pd.to_datetime(athena_df[date_column], errors='coerce')
+                # Filter by date range
+                athena_df = athena_df[(athena_df[date_column] >= start_date) & (athena_df[date_column] <= end_date)]
+                st.write(f"Records after date filtering: {len(athena_df)}")
+            except Exception as e:
+                st.warning(f"Error converting date column '{date_column}': {str(e)}. Using all data.")
+        else:
+            # Fall back to other date columns if Lead_Creation_Date is not available
+            st.warning("Lead_Creation_Date column not found. Trying alternative date columns.")
+            
+            date_column = None
+            date_column_candidates = ['Date', 'date', 'created_date', 'Created_Date', 'lead_date']
+            
+            for col in date_column_candidates:
+                if col in athena_df.columns:
+                    date_column = col
+                    st.write(f"Using '{date_column}' as the date filter column")
+                    break
+            
+            if date_column is None:
+                # Look for any column with 'date' in the name
+                date_cols = [col for col in athena_df.columns if 'date' in col.lower()]
+                if date_cols:
+                    date_column = date_cols[0]
+                    st.write(f"Using '{date_column}' as the date filter column")
+                else:
+                    st.warning("No date column found for filtering. Using all data.")
+            
+            # Filter the dataframe if a date column was found
+            if date_column:
+                try:
+                    # Convert the date column to datetime
+                    athena_df[date_column] = pd.to_datetime(athena_df[date_column], errors='coerce')
+                    # Filter by date range
+                    athena_df = athena_df[(athena_df[date_column] >= start_date) & (athena_df[date_column] <= end_date)]
+                    st.write(f"Records after date filtering: {len(athena_df)}")
+                except Exception as e:
+                    st.warning(f"Error converting date column '{date_column}': {str(e)}. Using all data.")
     
     # Clean affiliate code and filter records
     athena_df['Clean_Affiliate_Code'] = athena_df['Affiliate_Code'].apply(clean_affiliate_code)
@@ -444,9 +488,13 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     non_web_count = non_web_mask.sum()
     st.write(f"Non-WEB records to match: {non_web_count}")
     
+    # Create TFN mapping from clean TFN to PID
+    tfn_map = dict(zip(tfn_df['Clean_TFN'], tfn_df['PID']))
+    st.write(f"TFN mapping contains {len(tfn_map)} entries")
+    
     match_count = 0
     for idx, row in athena_df[non_web_mask].iterrows():
-        pid = match_pid(row, tfn_df)
+        pid = match_pid(row, tfn_map)
         if pid is not None:
             athena_df.at[idx, 'PID'] = pid
             match_count += 1
