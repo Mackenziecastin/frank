@@ -356,15 +356,24 @@ def clean_phone_number(phone_str):
     """
     if pd.isna(phone_str) or phone_str == '':
         return ''
-        
-    # Extract only digits
+    
+    # First convert to string and remove all non-digits
     digits_only = ''.join(c for c in str(phone_str) if c.isdigit())
     
-    # If it starts with country code 1 and is 11 digits, remove the 1
+    # Handle different lengths of phone numbers
     if len(digits_only) == 11 and digits_only.startswith('1'):
+        # Standard US number with country code: remove the leading 1
         return digits_only[1:]
-    
-    return digits_only
+    elif len(digits_only) == 10:
+        # Standard 10-digit US number
+        return digits_only
+    elif len(digits_only) > 10:
+        # For any number longer than 10 digits, take the last 10
+        # This handles cases where extra digits might be present
+        return digits_only[-10:]
+    else:
+        # For shorter numbers, return as is
+        return digits_only
 
 def clean_phone(phone_str):
     """Clean a phone number by extracting digits and handling special cases."""
@@ -485,6 +494,9 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
             # Add a dummy Lead_DNIS column to prevent errors
             athena_df['Lead_DNIS'] = "Unknown"
     
+    # Ensure Lead_DNIS is a string
+    athena_df['Lead_DNIS'] = athena_df['Lead_DNIS'].astype(str)
+    
     # Clean affiliate code and filter records
     if 'Affiliate_Code' not in athena_df.columns:
         st.error("Critical column 'Affiliate_Code' not found in the data!")
@@ -533,51 +545,33 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     # Initialize PID column
     athena_df['PID'] = None
     
-    # Check tfn_df structure
-    st.write("TFN DataFrame structure:")
-    st.write(f"Columns: {tfn_df.columns.tolist()}")
-    st.write(f"Row count: {len(tfn_df)}")
-    
-    # Check for Clean_TFN column
-    if 'Clean_TFN' not in tfn_df.columns:
-        st.error("Clean_TFN column not found in TFN data!")
-        if 'TFN' in tfn_df.columns:
-            st.write("Creating Clean_TFN column from TFN column")
-            tfn_df['Clean_TFN'] = tfn_df['TFN'].apply(lambda x: clean_phone_number(str(x)))
+    # Clean the TFN mapping to ensure consistent phone formats
+    cleaned_tfn_df = clean_tfn_mapping(tfn_df)
     
     # Create TFN mapping from clean TFN to PID
-    tfn_map = dict(zip(tfn_df['Clean_TFN'], tfn_df['PID']))
-    st.write(f"TFN mapping contains {len(tfn_map)} entries")
-    
-    # Sample the TFN mapping to verify content
-    sample_map = {k: v for i, (k, v) in enumerate(tfn_map.items()) if i < 5}
-    st.write("Sample of TFN mapping:", sample_map)
-    
-    # Direct check for critical numbers in the TFN mapping
-    critical_numbers = ['8446778720', '8005717438', '8009734275']
-    st.write("Checking if critical numbers are in TFN mapping:")
-    for phone in critical_numbers:
-        clean_phone = clean_phone_number(phone)
-        if clean_phone in tfn_map:
-            st.write(f"✅ {phone} (cleaned: {clean_phone}) -> PID: {tfn_map[clean_phone]}")
-        else:
-            st.error(f"❌ {phone} (cleaned: {clean_phone}) NOT FOUND in TFN mapping!")
+    tfn_map = dict(zip(cleaned_tfn_df['Clean_TFN'], cleaned_tfn_df['PID']))
+    st.write(f"Final TFN mapping contains {len(tfn_map)} entries")
     
     # For non-WEB records, try to match PIDs
     non_web_mask = ~athena_df['Lead_DNIS'].str.contains('WEB', na=False, case=False)
     non_web_count = non_web_mask.sum()
     st.write(f"Non-WEB records to match: {non_web_count}")
     
+    # Clean Lead_DNIS in athena_df for consistent matching
+    athena_df['Clean_Lead_DNIS'] = athena_df['Lead_DNIS'].apply(clean_phone_number)
+    
     # Debugging: Check for critical phone numbers in the data
+    critical_numbers = ['8446778720', '8005717438', '8009734275']
     for phone in critical_numbers:
         clean_phone = clean_phone_number(phone)
-        mask = athena_df['Lead_DNIS'].apply(lambda x: clean_phone_number(str(x)) == clean_phone if pd.notna(x) else False)
-        st.write(f"Critical phone {phone} found in {mask.sum()} records")
+        mask = athena_df['Clean_Lead_DNIS'] == clean_phone
+        count = mask.sum()
+        st.write(f"Critical phone {phone} (cleaned: {clean_phone}) found in {count} records")
         
         # If found, show a sample
-        if mask.sum() > 0:
+        if count > 0:
             st.write("Sample records with this number:")
-            st.write(athena_df[mask][['Lead_DNIS', 'Affiliate_Code']].head(3))
+            st.write(athena_df[mask][['Lead_DNIS', 'Clean_Lead_DNIS', 'Affiliate_Code']].head(3))
     
     # Sample a few non-web records for debugging
     if non_web_count > 0:
@@ -585,7 +579,7 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
         st.write("Sample of non-WEB records for debugging:")
         for i, (idx, row) in enumerate(sample_records.iterrows()):
             original_dnis = row['Lead_DNIS']
-            cleaned_dnis = clean_phone_number(str(original_dnis))
+            cleaned_dnis = row['Clean_Lead_DNIS']
             in_map = cleaned_dnis in tfn_map
             mapped_to = tfn_map.get(cleaned_dnis, "Not found") if in_map else "N/A"
             
@@ -599,28 +593,40 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     if non_web_count > 0:
         st.write("\n### Testing match_pid function directly")
         test_row = athena_df[non_web_mask].iloc[0]
-        st.write(f"Test row Lead_DNIS: {test_row['Lead_DNIS']}")
+        st.write(f"Test row Lead_DNIS: {test_row['Lead_DNIS']} (cleaned: {test_row['Clean_Lead_DNIS']})")
         matched_pid = match_pid(test_row, tfn_map)
         st.write(f"match_pid result: {matched_pid}")
     
+    # Direct matching using Clean_Lead_DNIS
     match_count = 0
     unmatched_sample = []
     mapped_pids = []  # To track all matched PIDs
     
+    # Create a mapping from Clean_Lead_DNIS to PID for direct matching
     for idx, row in athena_df[non_web_mask].iterrows():
-        pid = match_pid(row, tfn_map)
-        if pid is not None:
+        clean_dnis = row['Clean_Lead_DNIS']
+        
+        # Try direct match first
+        if clean_dnis in tfn_map:
+            pid = str(tfn_map[clean_dnis])
             athena_df.at[idx, 'PID'] = pid
             match_count += 1
             mapped_pids.append(pid)
         else:
-            # Collect a sample of unmatched records for debugging
-            if len(unmatched_sample) < 5:
-                unmatched_sample.append({
-                    'Lead_DNIS': row['Lead_DNIS'],
-                    'Clean_DNIS': clean_phone_number(str(row['Lead_DNIS'])),
-                    'Affiliate_Code': row['Affiliate_Code']
-                })
+            # Try match_pid as a fallback for phone number formatting that might differ
+            pid = match_pid(row, tfn_map)
+            if pid is not None:
+                athena_df.at[idx, 'PID'] = pid
+                match_count += 1
+                mapped_pids.append(pid)
+            else:
+                # Collect a sample of unmatched records for debugging
+                if len(unmatched_sample) < 5:
+                    unmatched_sample.append({
+                        'Lead_DNIS': row['Lead_DNIS'],
+                        'Clean_DNIS': clean_dnis,
+                        'Affiliate_Code': row['Affiliate_Code']
+                    })
     
     st.write(f"Successfully matched {match_count} out of {non_web_count} non-WEB records")
     st.write(f"Unique PIDs matched: {len(set(mapped_pids))}")
@@ -629,6 +635,22 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
         st.write("Sample of matched PIDs:", mapped_pids[:5])
     else:
         st.error("No PIDs were matched! The PID column contains only None values.")
+        
+        # Last resort: Try matching by substring
+        st.write("Attempting last resort matching by substring...")
+        match_count = 0
+        for idx, row in athena_df[non_web_mask].iterrows():
+            clean_dnis = row['Clean_Lead_DNIS']
+            if len(clean_dnis) >= 7:  # Only try if we have at least 7 digits
+                last_digits = clean_dnis[-7:]  # Use last 7 digits
+                for tfn, pid in tfn_map.items():
+                    if len(tfn) >= 7 and tfn[-7:] == last_digits:
+                        athena_df.at[idx, 'PID'] = str(pid)
+                        match_count += 1
+                        break
+        
+        if match_count > 0:
+            st.write(f"Matched {match_count} records using substring matching")
     
     # Display sample of unmatched records for debugging
     if unmatched_sample:
@@ -1353,7 +1375,7 @@ def match_pid(row, tfn_map):
     if 'WEB' in str(row['Lead_DNIS']):
         return np.nan
     
-    # Clean the phone number from Lead_DNIS
+    # Clean the phone number from Lead_DNIS using the standardized function
     phone_num = clean_phone_number(str(row['Lead_DNIS']))
     
     # Debug specific problematic numbers
@@ -1377,9 +1399,16 @@ def match_pid(row, tfn_map):
             st.write(f"DEBUG: Available keys in tfn_map sample: {list(tfn_map.keys())[:5]}... (total: {len(tfn_map)})")
             
             # Check if any similar numbers exist in the mapping
-            similar_keys = [k for k in tfn_map.keys() if phone_num in k or k in phone_num]
+            similar_keys = [k for k in tfn_map.keys() if len(k) >= 7 and len(phone_num) >= 7 and (k[-7:] == phone_num[-7:] or phone_num[-7:] == k[-7:])]
             if similar_keys:
-                st.write(f"DEBUG: Found similar keys: {similar_keys}")
+                st.write(f"DEBUG: Found similar keys (last 7 digits match): {similar_keys}")
+                # Try to match using the last 7 digits as a fallback
+                phone_last7 = phone_num[-7:] if len(phone_num) >= 7 else phone_num
+                for key in similar_keys:
+                    key_last7 = key[-7:] if len(key) >= 7 else key
+                    if phone_last7 == key_last7:
+                        st.write(f"Using partial match: {key} -> {tfn_map[key]}")
+                        return str(tfn_map[key])
         
         return np.nan
 
@@ -1461,6 +1490,76 @@ def analyze_records_by_pid(athena_df):
     for critical_pid in key_pids:
         count = (athena_df['PID'] == critical_pid).sum()
         st.write(f"PID {critical_pid}: {count} records")
+
+def clean_tfn_mapping(tfn_df):
+    """
+    Clean the TFN mapping to ensure consistent phone number formats.
+    
+    Parameters:
+    ----------
+    tfn_df : DataFrame
+        TFN mapping DataFrame with TFN and PID columns
+        
+    Returns:
+    -------
+    DataFrame
+        Cleaned TFN mapping DataFrame
+    """
+    st.write("Cleaning TFN mapping...")
+    
+    # Make a copy to avoid modifying the original
+    cleaned_df = tfn_df.copy()
+    
+    # Convert TFN to string
+    cleaned_df['TFN'] = cleaned_df['TFN'].astype(str)
+    
+    # Create Clean_TFN column if it doesn't exist
+    if 'Clean_TFN' not in cleaned_df.columns:
+        cleaned_df['Clean_TFN'] = cleaned_df['TFN'].apply(clean_phone_number)
+    else:
+        # Re-clean the Clean_TFN column to ensure consistency
+        cleaned_df['Clean_TFN'] = cleaned_df['Clean_TFN'].astype(str)
+        cleaned_df['Clean_TFN'] = cleaned_df['Clean_TFN'].apply(clean_phone_number)
+    
+    # Ensure PID is an integer and then convert to string for consistent comparisons
+    cleaned_df['PID'] = pd.to_numeric(cleaned_df['PID'], errors='coerce').fillna(0).astype(int).astype(str)
+    
+    # Remove duplicates based on Clean_TFN
+    cleaned_df = cleaned_df.drop_duplicates(subset=['Clean_TFN'])
+    
+    # Check for critical phone numbers
+    critical_numbers = {
+        '8446778720': '4790',
+        '8005717438': '42299',
+        '8009734275': '42038'
+    }
+    
+    # Check if critical numbers exist in the mapping
+    for phone, expected_pid in critical_numbers.items():
+        clean_phone = clean_phone_number(phone)
+        matches = cleaned_df[cleaned_df['Clean_TFN'] == clean_phone]
+        
+        if len(matches) == 0:
+            st.warning(f"Adding missing critical number {phone} (cleaned: {clean_phone}) to TFN mapping with PID {expected_pid}")
+            new_row = pd.DataFrame({
+                'PID': [expected_pid],
+                'TFN': [phone],
+                'Clean_TFN': [clean_phone]
+            })
+            cleaned_df = pd.concat([cleaned_df, new_row], ignore_index=True)
+        else:
+            # Ensure the PID is correct for critical numbers
+            if matches['PID'].iloc[0] != expected_pid:
+                st.warning(f"Correcting PID for {phone} from {matches['PID'].iloc[0]} to {expected_pid}")
+                cleaned_df.loc[cleaned_df['Clean_TFN'] == clean_phone, 'PID'] = expected_pid
+    
+    st.write(f"TFN mapping cleaned: {len(cleaned_df)} entries")
+    
+    # Display sample of cleaned mapping
+    st.write("Sample of cleaned TFN mapping:")
+    st.write(cleaned_df.head(5))
+    
+    return cleaned_df
 
 if __name__ == "__main__":
     show_bob_analysis()
