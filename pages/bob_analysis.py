@@ -577,21 +577,22 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
             # Add a dummy INSTALL_METHOD column
             athena_df['INSTALL_METHOD'] = "Unknown"
     
-    # Apply clean_affiliate_code
+    # Apply clean_affiliate_code but DON'T FILTER OUT ROWS
     athena_df['Clean_Affiliate_Code'] = athena_df['Affiliate_Code'].apply(clean_affiliate_code)
+    
+    # Count different types of affiliate codes
+    null_affiliates = athena_df['Clean_Affiliate_Code'].isna().sum()
+    empty_affiliates = (athena_df['Clean_Affiliate_Code'] == "").sum()
+    cake_affiliates = (athena_df['Clean_Affiliate_Code'] == "CAKE").sum()
+    st.write(f"Affiliate Code Stats (for info only, no rows filtered):")
+    st.write(f"  - Null affiliate codes: {null_affiliates}")
+    st.write(f"  - Empty affiliate codes: {empty_affiliates}")
+    st.write(f"  - CAKE affiliate codes: {cake_affiliates}")
     
     # Extract PID directly from Clean_Affiliate_Code as another option
     athena_df['PID_from_Affiliate'] = athena_df['Clean_Affiliate_Code'].apply(
-        lambda x: x.split('_')[0] if '_' in x else None
+        lambda x: x.split('_')[0] if isinstance(x, str) and '_' in x else None
     )
-    
-    # Filter records
-    athena_df = athena_df[
-        (athena_df['Clean_Affiliate_Code'].notna()) & 
-        (athena_df['Clean_Affiliate_Code'] != "") & 
-        (athena_df['Clean_Affiliate_Code'] != "CAKE")
-    ]
-    st.write(f"Records after affiliate code filtering: {len(athena_df)}")
     
     # Count records with "WEB" in Lead_DNIS
     web_count = athena_df[athena_df['Lead_DNIS'].str.contains('WEB', na=False, case=False)].shape[0]
