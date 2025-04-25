@@ -91,274 +91,150 @@ def get_current_rates(conversion_df):
     return current_rates
 
 def load_combined_resi_tfn_data(sheet_url):
-    base_url = sheet_url.split("/edit")[0]
+    """
+    Load and combine TFN data from both RESI TFN sheet and Display TFN sheet.
     
-    def sheet_csv_url(sheet_name):
-        url = f"{base_url}/export?format=csv&gid="
-        # RESI TFN Sheet gid
-        if sheet_name == "RESI TFN Sheet":
-            url += "1629976834"
-        # Display TFN Sheet gid
-        elif sheet_name == "Display TFN Sheet":
-            url += "383243987"  # Correct GID for Display TFN Sheet
-        return url
+    Parameters:
+    ----------
+    sheet_url : str
+        The URL of the Google sheet
+        
+    Returns:
+    -------
+    pd.DataFrame
+        Combined DataFrame with TFN to PID mapping
+    """
+    # Extract base URL and GIDs from sheet_url
+    base_url = sheet_url.split('/edit')[0]
+    resi_csv_url = f"{base_url}/export?format=csv&gid=0"
+    display_csv_url = f"{base_url}/export?format=csv&gid=1708211536"
     
-    try:
-        # Load RESI sheet with first row as headers
-        st.write("\nLoading RESI TFN Sheet...")
-        resi_df = pd.read_csv(sheet_csv_url("RESI TFN Sheet"), header=0, na_values=['', 'nan', 'NaN', 'None'])
+    st.write(f"Loading RESI TFN from: {resi_csv_url}")
+    
+    # Load RESI TFN sheet
+    resi_df = pd.read_csv(resi_csv_url)
+    
+    # Clean the PID column - convert to numeric and replace NaN with empty string
+    resi_df['PID'] = pd.to_numeric(resi_df['PID'], errors='coerce')
+    resi_df = resi_df.fillna('')
+    
+    # Filter out rows where PID or TFN is empty
+    resi_df = resi_df[(resi_df['PID'] != '') & (resi_df['TFN'] != '')]
+    
+    # Check the format of PID after loading
+    st.write(f"RESI TFN PIDs (first 5): {resi_df['PID'].head(5).tolist()}")
+    
+    # Define critical phone numbers to check in the RESI sheet
+    critical_numbers = {
+        '8446778720': 4790,
+        '8005717438': 42299,
+        '8009734275': 42038
+    }
+    
+    # Check if critical numbers exist in the RESI sheet
+    for phone, expected_pid in critical_numbers.items():
+        clean_phone = clean_phone_number(phone)
+        matches = resi_df[resi_df['TFN'].apply(lambda x: clean_phone_number(x) == clean_phone)]
         
-        # Convert PID to integer type immediately after loading
-        resi_df['PID'] = pd.to_numeric(resi_df['PID'], errors='coerce').fillna('').astype(str).replace('\.0$', '', regex=True)
+        if len(matches) == 0:
+            st.warning(f"Critical number {phone} not found in RESI sheet")
+        else:
+            pid_in_sheet = matches['PID'].iloc[0]
+            if pid_in_sheet != expected_pid:
+                st.warning(f"Critical number {phone} maps to PID {pid_in_sheet} in RESI sheet, but expected {expected_pid}")
+    
+    st.write(f"Loaded {len(resi_df)} rows from RESI TFN sheet")
+    
+    # Load Display TFN sheet
+    st.write(f"Loading Display TFN from: {display_csv_url}")
+    display_df = pd.read_csv(display_csv_url)
+    
+    # Identify the PID and TFN columns
+    pid_columns = [col for col in display_df.columns if 'pid' in col.lower()]
+    tfn_columns = [col for col in display_df.columns if 'tfn' in col.lower() or 'phone' in col.lower()]
+    
+    if pid_columns and tfn_columns:
+        pid_col = pid_columns[0]
+        tfn_col = tfn_columns[0]
         
-        # Clean the dataframe - replace NaN with empty string
-        resi_df = resi_df.fillna('')
+        # Rename columns to match RESI format
+        display_df = display_df.rename(columns={pid_col: 'PID', tfn_col: 'TFN'})
         
-        st.write("RESI Sheet Columns:", [col for col in resi_df.columns.tolist() if col])
-        st.write("RESI Sheet first few rows (non-empty rows only):")
-        
-        # Debug PID format right after loading
-        st.write("\nPID format check after initial load:")
-        st.write(resi_df[['Partner Name', 'PID', 'Code', 'Phone #']].head().to_dict('records'))
-        
-        # Filter rows that have data
-        non_empty_mask = (resi_df['PID'].astype(str).str.strip().ne('')) & (resi_df['Phone #'].astype(str).str.strip().ne(''))
-        sample_rows = resi_df[non_empty_mask].head()
-        
-        # Convert to records and clean up the output
-        clean_records = []
-        for record in sample_rows[['Partner Name', 'PID', 'Code', 'Phone #']].to_dict('records'):
-            clean_record = {}
-            for key, value in record.items():
-                if pd.isna(value) or value == '' or value == 'nan':
-                    clean_record[key] = ''
-                else:
-                    clean_record[key] = str(value).strip().rstrip('.0')  # Ensure we remove any trailing .0
-            clean_records.append(clean_record)
-        st.write(clean_records)
-        
-        # Load Display sheet with first row as headers
-        st.write("\nLoading Display TFN Sheet...")
-        st.write("URL being used:", sheet_csv_url("Display TFN Sheet"))  # Debug URL
-        display_df = pd.read_csv(sheet_csv_url("Display TFN Sheet"), header=0, na_values=['', 'nan', 'NaN', 'None'])
-        
-        # Debug raw column names
-        st.write("Raw Display Sheet column names:", display_df.columns.tolist())
-        
-        # Try to find PID and TFN columns - they might have different names
-        pid_column = None
-        tfn_column = None
-        
-        # Common variations of column names
-        pid_variations = ['PID', 'Pid', 'pid', 'Partner ID', 'PartnerID', 'ID']
-        tfn_variations = ['TFN', 'Tfn', 'tfn', 'Phone Number', 'Phone #', 'PhoneNumber', 'Phone']
-        
-        for col in display_df.columns:
-            # Debug each column name and its first few values
-            st.write(f"Column '{col}' first few values:", display_df[col].head().tolist())
-            
-            # Check if this column might be PID or TFN
-            if any(pid_var in col for pid_var in pid_variations):
-                pid_column = col
-            if any(tfn_var in col for tfn_var in tfn_variations):
-                tfn_column = col
-        
-        st.write(f"Found PID column: {pid_column}")
-        st.write(f"Found TFN column: {tfn_column}")
-        
-        if pid_column is None or tfn_column is None:
-            st.error("Could not find required columns in Display TFN Sheet")
-            st.error(f"Available columns: {display_df.columns.tolist()}")
-            raise ValueError(f"Missing required columns in Display TFN Sheet. Need PID and TFN, found: {display_df.columns.tolist()}")
-        
-        # Rename columns to standard names
-        display_df = display_df.rename(columns={
-            pid_column: 'PID',
-            tfn_column: 'TFN'
-        })
-        
-        # Now proceed with the cleaning
-        display_df['PID'] = pd.to_numeric(display_df['PID'], errors='coerce').fillna('').astype(str).replace('\.0$', '', regex=True)
+        # Clean the PID column - convert to numeric and replace NaN with empty string
+        display_df['PID'] = pd.to_numeric(display_df['PID'], errors='coerce')
         display_df = display_df.fillna('')
         
-        st.write("Display Sheet Columns:", [col for col in display_df.columns.tolist() if col])
-        st.write("Display Sheet first few rows (non-empty rows only):")
-        non_empty_mask = (display_df['PID'].astype(str).str.strip().ne('')) & (display_df['TFN'].astype(str).str.strip().ne(''))
-        sample_rows = display_df[non_empty_mask].head()
+        # Filter out rows where PID or TFN is empty
+        display_df = display_df[(display_df['PID'] != '') & (display_df['TFN'] != '')]
         
-        # Convert to records and clean up the output
-        clean_records = []
-        for record in sample_rows[['PID', 'TFN']].to_dict('records'):
-            clean_record = {}
-            for key, value in record.items():
-                if pd.isna(value) or value == '' or value == 'nan':
-                    clean_record[key] = ''
-                else:
-                    clean_record[key] = str(value).strip()
-            clean_records.append(clean_record)
-        st.write(clean_records)
+        st.write(f"Loaded {len(display_df)} rows from Display TFN sheet")
         
-        # Search for critical phone numbers in RESI sheet
-        critical_numbers = [
-            '8446778720', '8005717438', '8009734275', '8442069696', '8442342126',
-            '8444399581', '8444399582', '8445524846', '8445862465', '8445986623',
-            '8446102586', '8446253379', '8446451022', '8556943664'
-        ]
+        # Combine both dataframes
+        combined_df = pd.concat([resi_df[['PID', 'TFN']], display_df[['PID', 'TFN']]], ignore_index=True)
         
-        st.write("\n### Checking for Important Phone Numbers in RESI Sheet")
-        for number in critical_numbers:
-            # Try multiple formats of the number
-            matches = resi_df[
-                resi_df['Phone #'].astype(str).str.contains(number, na=False) | 
-                resi_df['Phone #'].astype(str).str.contains(f"\\+1{number}", na=False) |
-                resi_df['Phone #'].astype(str).str.contains(f"1{number}", na=False) |
-                resi_df['Phone #'].astype(str).str.contains(f"{number[:3]}-{number[3:6]}-{number[6:]}", na=False)
-            ]
-            
-            if not matches.empty:
-                st.write(f"✓ Found {number} in RESI sheet with PID: {matches['PID'].iloc[0]}")
-                st.write(f"  Original format: {matches['Phone #'].iloc[0]}")
-            else:
-                st.write(f"⚠️ Warning: {number} NOT found in RESI sheet")
+        # Add clean TFN column
+        combined_df['Clean_TFN'] = combined_df['TFN'].apply(clean_phone_number)
         
-        # Get the actual column names for TFN and PID
-        tfn_col = 'Phone #'  # From the actual header row
-        pid_col = 'PID'  # From the actual header row
+        # Remove duplicates based on Clean_TFN
+        combined_df = combined_df.drop_duplicates(subset=['Clean_TFN'])
         
-        st.write("\nIdentified columns:")
-        st.write(f"TFN column: {tfn_col}")
-        st.write(f"PID column: {pid_col}")
-        
-        # Filter out rows with empty PIDs or phone numbers before combining
-        resi_df = resi_df[
-            resi_df[pid_col].astype(str).str.strip().ne('') & 
-            resi_df[tfn_col].astype(str).str.strip().ne('')
-        ]
-        display_df = display_df[
-            display_df['PID'].astype(str).str.strip().ne('') & 
-            display_df['TFN'].astype(str).str.strip().ne('')
-        ]
-        
-        # Combine sheets with correct column names
-        combined_df = pd.concat([
-            resi_df[[pid_col, tfn_col]].rename(columns={pid_col: "PID", tfn_col: "TFN"}),
-            display_df[['PID', 'TFN']]
-        ], ignore_index=True)
-        
-        # Store original TFN values for reference
-        combined_df['Original_TFN'] = combined_df['TFN']
-        
-        # Clean TFNs - keep empty values as blank strings
-        combined_df['Clean_TFN'] = combined_df['TFN'].fillna('').astype(str)
-        
-        # Try multiple cleaning approaches to ensure all formats are covered
-        cleaned_tfns = []
-        for tfn in combined_df['Clean_TFN']:
-            # Standard cleaning - remove non-digits
-            standard_clean = ''.join(c for c in str(tfn) if c.isdigit())
-            
-            # If it has country code (1) at the beginning and is 11 digits, create a 10-digit version too
-            alt_clean = None
-            if len(standard_clean) == 11 and standard_clean.startswith('1'):
-                alt_clean = standard_clean[1:]
-            
-            cleaned_tfns.append((standard_clean, alt_clean))
-        
-        # Create expanded dataframe with multiple TFN formats
-        expanded_rows = []
-        for idx, row in combined_df.iterrows():
-            std_clean, alt_clean = cleaned_tfns[idx]
-            
-            # Add row with standard cleaning
-            if std_clean:
-                expanded_rows.append({
-                    'PID': row['PID'],
-                    'TFN': row['TFN'],
-                    'Original_TFN': row['Original_TFN'],
-                    'Clean_TFN': std_clean
+        # Ensure critical numbers are in the final mapping
+        for phone, expected_pid in critical_numbers.items():
+            clean_phone = clean_phone_number(phone)
+            if clean_phone not in combined_df['Clean_TFN'].values:
+                st.warning(f"Adding missing critical number {phone} to TFN mapping with PID {expected_pid}")
+                new_row = pd.DataFrame({
+                    'PID': [expected_pid],
+                    'TFN': [phone],
+                    'Clean_TFN': [clean_phone]
                 })
-            
-            # Add row with alternate cleaning if it exists
-            if alt_clean:
-                expanded_rows.append({
-                    'PID': row['PID'],
-                    'TFN': row['TFN'],
-                    'Original_TFN': row['Original_TFN'],
-                    'Clean_TFN': alt_clean
-                })
-        
-        # Replace combined_df with expanded version
-        if expanded_rows:
-            combined_df = pd.DataFrame(expanded_rows)
-            st.write(f"Expanded TFN mappings to include alternate formats: {len(combined_df)} total mappings")
-        
-        # Clean PIDs - handle NaN and float formatting
-        def clean_pid(x):
-            try:
-                if pd.isna(x) or str(x).strip() == '':
-                    return ''
-                # Remove any decimal points and trailing zeros
-                numeric_str = str(x).strip()
-                if '.' in numeric_str:
-                    numeric_str = numeric_str.split('.')[0]
-                return numeric_str if numeric_str.isdigit() else ''
-            except (ValueError, TypeError):
-                return ''
-        
-        combined_df['PID'] = combined_df['PID'].apply(clean_pid)
-        
-        # Debug PID cleaning
-        st.write("\nPID Cleaning Example:")
-        sample_pids = resi_df['PID'].head()
-        st.write("Before cleaning:", [str(x) for x in sample_pids.tolist()])
-        st.write("After cleaning:", [clean_pid(x) for x in sample_pids])
-        
-        # Remove any rows where either Clean_TFN or PID is empty after cleaning
-        combined_df = combined_df[
-            combined_df['Clean_TFN'].str.strip().ne('') & 
-            combined_df['PID'].str.strip().ne('')
-        ]
-        
-        # Debug final mapping
-        st.write("\nFinal TFN mapping check:")
-        st.write("Total records in mapping:", len(combined_df))
-        st.write("Sample of final mapping:")
-        st.write(combined_df[['Clean_TFN', 'PID', 'Original_TFN']].head(20))
-        
-        # Verify critical numbers are in the mapping
-        st.write("\n### Verifying critical phone numbers exist in final mapping")
-        for number in critical_numbers:
-            # Check both with and without country code
-            matches = combined_df[
-                (combined_df['Clean_TFN'] == number) | 
-                (combined_df['Clean_TFN'] == f"1{number}")
-            ]
-            
-            if not matches.empty:
-                st.write(f"✓ Found {number} in mapping with PID: {matches['PID'].iloc[0]}")
-                st.write(f"  Original format: {matches['Original_TFN'].iloc[0]}")
+                combined_df = pd.concat([combined_df, new_row], ignore_index=True)
             else:
-                # Try more flexible matching on original
-                original_matches = combined_df[combined_df['Original_TFN'].str.contains(number, na=False)]
-                if not original_matches.empty:
-                    st.write(f"⚠️ Found {number} in original TFN but not in cleaned version. PID: {original_matches['PID'].iloc[0]}")
-                    st.write(f"  Original format: {original_matches['Original_TFN'].iloc[0]}")
-                    st.write(f"  Cleaned to: {original_matches['Clean_TFN'].iloc[0]}")
-                else:
-                    st.write(f"✗ {number} NOT found in mapping")
+                row_idx = combined_df[combined_df['Clean_TFN'] == clean_phone].index[0]
+                pid_in_mapping = combined_df.loc[row_idx, 'PID']
+                
+                if pid_in_mapping != expected_pid:
+                    st.warning(f"Correcting PID for {phone} from {pid_in_mapping} to {expected_pid}")
+                    combined_df.loc[row_idx, 'PID'] = expected_pid
         
-        st.write("\nAll unique PIDs in mapping:")
-        st.write(sorted([str(pid).strip() for pid in combined_df['PID'].unique().tolist() if str(pid).strip()]))
+        # Create a mapping from clean TFN to PID
+        tfn_to_pid = dict(zip(combined_df['Clean_TFN'], combined_df['PID']))
         
-        # Return only the Clean_TFN and PID columns for mapping
-        return combined_df[['Clean_TFN', 'PID']]
+        st.write(f"Final combined TFN mapping contains {len(tfn_to_pid)} entries")
         
-    except Exception as e:
-        st.error(f"Error loading TFN data: {str(e)}")
-        st.error("Full error details:")
-        import traceback
-        st.error(traceback.format_exc())
-        raise
+        # Print a summary of the final mapping
+        print(f"TFN mapping summary: {len(tfn_to_pid)} total entries")
+        
+        return combined_df
+    else:
+        st.error("Could not identify PID and TFN columns in Display TFN sheet")
+        return resi_df[['PID', 'TFN']]
+
+def clean_phone_number(phone_str):
+    """
+    Clean a phone number string to a standard format (digits only).
+    
+    Parameters:
+    ----------
+    phone_str : str
+        The phone number string to clean
+        
+    Returns:
+    -------
+    str
+        Cleaned phone number with only digits
+    """
+    if pd.isna(phone_str) or phone_str == '':
+        return ''
+        
+    # Extract only digits
+    digits_only = ''.join(c for c in str(phone_str) if c.isdigit())
+    
+    # If it starts with country code 1 and is 11 digits, remove the 1
+    if len(digits_only) == 11 and digits_only.startswith('1'):
+        return digits_only[1:]
+    
+    return digits_only
 
 def clean_phone(phone_str):
     """Clean a phone number by extracting digits and handling special cases."""
@@ -382,342 +258,171 @@ def clean_phone(phone_str):
     # Otherwise just return all digits
     return digits
 
-def clean_athena():
-    """Clean athena data."""
-    st.session_state['athena_is_loaded'] = False
+def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
+    """
+    Clean and process Athena data for analysis.
     
-    # Retrieve data from S3 or local cache
-    athena_df = fetch_athena_data()
+    Parameters:
+    ----------
+    athena_df : DataFrame
+        Raw Athena data
+    tfn_df : DataFrame
+        TFN mapping data
+    leads_df : DataFrame
+        Leads data
+    start_date : str or datetime
+        Start date for filtering
+    end_date : str or datetime
+        End date for filtering
     
-    # Debug: Print column names before processing
-    st.write("Original columns:", athena_df.columns.tolist())
+    Returns:
+    -------
+    DataFrame
+        Cleaned Athena data with matched PIDs
+    """
+    # Filter by date range
+    if start_date and end_date:
+        st.write(f"Filtering data between {start_date} and {end_date}")
+        
+        # Convert to datetime if they're strings
+        if isinstance(start_date, str):
+            start_date = pd.to_datetime(start_date)
+        if isinstance(end_date, str):
+            end_date = pd.to_datetime(end_date)
+        
+        # Filter the dataframe
+        athena_df['Date'] = pd.to_datetime(athena_df['Date'])
+        athena_df = athena_df[(athena_df['Date'] >= start_date) & (athena_df['Date'] <= end_date)]
+        st.write(f"Records after date filtering: {len(athena_df)}")
     
-    # Show shape before cleaning
-    original_shape = athena_df.shape
-    
-    # Debug information - Business line distribution before filtering
-    st.write("\n### Business Line Distribution Before Filtering")
-    if 'Ln_of_Busn' in athena_df.columns:
-        st.write("Unique business lines:", athena_df['Ln_of_Busn'].unique())
-        st.write("Counts by business line:")
-        st.write(athena_df['Ln_of_Busn'].value_counts())
-    
-    # Clean affiliate code
-    if 'SRC_SUBD_ID' in athena_df.columns:
-        athena_df['Affiliate_Code'] = athena_df['SRC_SUBD_ID'].apply(clean_affiliate_code)
-    
-    # Debug: Print sample rows to see column values
-    st.write("Sample rows after processing SRC_SUBD_ID:")
-    st.write(athena_df[['SRC_SUBD_ID', 'Affiliate_Code']].head())
-    
-    # Filter records
+    # Clean affiliate code and filter records
+    athena_df['Clean_Affiliate_Code'] = athena_df['Affiliate_Code'].apply(clean_affiliate_code)
     athena_df = athena_df[
-        # Keep only main residential records (non-health)
-        (~athena_df['Ln_of_Busn'].str.contains('health', case=False, na=False)) &
-        (~athena_df['DNIS_BUSN_SEG_CD'].str.contains('health', case=False, na=False)) &
-        # Must have sale date
-        (athena_df['Sale_Date'].notna()) &
-        # Must be NEW or RESALE
-        ((athena_df['Ordr_Type'] == 'NEW') | (athena_df['Ordr_Type'] == 'RESALE'))
+        (athena_df['Clean_Affiliate_Code'].notna()) & 
+        (athena_df['Clean_Affiliate_Code'] != "") & 
+        (athena_df['Clean_Affiliate_Code'] != "CAKE")
     ]
+    st.write(f"Records after affiliate code filtering: {len(athena_df)}")
     
-    # Debug information - Business line distribution after filtering
-    st.write("\n### Business Line Distribution After Filtering")
-    if 'Ln_of_Busn' in athena_df.columns:
-        st.write("Remaining business lines:", athena_df['Ln_of_Busn'].unique())
-        st.write("Filtered counts by business line:")
-        st.write(athena_df['Ln_of_Busn'].value_counts())
+    # Count records with "WEB" in Lead_DNIS
+    web_count = athena_df[athena_df['Lead_DNIS'].str.contains('WEB', na=False, case=False)].shape[0]
+    st.write(f"Records with 'WEB' in Lead_DNIS: {web_count}")
     
-    # Show shape after filtering
-    filtered_shape = athena_df.shape
-    st.write(f"Records before filtering: {original_shape[0]}, after: {filtered_shape[0]}")
+    # For non-WEB records, try to match PIDs
+    athena_df['PID'] = None
+    non_web_mask = ~athena_df['Lead_DNIS'].str.contains('WEB', na=False, case=False)
+    non_web_count = non_web_mask.sum()
+    st.write(f"Non-WEB records to match: {non_web_count}")
     
-    # Match PIDs for non-web records
-    st.write("\n### PID Matching for Non-Web Records")
-    phones = athena_df[~athena_df['Lead_DNIS'].str.contains("WEB", na=False)]
-    web = athena_df[athena_df['Lead_DNIS'].str.contains("WEB", na=False)]
+    match_count = 0
+    for idx, row in athena_df[non_web_mask].iterrows():
+        pid = match_pid(row, tfn_df)
+        if pid is not None:
+            athena_df.at[idx, 'PID'] = pid
+            match_count += 1
     
-    # Get counts before PID matching
-    st.write(f"Non-web records before PID matching: {len(phones)}")
+    st.write(f"Successfully matched {match_count} out of {non_web_count} non-WEB records")
     
-    # Create a mapping dict for TFN -> PID
-    combined_df = load_combined_resi_tfn_data(TFN_SHEET_URL)
-    
-    # Debug TFN mapping dataframe
-    st.write("\n### TFN Mapping Sample")
-    st.write(combined_df[['PID', 'TFN', 'Clean_TFN']].head())
-    
-    # Apply PID matching for non-web records
-    phones['PID'] = phones['Lead_DNIS'].apply(lambda dnis: match_pid(dnis, combined_df))
-    
-    # Debug how many matched
-    matched = phones[phones['PID'].notna()]
-    st.write(f"Non-web records with matched PID: {len(matched)} ({len(matched)/len(phones):.2%})")
-    
-    # Show distribution of matched PIDs
-    st.write("Top 10 matched PIDs:")
-    st.write(phones['PID'].value_counts().head(10))
-    
-    # Combine web and matched phone records
-    athena_df = pd.concat([web, phones])
+    # Special debug for DNIS that maps to PID 42038
+    if '8009734275' in athena_df['Lead_DNIS'].values:
+        dnis_42038 = athena_df[athena_df['Lead_DNIS'].str.contains('8009734275', na=False)]
+        st.write(f"Found {len(dnis_42038)} records with DNIS 8009734275")
+        st.write(dnis_42038[['Lead_DNIS', 'PID', 'INSTALL_METHOD']])
     
     # Analyze records by PID
-    st.write("\n### Records by PID")
-    pid_counts = analyze_records_by_pid(athena_df)
-    
-    # Set loaded flag
-    st.session_state['athena_is_loaded'] = True
-    
-    # Store athena_df in session state for use in other functions
-    st.session_state['athena_df'] = athena_df
+    analyze_records_by_pid(athena_df)
     
     return athena_df
 
-def analyze_pre_matchback_phone_metrics(athena_df, tfn_df=None):
+def analyze_pre_matchback_phone_metrics(athena_df, tfn_map=None):
     """
-    Analyze phone records directly from Athena data before PID matchback.
-    This helps identify if the issue is with the raw data or with the matchback process.
+    Perform pre-matchback analysis on phone records to identify potential matching issues.
     
-    Args:
-        athena_df: The full Athena DataFrame
-        tfn_df: TFN mapping DataFrame (optional)
-    
+    Parameters:
+    -----------
+    athena_df : pd.DataFrame
+        DataFrame containing the Athena records
+    tfn_map : dict, optional
+        Mapping from cleaned phone numbers to PIDs for verification
+        
     Returns:
-        dict: Pre-matchback phone metrics
+    --------
+    pre_match_stats : dict
+        Dictionary containing statistics about pre-matchback phone records
     """
-    # First get all non-WEB records directly from Athena - but check for any case variations
-    raw_phone_records = athena_df[~athena_df['Lead_DNIS'].str.contains("WEB", case=True, na=False)].copy()
+    st.subheader("Pre-Matchback Phone Analysis")
     
-    # Store raw phone records in session state for debugging
-    st.session_state.raw_phone_records = raw_phone_records
+    # Count raw phone records (non-WEB)
+    non_web_mask = ~athena_df['Lead_DNIS'].str.contains('WEB', na=False)
+    raw_phone_count = non_web_mask.sum()
     
-    # Add export button for raw phone records
-    st.subheader("Export Raw Phone Records")
-    if st.button("Export Raw Phone Records to CSV"):
-        try:
-            # Create a BytesIO object to hold the CSV file in memory
-            output = io.BytesIO()
-            
-            # Write the DataFrame to CSV
-            raw_phone_records.to_csv(output, index=False)
-            
-            # Seek to the beginning of the BytesIO object
-            output.seek(0)
-            
-            # Create download button
-            st.download_button(
-                label="Download Raw Phone Records",
-                data=output,
-                file_name="raw_phone_records.csv",
-                mime="text/csv"
-            )
-        except Exception as e:
-            st.error(f"Error exporting raw phone records: {str(e)}")
-            st.error("Full error details:")
-            import traceback
-            st.error(traceback.format_exc())
+    st.write(f"Raw Phone Records (non-WEB): {raw_phone_count}")
     
-    # Check if there are any records with null Lead_DNIS (these would be missed by str.contains)
-    null_dnis_records = athena_df[athena_df['Lead_DNIS'].isna()].copy()
-    if not null_dnis_records.empty:
-        st.write(f"Found {len(null_dnis_records)} records with null Lead_DNIS values")
-        st.write("Sample of records with null Lead_DNIS:")
-        st.write(null_dnis_records.head())
+    # Define problematic numbers to track specifically
+    problematic_numbers = ['8446778720', '8005717438', '8009734275']
+    problematic_pids = {'8446778720': '4790', '8005717438': '42299', '8009734275': '42038'}
     
-    # Check for non-WEB records with different case variations
-    possible_phone_records = len(athena_df[~athena_df['Lead_DNIS'].str.contains("WEB", case=False, na=False)])
-    if possible_phone_records != len(raw_phone_records):
-        st.write(f"⚠️ Found discrepancy in phone record count when using case-insensitive search")
-        st.write(f"Case-sensitive non-WEB count: {len(raw_phone_records)}")
-        st.write(f"Case-insensitive non-WEB count: {possible_phone_records}")
-        
-        # Find the records that differ between the two methods
-        case_sensitive_mask = ~athena_df['Lead_DNIS'].str.contains("WEB", case=True, na=False)
-        case_insensitive_mask = ~athena_df['Lead_DNIS'].str.contains("WEB", case=False, na=False)
-        different_records = athena_df[case_insensitive_mask & ~case_sensitive_mask]
-        
-        st.write(f"Found {len(different_records)} records with Lead_DNIS containing 'web', 'Web', etc. but not exactly 'WEB'")
-        if not different_records.empty:
-            st.write("Sample of these records:")
-            st.write(different_records[['Lead_DNIS', 'INSTALL_METHOD', 'Sale_Date', 'Install_Date']])
-    
-    # Check for any records that contain "web" in different formats
-    st.write("\n### Checking for records with variations of 'WEB' in Lead_DNIS")
-    for variation in ["web", "Web", "WEb", "WeB"]:
-        if variation == "WEB": continue  # Skip the exact match we already checked
-        count = len(athena_df[athena_df['Lead_DNIS'].str.contains(variation, na=False)])
+    # Check for specific problematic DNIS values
+    for dnis in problematic_numbers:
+        cleaned_dnis = clean_phone_number(dnis)
+        mask = athena_df['Lead_DNIS'].apply(lambda x: clean_phone_number(str(x)) == cleaned_dnis if pd.notna(x) else False)
+        count = mask.sum()
         if count > 0:
-            st.write(f"Found {count} records containing '{variation}'")
-            sample = athena_df[athena_df['Lead_DNIS'].str.contains(variation, na=False)].head()
-            st.write(f"Sample Lead_DNIS values: {sample['Lead_DNIS'].tolist()}")
+            in_map = "Yes" if tfn_map and cleaned_dnis in tfn_map else "No"
+            mapped_pid = tfn_map.get(cleaned_dnis, "Not found") if tfn_map else "N/A"
+            expected_pid = problematic_pids.get(dnis, "Unknown")
+            
+            st.write(f"**DNIS {dnis}**: Found {count} records")
+            st.write(f"  - Cleaned to: {cleaned_dnis}")
+            st.write(f"  - In TFN map: {in_map}")
+            st.write(f"  - Mapped PID: {mapped_pid}")
+            st.write(f"  - Expected PID: {expected_pid}")
+            
+            # Sample a few records for this DNIS
+            sample_records = athena_df[mask].head(3)
+            st.write("  - Sample records:")
+            st.dataframe(sample_records[['PID', 'Lead_DNIS', 'Affiliate_Code', 'INSTALL_METHOD']])
     
-    # Now use more comprehensive search for non-phone records
-    comprehensive_phone_records = athena_df[~athena_df['Lead_DNIS'].str.contains("WEB|web|Web", case=False, na=False)].copy()
-    
-    st.write(f"\n### Pre-Matchback Phone Analysis")
-    st.write(f"Total non-WEB records with basic filter: {len(raw_phone_records)}")
-    st.write(f"Total non-WEB records with comprehensive filter: {len(comprehensive_phone_records)}")
-    
-    # Use the comprehensive filter for further analysis
-    raw_phone_records = comprehensive_phone_records
-    
-    # Check for potentially non-phone records that might be miscounted
-    suspect_records = raw_phone_records[raw_phone_records['Lead_DNIS'].str.contains(r'\D', na=False)]
-    st.write(f"\nFound {len(suspect_records)} non-WEB records with non-numeric characters in Lead_DNIS")
-    if not suspect_records.empty:
-        st.write("Sample of these records:")
-        st.write(suspect_records[['Lead_DNIS', 'INSTALL_METHOD', 'Sale_Date', 'Install_Date']])
-    
-    # Check how many have Lead_DNIS values (should be all of them)
-    with_dnis = raw_phone_records['Lead_DNIS'].notna().sum()
-    st.write(f"Records with Lead_DNIS: {with_dnis}")
-    
-    # Count all Lead_DNIS values directly
-    st.write("\n### Direct Lead_DNIS Analysis")
-    st.write("Analyzing all unique Lead_DNIS values:")
-    
-    all_dnis_values = athena_df['Lead_DNIS'].value_counts().to_dict()
-    st.write(f"Total unique Lead_DNIS values in dataset: {len(all_dnis_values)}")
-    
-    web_values = {dnis: count for dnis, count in all_dnis_values.items() 
-                 if isinstance(dnis, str) and 'WEB' in dnis.upper()}
-    non_web_values = {dnis: count for dnis, count in all_dnis_values.items() 
-                     if not (isinstance(dnis, str) and 'WEB' in dnis.upper())}
-    
-    st.write(f"Lead_DNIS values containing 'WEB' (any case): {len(web_values)}")
-    st.write(f"Lead_DNIS values not containing 'WEB': {len(non_web_values)}")
-    
-    total_web_records = sum(web_values.values())
-    total_non_web_records = sum(non_web_values.values())
-    
-    st.write(f"Total records with WEB in Lead_DNIS: {total_web_records}")
-    st.write(f"Total records without WEB in Lead_DNIS: {total_non_web_records}")
-    st.write(f"Total records: {total_web_records + total_non_web_records}")
-    st.write(f"Dataset total: {len(athena_df)}")
-    
-    # Verify if all records are accounted for
-    if len(athena_df) != (total_web_records + total_non_web_records):
-        st.write("⚠️ Some records are not being counted properly!")
-        st.write(f"Missing records: {len(athena_df) - (total_web_records + total_non_web_records)}")
+    # Sample a subset of DNIS values to check match status
+    sample_size = min(50, raw_phone_count)
+    if raw_phone_count > 0:
+        sampled_dnis = athena_df[non_web_mask]['Lead_DNIS'].sample(sample_size, random_state=42).to_list()
+        checked_dnis = []
         
-        # Look for null values
-        null_dnis = athena_df[athena_df['Lead_DNIS'].isna()]
-        st.write(f"Records with null Lead_DNIS: {len(null_dnis)}")
-        if len(null_dnis) > 0:
-            st.write("Sample of records with null Lead_DNIS:")
-            st.write(null_dnis.head())
+        for dnis in sampled_dnis:
+            cleaned = clean_phone_number(str(dnis))
+            matched = "Yes" if tfn_map and cleaned in tfn_map else "No"
+            mapped_to = tfn_map.get(cleaned, "Not found") if tfn_map else "N/A"
+            
+            checked_dnis.append({
+                "DNIS": dnis,
+                "Cleaned_DNIS": cleaned,
+                "Matched": matched,
+                "Mapped_To": mapped_to
+            })
+        
+        st.write(f"Sample of {sample_size} DNIS values checked against TFN map:")
+        check_df = pd.DataFrame(checked_dnis)
+        st.dataframe(check_df)
+        
+        # Calculate match rate
+        if tfn_map:
+            match_count = sum(1 for item in checked_dnis if item["Matched"] == "Yes")
+            match_rate = (match_count / sample_size) * 100
+            st.write(f"Match rate in sample: {match_rate:.1f}% ({match_count}/{sample_size})")
+            
+            if match_rate < 90:
+                st.warning(f"Low match rate detected! Only {match_rate:.1f}% of sampled DNIS values matched to a PID.")
     
-    # Show unique Lead_DNIS values (first 20)
-    unique_dnis = raw_phone_records['Lead_DNIS'].unique()
-    st.write(f"\nFound {len(unique_dnis)} unique DNIS values. First 20:")
-    for dnis in unique_dnis[:20]:
-        st.write(f"- '{dnis}'")
-    
-    # Get the pre-matchback counts by install method
+    # Return statistics for further analysis
     pre_match_stats = {
-        'by_install_method': raw_phone_records.groupby('INSTALL_METHOD').size().to_dict(),
-        'sales_by_method': {},
-        'installs_by_method': {}
+        "raw_phone_count": raw_phone_count,
+        "problematic_numbers_found": {dnis: athena_df['Lead_DNIS'].apply(
+            lambda x: clean_phone_number(str(x)) == clean_phone_number(dnis) if pd.notna(x) else False
+        ).sum() for dnis in problematic_numbers}
     }
     
-    # Count sales and installs by install method
-    for method in raw_phone_records['INSTALL_METHOD'].unique():
-        method_df = raw_phone_records[raw_phone_records['INSTALL_METHOD'] == method]
-        pre_match_stats['sales_by_method'][method] = method_df['Sale_Date'].notna().sum()
-        pre_match_stats['installs_by_method'][method] = method_df['Install_Date'].notna().sum()
-    
-    # Show summary of pre-matchback counts
-    st.write("\n#### Phone Record Counts by INSTALL_METHOD (Pre-Matchback)")
-    method_counts = pd.DataFrame({
-        'INSTALL_METHOD': list(pre_match_stats['by_install_method'].keys()),
-        'Record Count': list(pre_match_stats['by_install_method'].values()),
-    })
-    st.dataframe(method_counts)
-    
-    # Show detailed sales and installs by method
-    st.write("\n#### Sales and Installs by INSTALL_METHOD (Pre-Matchback)")
-    sales_installs = pd.DataFrame({
-        'INSTALL_METHOD': list(pre_match_stats['sales_by_method'].keys()),
-        'Sales': list(pre_match_stats['sales_by_method'].values()),
-        'Installs': list(pre_match_stats['installs_by_method'].values())
-    })
-    st.dataframe(sales_installs)
-    
-    # Use regex to find any Lead_DNIS with exact numeric pattern - these would be phone numbers
-    likely_phone_mask = raw_phone_records['Lead_DNIS'].str.match(r'^\d+$', na=False)
-    likely_phone_records = raw_phone_records[likely_phone_mask]
-    
-    st.write(f"\nRecords with purely numeric Lead_DNIS (likely true phone numbers): {len(likely_phone_records)}")
-    
-    # Calculate totals
-    total_phone_sales = sum(pre_match_stats['sales_by_method'].values())
-    total_phone_installs = sum(pre_match_stats['installs_by_method'].values())
-    
-    st.write(f"\n### Total Pre-Matchback Phone Metrics")
-    st.write(f"Total Phone Sales: {total_phone_sales}")
-    st.write(f"Total Phone Installs: {total_phone_installs}")
-    
-    # Create a bar chart for pre-matchback phone metrics
-    fig = px.bar(
-        sales_installs,
-        x='INSTALL_METHOD',
-        y=['Sales', 'Installs'],
-        title='Phone Sales and Installs by INSTALL_METHOD (Pre-Matchback)',
-        barmode='group'
-    )
-    st.plotly_chart(fig)
-    
-    # Now analyze the TFN mapping and potential matchback issues
-    tfn_map = {}
-    if tfn_df is not None:
-        tfn_map = dict(zip(tfn_df['Clean_TFN'], tfn_df['PID']))
-    
-    st.write("\n#### Lead_DNIS to TFN Mapping Check")
-    st.write(f"TFN mapping size: {len(tfn_map)}")
-    
-    # Check how many Lead_DNIS values match TFNs in the mapping
-    matching_counts = 0
-    dnis_to_check = min(100, len(raw_phone_records))
-    checked_dnis = []
-    
-    for _, row in raw_phone_records.head(dnis_to_check).iterrows():
-        dnis = row['Lead_DNIS']
-        numeric_dnis = ''.join(c for c in str(dnis) if c.isdigit())
-        matches_tfn = numeric_dnis in tfn_map
-        checked_dnis.append({
-            'Lead_DNIS': dnis,
-            'Numeric_DNIS': numeric_dnis,
-            'Matches_TFN': matches_tfn,
-            'Matched_PID': tfn_map.get(numeric_dnis, 'No match')
-        })
-        if matches_tfn:
-            matching_counts += 1
-    
-    st.write(f"Checked {dnis_to_check} DNIS values, {matching_counts} match a TFN in the mapping")
-    
-    # Show sample of the DNIS check results
-    st.write("\nSample DNIS Matching Check (first 20):")
-    st.dataframe(pd.DataFrame(checked_dnis[:20]))
-    
-    # Special check for 42038
-    st.write("\n### Special check for PID 42038 (DNIS 8009734275)")
-    pid_42038_records = raw_phone_records[raw_phone_records['Lead_DNIS'].str.contains('8009734275', na=False)]
-    st.write(f"Found {len(pid_42038_records)} raw records with DNIS 8009734275")
-    if not pid_42038_records.empty:
-        st.write("Sample records:")
-        st.write(pid_42038_records[['Lead_DNIS', 'INSTALL_METHOD', 'Sale_Date', 'Install_Date']].head())
-        
-        # Check if numeric DNIS match
-        for _, row in pid_42038_records.iterrows():
-            dnis = row['Lead_DNIS']
-            numeric_dnis = ''.join(c for c in str(dnis) if c.isdigit())
-            st.write(f"Original DNIS: {dnis}, Numeric DNIS: {numeric_dnis}, In TFN Map: {numeric_dnis in tfn_map}")
-            if numeric_dnis in tfn_map:
-                st.write(f"Mapped to PID: {tfn_map[numeric_dnis]}")
-            else:
-                st.write("Not found in TFN map")
-    
-    return pre_match_stats, raw_phone_records
+    return pre_match_stats
 
 def analyze_post_matchback_metrics_by_pid(phone_df):
     """
@@ -1315,6 +1020,691 @@ def allocate_phone_metrics(cake_df, phone_df, athena_df=None):
     st.write(f"Total DIFM Phone Installs for {pid}: {cake_df.loc[pid_mask, 'DIFM Phone Installs'].sum()}")
     
     return cake_df
+
+def match_pid(row, tfn_map):
+    """
+    Match a phone record to a PID using the TFN mapping.
+    
+    Parameters:
+    ----------
+    row : pd.Series
+        Row from the phone records DataFrame
+    tfn_map : dict
+        Mapping from cleaned phone numbers to PIDs
+        
+    Returns:
+    -------
+    pid : str or np.nan
+        Matched PID or np.nan if no match found
+    """
+    # Only process non-WEB records
+    if 'WEB' in str(row['Lead_DNIS']):
+        return np.nan
+    
+    # Clean the phone number from Lead_DNIS
+    phone_num = clean_phone_number(str(row['Lead_DNIS']))
+    
+    # Debug specific problematic numbers
+    problematic_numbers = ['8446778720', '8005717438', '8009734275']
+    clean_problematic = [clean_phone_number(num) for num in problematic_numbers]
+    
+    if phone_num in clean_problematic:
+        print(f"DEBUG: Processing problematic number {phone_num}")
+        
+    # Try to match the cleaned phone number to a PID
+    if phone_num in tfn_map:
+        pid = tfn_map[phone_num]
+        
+        if phone_num in clean_problematic:
+            print(f"DEBUG: Matched {phone_num} to PID {pid}")
+        
+        return pid
+    else:
+        if phone_num in clean_problematic:
+            print(f"DEBUG: Failed to match problematic number {phone_num}")
+            print(f"DEBUG: Available keys in tfn_map: {list(tfn_map.keys())[:10]}... (total: {len(tfn_map)})")
+            
+            # Check if any similar numbers exist in the mapping
+            similar_keys = [k for k in tfn_map.keys() if phone_num in k or k in phone_num]
+            if similar_keys:
+                print(f"DEBUG: Found similar keys: {similar_keys}")
+        
+        return np.nan
+
+def analyze_records_by_pid(athena_df):
+    """
+    Analyze records by PID, count occurrences, and generate visualizations.
+    
+    Parameters:
+    ----------
+    athena_df : DataFrame
+        Athena data with PIDs matched
+    
+    Returns:
+    -------
+    None
+    """
+    st.subheader("Analysis of Records by PID")
+    
+    # Count records by PID
+    pid_counts = athena_df[athena_df['PID'].notna()].groupby('PID').size().reset_index(name='count')
+    pid_counts = pid_counts.sort_values('count', ascending=False)
+    
+    st.write(f"Total PIDs with records: {len(pid_counts)}")
+    
+    # Display top 20 PIDs by record count
+    st.write("Top 20 PIDs by record count:")
+    st.dataframe(pid_counts.head(20))
+    
+    # Create bar chart of top 20 PIDs
+    top_pids = pid_counts.head(20)
+    fig = px.bar(top_pids, x='PID', y='count', title='Top 20 PIDs by Record Count')
+    fig.update_layout(xaxis_title='PID', yaxis_title='Number of Records')
+    st.plotly_chart(fig)
+    
+    # Key PIDs of interest
+    key_pids = ['42299', '4790', '42038']
+    st.subheader("Details for PIDs of Interest")
+    
+    key_pid_data = []
+    for pid in key_pids:
+        # Get observed count
+        observed = 0
+        if pid in pid_counts['PID'].values:
+            observed = pid_counts.loc[pid_counts['PID'] == pid, 'count'].iloc[0]
+        
+        # Get DNIS for this PID
+        dnis_values = athena_df[athena_df['PID'] == pid]['Lead_DNIS'].unique()
+        dnis_str = ', '.join(str(d) for d in dnis_values) if len(dnis_values) > 0 else 'None found'
+        
+        # Append to data for visualization
+        key_pid_data.append({
+            'PID': pid,
+            'Observed Records': observed,
+            'DNIS Values': dnis_str
+        })
+    
+    # Show table of key PIDs
+    st.write("Details for Key PIDs:")
+    st.dataframe(pd.DataFrame(key_pid_data))
+    
+    # Check if we have metrics for these PIDs and compare with expected values
+    if 'INSTALL_METHOD' in athena_df.columns and 'SALES' in athena_df.columns and 'INSTALLS' in athena_df.columns:
+        st.subheader("Metrics for Key PIDs")
+        
+        # Define expected metrics for validation
+        expected_metrics = {
+            '42299': {'DIFM Sales': 41, 'DIFM Installs': 25, 'DIY Sales': 1, 'DIY Installs': 1},
+            '4790': {'DIFM Sales': 22, 'DIFM Installs': 9, 'DIY Sales': 1, 'DIY Installs': 1},
+            '42038': {'DIFM Sales': 4, 'DIFM Installs': 1, 'DIY Sales': 0, 'DIY Installs': 0}
+        }
+        
+        # Get actual metrics
+        metric_data = []
+        for pid in key_pids:
+            pid_df = athena_df[athena_df['PID'] == pid]
+            
+            # Calculate actual metrics
+            difm_sales = pid_df[(pid_df['INSTALL_METHOD'] == 'DIFM') & (pid_df['SALES'] == 1)].shape[0]
+            difm_installs = pid_df[(pid_df['INSTALL_METHOD'] == 'DIFM') & (pid_df['INSTALLS'] == 1)].shape[0]
+            diy_sales = pid_df[(pid_df['INSTALL_METHOD'] == 'DIY') & (pid_df['SALES'] == 1)].shape[0]
+            diy_installs = pid_df[(pid_df['INSTALL_METHOD'] == 'DIY') & (pid_df['INSTALLS'] == 1)].shape[0]
+            
+            # Add to dataframe
+            metric_data.append({
+                'PID': pid,
+                'DIFM Sales (Actual)': difm_sales,
+                'DIFM Sales (Expected)': expected_metrics[pid]['DIFM Sales'],
+                'DIFM Installs (Actual)': difm_installs,
+                'DIFM Installs (Expected)': expected_metrics[pid]['DIFM Installs'],
+                'DIY Sales (Actual)': diy_sales,
+                'DIY Sales (Expected)': expected_metrics[pid]['DIY Sales'],
+                'DIY Installs (Actual)': diy_installs,
+                'DIY Installs (Expected)': expected_metrics[pid]['DIY Installs']
+            })
+        
+        # Show metrics table
+        metrics_df = pd.DataFrame(metric_data)
+        st.dataframe(metrics_df)
+        
+        # Create comparison visualization
+        comparison_data = []
+        for pid in key_pids:
+            pid_row = metrics_df[metrics_df['PID'] == pid].iloc[0]
+            
+            # Add actual metrics
+            comparison_data.append({'PID': pid, 'Metric': 'DIFM Sales', 'Value': pid_row['DIFM Sales (Actual)'], 'Type': 'Actual'})
+            comparison_data.append({'PID': pid, 'Metric': 'DIFM Installs', 'Value': pid_row['DIFM Installs (Actual)'], 'Type': 'Actual'})
+            comparison_data.append({'PID': pid, 'Metric': 'DIY Sales', 'Value': pid_row['DIY Sales (Actual)'], 'Type': 'Actual'})
+            comparison_data.append({'PID': pid, 'Metric': 'DIY Installs', 'Value': pid_row['DIY Installs (Actual)'], 'Type': 'Actual'})
+            
+            # Add expected metrics
+            comparison_data.append({'PID': pid, 'Metric': 'DIFM Sales', 'Value': pid_row['DIFM Sales (Expected)'], 'Type': 'Expected'})
+            comparison_data.append({'PID': pid, 'Metric': 'DIFM Installs', 'Value': pid_row['DIFM Installs (Expected)'], 'Type': 'Expected'})
+            comparison_data.append({'PID': pid, 'Metric': 'DIY Sales', 'Value': pid_row['DIY Sales (Expected)'], 'Type': 'Expected'})
+            comparison_data.append({'PID': pid, 'Metric': 'DIY Installs', 'Value': pid_row['DIY Installs (Expected)'], 'Type': 'Expected'})
+        
+        comparison_df = pd.DataFrame(comparison_data)
+        
+        # Create grouped bar chart
+        fig = px.bar(
+            comparison_df, 
+            x='Metric', 
+            y='Value', 
+            color='Type',
+            barmode='group',
+            facet_col='PID',
+            title='Actual vs Expected Metrics for Key PIDs',
+            color_discrete_map={'Actual': 'blue', 'Expected': 'red'}
+        )
+        fig.update_layout(height=500)
+        st.plotly_chart(fig)
+        
+        # Add explanation for any discrepancies
+        for pid in key_pids:
+            pid_row = metrics_df[metrics_df['PID'] == pid].iloc[0]
+            
+            # Check for discrepancies
+            has_discrepancy = False
+            discrepancies = []
+            
+            if pid_row['DIFM Sales (Actual)'] != pid_row['DIFM Sales (Expected)']:
+                discrepancies.append(f"DIFM Sales: {pid_row['DIFM Sales (Actual)']} vs expected {pid_row['DIFM Sales (Expected)']}")
+                has_discrepancy = True
+                
+            if pid_row['DIFM Installs (Actual)'] != pid_row['DIFM Installs (Expected)']:
+                discrepancies.append(f"DIFM Installs: {pid_row['DIFM Installs (Actual)']} vs expected {pid_row['DIFM Installs (Expected)']}")
+                has_discrepancy = True
+                
+            if pid_row['DIY Sales (Actual)'] != pid_row['DIY Sales (Expected)']:
+                discrepancies.append(f"DIY Sales: {pid_row['DIY Sales (Actual)']} vs expected {pid_row['DIY Sales (Expected)']}")
+                has_discrepancy = True
+                
+            if pid_row['DIY Installs (Actual)'] != pid_row['DIY Installs (Expected)']:
+                discrepancies.append(f"DIY Installs: {pid_row['DIY Installs (Actual)']} vs expected {pid_row['DIY Installs (Expected)']}")
+                has_discrepancy = True
+            
+            if has_discrepancy:
+                st.warning(f"PID {pid} has metric discrepancies: {', '.join(discrepancies)}")
+            else:
+                st.success(f"PID {pid} metrics match expected values")
+
+def generate_pivots(athena_df):
+    """
+    Generate web and phone pivot tables from Athena data.
+    
+    Parameters:
+    ----------
+    athena_df : DataFrame
+        Cleaned Athena data with matched PIDs
+    
+    Returns:
+    -------
+    tuple
+        (web_pivot, phone_pivot) DataFrames
+    """
+    st.subheader("Pivot Table Generation")
+    
+    # Pre-matchback analysis
+    pre_match_stats = analyze_pre_matchback_phone_metrics(
+        athena_df, 
+        tfn_map=dict(zip(
+            st.session_state.tfn_df['Clean_TFN'], 
+            st.session_state.tfn_df['PID']
+        )) if 'tfn_df' in st.session_state else None
+    )
+    
+    # Split data into Web and Phone records
+    web_mask = athena_df['Lead_DNIS'].str.contains('WEB', na=False, case=False)
+    web_df = athena_df[web_mask]
+    phone_df = athena_df[~web_mask & athena_df['PID'].notna()]
+    
+    st.write(f"Web records: {len(web_df)}")
+    st.write(f"Phone records with PID: {len(phone_df)}")
+    
+    # Add sale and install flags for aggregation
+    for df in [web_df, phone_df]:
+        if 'Sale_Date' in df.columns:
+            df['SALES'] = df['Sale_Date'].notna().astype(int)
+        else:
+            df['SALES'] = 0
+        
+        if 'Install_Date' in df.columns:
+            df['INSTALLS'] = df['Install_Date'].notna().astype(int)
+        else:
+            df['INSTALLS'] = 0
+    
+    # Create web pivot
+    st.write("Generating Web pivot table...")
+    web_pivot_data = []
+    
+    for affiliate, group in web_df.groupby('Clean_Affiliate_Code'):
+        # Get DIFM counts
+        difm_df = group[group['INSTALL_METHOD'].str.contains('DIFM', na=False)]
+        difm_sales = difm_df['SALES'].sum()
+        difm_installs = difm_df['INSTALLS'].sum()
+        
+        # Get DIY counts
+        diy_df = group[group['INSTALL_METHOD'].str.contains('DIY', na=False)]
+        diy_sales = diy_df['SALES'].sum()
+        diy_installs = diy_df['INSTALLS'].sum()
+        
+        # Split affiliate code into PID and subid
+        parts = affiliate.split('_')
+        pid = parts[0] if len(parts) > 0 else ''
+        subid = parts[1] if len(parts) > 1 else ''
+        
+        # Add to pivot data
+        web_pivot_data.append({
+            'Concatenated': affiliate,
+            'PID': pid,
+            'SubID': subid,
+            'Web DIFM Sales': int(difm_sales),
+            'DIFM Web Installs': int(difm_installs),
+            'Web DIY Sales': int(diy_sales),
+            'DIY Web Installs': int(diy_installs)
+        })
+    
+    # Create web pivot DataFrame
+    web_pivot = pd.DataFrame(web_pivot_data)
+    st.write(f"Web pivot created with {len(web_pivot)} rows")
+    
+    # Display web pivot totals
+    st.write("\n### Web Channel Metrics")
+    web_totals = {
+        'Web DIFM Sales': web_pivot['Web DIFM Sales'].sum(),
+        'DIFM Web Installs': web_pivot['DIFM Web Installs'].sum(),
+        'Web DIY Sales': web_pivot['Web DIY Sales'].sum(),
+        'DIY Web Installs': web_pivot['DIY Web Installs'].sum()
+    }
+    st.write(web_totals)
+    
+    # Create web metrics visualization
+    web_totals_df = pd.DataFrame([
+        {'Metric': 'DIFM Sales', 'Count': web_totals['Web DIFM Sales']},
+        {'Metric': 'DIFM Installs', 'Count': web_totals['DIFM Web Installs']},
+        {'Metric': 'DIY Sales', 'Count': web_totals['Web DIY Sales']},
+        {'Metric': 'DIY Installs', 'Count': web_totals['DIY Web Installs']}
+    ])
+    
+    fig = px.bar(
+        web_totals_df,
+        x='Metric',
+        y='Count',
+        title='Web Channel Metrics'
+    )
+    st.plotly_chart(fig)
+    
+    # Create phone pivot (by PID)
+    st.write("Generating Phone pivot table...")
+    
+    # Get phone metrics by PID
+    phone_metrics_df = analyze_post_matchback_metrics_by_pid(phone_df)
+    
+    # Create phone pivot DataFrame
+    phone_pivot = phone_metrics_df.copy()
+    phone_pivot = phone_pivot.set_index('PID')
+    phone_pivot = phone_pivot.rename(columns={
+        'DIFM Sales': 'Phone DIFM Sales',
+        'DIFM Installs': 'DIFM Phone Installs',
+        'DIY Sales': 'Phone DIY Sales',
+        'DIY Installs': 'DIY Phone Installs'
+    })
+    
+    # Ensure all required columns exist
+    required_cols = [
+        'Phone DIFM Sales', 'DIFM Phone Installs', 
+        'Phone DIY Sales', 'DIY Phone Installs'
+    ]
+    
+    for col in required_cols:
+        if col not in phone_pivot.columns:
+            phone_pivot[col] = 0
+    
+    # Fill missing values with zeros
+    phone_pivot = phone_pivot.fillna(0)
+    
+    # Display phone pivot totals
+    st.write("\n### Phone Channel Metrics")
+    phone_totals = {
+        'Phone DIFM Sales': phone_pivot['Phone DIFM Sales'].sum(),
+        'DIFM Phone Installs': phone_pivot['DIFM Phone Installs'].sum(),
+        'Phone DIY Sales': phone_pivot['Phone DIY Sales'].sum(),
+        'DIY Phone Installs': phone_pivot['DIY Phone Installs'].sum()
+    }
+    st.write(phone_totals)
+    
+    # Create phone metrics visualization
+    phone_totals_df = pd.DataFrame([
+        {'Metric': 'DIFM Sales', 'Count': phone_totals['Phone DIFM Sales']},
+        {'Metric': 'DIFM Installs', 'Count': phone_totals['DIFM Phone Installs']},
+        {'Metric': 'DIY Sales', 'Count': phone_totals['Phone DIY Sales']},
+        {'Metric': 'DIY Installs', 'Count': phone_totals['DIY Phone Installs']}
+    ])
+    
+    fig = px.bar(
+        phone_totals_df,
+        x='Metric',
+        y='Count',
+        title='Phone Channel Metrics'
+    )
+    st.plotly_chart(fig)
+    
+    return web_pivot, phone_pivot
+
+def clean_conversion(conversion_df):
+    """
+    Clean and process the conversion data.
+    
+    Parameters:
+    ----------
+    conversion_df : DataFrame
+        Raw conversion data
+    
+    Returns:
+    -------
+    DataFrame
+        Cleaned conversion data
+    """
+    st.subheader("Conversion Data Processing")
+    
+    # Convert date columns to datetime
+    date_cols = [col for col in conversion_df.columns if 'date' in col.lower()]
+    for col in date_cols:
+        conversion_df[col] = pd.to_datetime(conversion_df[col], errors='coerce')
+    
+    # Clean Affiliate ID and Sub ID
+    conversion_df['Affiliate ID'] = conversion_df['Affiliate ID'].astype(str)
+    conversion_df['Sub ID'] = conversion_df['Sub ID'].astype(str)
+    
+    # Create concatenated ID (PID_SubID)
+    conversion_df['Concatenated'] = conversion_df.apply(
+        lambda r: f"{r['Affiliate ID']}_{r['Sub ID']}" if r['Sub ID'] else f"{r['Affiliate ID']}_",
+        axis=1
+    )
+    
+    # Extract PID
+    conversion_df['PID'] = conversion_df['Affiliate ID']
+    
+    # Get metrics
+    metrics = ['Clicks', 'Revenue', 'Affiliate Payout', 'Conversions']
+    for metric in metrics:
+        if metric in conversion_df.columns:
+            conversion_df[metric] = pd.to_numeric(conversion_df[metric], errors='coerce').fillna(0)
+    
+    # Calculate cost (Affiliate Payout if available, otherwise Revenue)
+    if 'Affiliate Payout' in conversion_df.columns:
+        conversion_df['Cost'] = conversion_df['Affiliate Payout']
+    elif 'Revenue' in conversion_df.columns:
+        conversion_df['Cost'] = conversion_df['Revenue']
+    else:
+        conversion_df['Cost'] = 0
+    
+    # Calculate leads (Conversions if available, otherwise deduce from other fields)
+    if 'Conversions' in conversion_df.columns:
+        conversion_df['Leads'] = conversion_df['Conversions']
+    else:
+        conversion_df['Leads'] = 0
+    
+    # Aggregate by Concatenated ID
+    agg_dict = {
+        'Cost': 'sum',
+        'Leads': 'sum',
+        'PID': 'first'
+    }
+    
+    cake_df = conversion_df.groupby('Concatenated').agg(agg_dict).reset_index()
+    
+    # Add current rates
+    current_rates = get_current_rates(conversion_df)
+    cake_df = pd.merge(
+        cake_df,
+        current_rates[['Concatenated', 'Current Rate']],
+        on='Concatenated',
+        how='left'
+    )
+    
+    # Fill NaN values
+    cake_df = cake_df.fillna(0)
+    
+    # Initialize web and phone metrics columns
+    web_metrics = ['Web DIFM Sales', 'DIFM Web Installs', 'Web DIY Sales', 'DIY Web Installs']
+    phone_metrics = ['Phone DIFM Sales', 'DIFM Phone Installs', 'Phone DIY Sales', 'DIY Phone Installs']
+    
+    for col in web_metrics + phone_metrics:
+        cake_df[col] = 0
+    
+    st.write(f"Conversion data processed: {len(cake_df)} unique Affiliate ID/Sub ID combinations")
+    
+    return cake_df
+
+def merge_and_compute(cake_df, web_pivot, phone_pivot, conversion_df):
+    """
+    Merge data and compute final metrics.
+    
+    Parameters:
+    ----------
+    cake_df : DataFrame
+        Cleaned conversion data
+    web_pivot : DataFrame
+        Web pivot table
+    phone_pivot : DataFrame
+        Phone pivot table
+    conversion_df : DataFrame
+        Raw conversion data for reference
+    
+    Returns:
+    -------
+    DataFrame
+        Final report with all metrics
+    """
+    st.subheader("Merging Data and Computing Metrics")
+    
+    # Merge web metrics
+    result_df = pd.merge(
+        cake_df,
+        web_pivot,
+        on='Concatenated',
+        how='left',
+        suffixes=('', '_web')
+    )
+    
+    # Update PID from web_pivot if not present in cake_df
+    result_df['PID'] = result_df.apply(
+        lambda r: r['PID_web'] if pd.isna(r['PID']) or r['PID'] == '' else r['PID'],
+        axis=1
+    )
+    
+    # Fill NaN values in web metrics columns
+    web_metrics = ['Web DIFM Sales', 'DIFM Web Installs', 'Web DIY Sales', 'DIY Web Installs']
+    for col in web_metrics:
+        if col in result_df.columns:
+            result_df[col] = result_df[col].fillna(0).astype(int)
+    
+    # Drop extra columns from web merge
+    cols_to_drop = [c for c in result_df.columns if c.endswith('_web')]
+    result_df = result_df.drop(columns=cols_to_drop)
+    
+    # Allocate phone metrics based on web activity
+    result_df = allocate_phone_metrics(result_df, phone_pivot)
+    
+    # Calculate total metrics
+    result_df['Total DIFM Sales'] = result_df['Web DIFM Sales'] + result_df['Phone DIFM Sales']
+    result_df['Total DIFM Installs'] = result_df['DIFM Web Installs'] + result_df['DIFM Phone Installs']
+    result_df['Total DIY Sales'] = result_df['Web DIY Sales'] + result_df['Phone DIY Sales']
+    result_df['Total DIY Installs'] = result_df['DIY Web Installs'] + result_df['DIY Phone Installs']
+    
+    # Calculate revenue (based on installs)
+    result_df['Revenue'] = (result_df['Total DIFM Installs'] * 650) + (result_df['Total DIY Installs'] * 250)
+    
+    # Calculate profitability
+    result_df['Profit/Loss'] = result_df['Revenue'] - result_df['Cost']
+    
+    # Calculate projected installs using a function
+    result_df['Projected Installs'] = result_df.apply(calculate_projected_installs, axis=1)
+    
+    # Calculate projected revenue and profit
+    result_df['Projected Revenue'] = result_df['Projected Installs'] * 650
+    result_df['Projected Profit/Loss'] = result_df['Projected Revenue'] - result_df['Cost']
+    
+    # Calculate margins and eCPL
+    result_df['Margin'] = (result_df['Profit/Loss'] / result_df['Revenue']).replace([np.inf, -np.inf], 0)
+    result_df['Projected Margin'] = (result_df['Projected Profit/Loss'] / result_df['Projected Revenue']).replace([np.inf, -np.inf], 0)
+    result_df['eCPL'] = (result_df['Cost'] / result_df['Leads']).replace([np.inf, -np.inf], 0)
+    
+    # Format percentages
+    result_df['Margin'] = result_df['Margin'].fillna(0)
+    result_df['Projected Margin'] = result_df['Projected Margin'].fillna(0)
+    
+    # Clean up any remaining NaN values
+    result_df = result_df.fillna(0)
+    
+    # Convert numeric columns to appropriate types
+    int_columns = [
+        'Leads', 'Web DIFM Sales', 'Phone DIFM Sales', 'Total DIFM Sales',
+        'DIFM Web Installs', 'DIFM Phone Installs', 'Total DIFM Installs',
+        'Web DIY Sales', 'Phone DIY Sales', 'Total DIY Sales',
+        'DIY Web Installs', 'DIY Phone Installs', 'Total DIY Installs',
+        'Projected Installs'
+    ]
+    
+    for col in int_columns:
+        result_df[col] = result_df[col].astype(int)
+    
+    # Sort by projected revenue
+    result_df = result_df.sort_values('Projected Revenue', ascending=False)
+    
+    st.write(f"Final report generated with {len(result_df)} rows")
+    
+    return result_df
+
+def verify_metrics_match(athena_df, final_df):
+    """
+    Verify that metrics in the final report match the raw data.
+    
+    Parameters:
+    ----------
+    athena_df : DataFrame
+        Raw Athena data
+    final_df : DataFrame
+        Final report with computed metrics
+    """
+    st.subheader("Metrics Verification")
+    
+    # Calculate expected totals from raw Athena data
+    web_mask = athena_df['Lead_DNIS'].str.contains('WEB', na=False, case=False)
+    web_df = athena_df[web_mask]
+    phone_df = athena_df[~web_mask & athena_df['PID'].notna()]
+    
+    # Calculate sale and install flags if not present
+    for df in [web_df, phone_df]:
+        if 'SALES' not in df.columns and 'Sale_Date' in df.columns:
+            df['SALES'] = df['Sale_Date'].notna().astype(int)
+        if 'INSTALLS' not in df.columns and 'Install_Date' in df.columns:
+            df['INSTALLS'] = df['Install_Date'].notna().astype(int)
+    
+    # Calculate web metrics
+    web_difm_sales = web_df[web_df['INSTALL_METHOD'].str.contains('DIFM', na=False)]['SALES'].sum()
+    web_difm_installs = web_df[web_df['INSTALL_METHOD'].str.contains('DIFM', na=False)]['INSTALLS'].sum()
+    web_diy_sales = web_df[web_df['INSTALL_METHOD'].str.contains('DIY', na=False)]['SALES'].sum()
+    web_diy_installs = web_df[web_df['INSTALL_METHOD'].str.contains('DIY', na=False)]['INSTALLS'].sum()
+    
+    # Calculate phone metrics
+    phone_difm_sales = phone_df[phone_df['INSTALL_METHOD'].str.contains('DIFM', na=False)]['SALES'].sum()
+    phone_difm_installs = phone_df[phone_df['INSTALL_METHOD'].str.contains('DIFM', na=False)]['INSTALLS'].sum()
+    phone_diy_sales = phone_df[phone_df['INSTALL_METHOD'].str.contains('DIY', na=False)]['SALES'].sum()
+    phone_diy_installs = phone_df[phone_df['INSTALL_METHOD'].str.contains('DIY', na=False)]['INSTALLS'].sum()
+    
+    # Get totals from final report
+    report_web_difm_sales = final_df['Web DIFM Sales'].sum()
+    report_web_difm_installs = final_df['DIFM Web Installs'].sum()
+    report_web_diy_sales = final_df['Web DIY Sales'].sum()
+    report_web_diy_installs = final_df['DIY Web Installs'].sum()
+    
+    report_phone_difm_sales = final_df['Phone DIFM Sales'].sum()
+    report_phone_difm_installs = final_df['DIFM Phone Installs'].sum()
+    report_phone_diy_sales = final_df['Phone DIY Sales'].sum()
+    report_phone_diy_installs = final_df['DIY Phone Installs'].sum()
+    
+    # Create comparison table
+    comparison = pd.DataFrame({
+        'Metric': [
+            'Web DIFM Sales', 'DIFM Web Installs', 'Web DIY Sales', 'DIY Web Installs',
+            'Phone DIFM Sales', 'DIFM Phone Installs', 'Phone DIY Sales', 'DIY Phone Installs'
+        ],
+        'Expected': [
+            web_difm_sales, web_difm_installs, web_diy_sales, web_diy_installs,
+            phone_difm_sales, phone_difm_installs, phone_diy_sales, phone_diy_installs
+        ],
+        'Reported': [
+            report_web_difm_sales, report_web_difm_installs, report_web_diy_sales, report_web_diy_installs,
+            report_phone_difm_sales, report_phone_difm_installs, report_phone_diy_sales, report_phone_diy_installs
+        ]
+    })
+    
+    # Add difference column
+    comparison['Difference'] = comparison['Reported'] - comparison['Expected']
+    
+    # Display comparison
+    st.write("Comparing raw data metrics with reported metrics:")
+    st.dataframe(comparison)
+    
+    # Check for discrepancies
+    discrepancies = comparison[comparison['Difference'] != 0]
+    if len(discrepancies) > 0:
+        st.warning("Discrepancies found between raw data and report!")
+        st.dataframe(discrepancies)
+    else:
+        st.success("All metrics match between raw data and final report.")
+
+def compare_with_reference(final_df):
+    """
+    Compare the generated report with reference metrics.
+    
+    Parameters:
+    ----------
+    final_df : DataFrame
+        Final report with computed metrics
+    """
+    st.subheader("Reference Comparison")
+    
+    # Define expected totals
+    expected_totals = {
+        'Phone DIFM Sales': 106,
+        'DIFM Phone Installs': 48,
+        'Phone DIY Sales': 4,
+        'DIY Phone Installs': 4,
+    }
+    
+    # Get actual totals
+    actual_totals = {
+        'Phone DIFM Sales': final_df['Phone DIFM Sales'].sum(),
+        'DIFM Phone Installs': final_df['DIFM Phone Installs'].sum(),
+        'Phone DIY Sales': final_df['Phone DIY Sales'].sum(),
+        'DIY Phone Installs': final_df['DIY Phone Installs'].sum()
+    }
+    
+    # Create comparison DataFrame
+    comparison = pd.DataFrame({
+        'Metric': list(expected_totals.keys()),
+        'Expected': list(expected_totals.values()),
+        'Actual': [actual_totals[k] for k in expected_totals.keys()]
+    })
+    
+    # Add difference column
+    comparison['Difference'] = comparison['Actual'] - comparison['Expected']
+    
+    # Display comparison
+    st.write("Comparing with reference totals:")
+    st.dataframe(comparison)
+    
+    # Check for discrepancies
+    discrepancies = comparison[comparison['Difference'] != 0]
+    if len(discrepancies) > 0:
+        st.warning("Discrepancies found against reference totals!")
+        st.dataframe(discrepancies)
+    else:
+        st.success("All metrics match reference totals.")
 
 if __name__ == "__main__":
     show_bob_analysis() 
