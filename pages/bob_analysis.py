@@ -785,22 +785,169 @@ def analyze_phone_record_discrepancies(athena_df, expected_count, metric_type):
     return results
 
 def generate_pivots(athena_df):
-    # Split web and phone data
+    # First, analyze phone records before PID matchback to get accurate count
+    st.write("\n### Pre-Matchback Analysis to Identify Missing Records")
+    tfn_df = None
+    if 'tfn_df' in st.session_state:
+        tfn_df = st.session_state.tfn_df
+    
+    # Perform detailed pre-matchback analysis
+    pre_match_stats, raw_phone_records = analyze_pre_matchback_phone_metrics(athena_df, tfn_df)
+    
+    # Count actual raw phone records before filtering
+    st.write(f"\n### Detailed Phone Record Investigation")
+    total_raw_phone = len(raw_phone_records)
+    st.write(f"Total raw non-WEB records detected: {total_raw_phone}")
+    
+    # Check for records being excluded by the standard filter
+    standard_filter = athena_df[~athena_df['Lead_DNIS'].str.contains("WEB", na=False)]
+    standard_count = len(standard_filter)
+    st.write(f"Records with standard filter ~contains('WEB'): {standard_count}")
+    
+    # Most thorough check - look at the record counts a different way
+    st.write("\n### Comprehensive Phone Record Cross-Check")
+    # Count the total records
+    total_records = len(athena_df)
+    st.write(f"Total records in athena_df: {total_records}")
+    
+    # Count all records with any variation of "WEB" in them
+    web_records = athena_df[athena_df['Lead_DNIS'].str.contains('web|WEB|Web', case=False, na=False)]
+    web_count = len(web_records)
+    st.write(f"Records with 'WEB' (any case) in Lead_DNIS: {web_count}")
+    
+    # This should equal the total non-WEB records
+    expected_phone_count = total_records - web_count
+    st.write(f"Expected phone count (total - web): {expected_phone_count}")
+    
+    # Count null Lead_DNIS separately 
+    null_dnis_count = athena_df['Lead_DNIS'].isna().sum()
+    st.write(f"Records with null Lead_DNIS: {null_dnis_count}")
+    
+    # This gives us our final expected phone count
+    final_expected_phone = expected_phone_count - null_dnis_count
+    st.write(f"Final expected phone count: {final_expected_phone}")
+    
+    if final_expected_phone != standard_count:
+        st.write(f"⚠️ STILL MISSING RECORDS: Expected {final_expected_phone}, got {standard_count}")
+        
+        # Check for potential issues with Lead_DNIS containing special characters
+        # that might interfere with the contains() method
+        st.write("\n### Examining Lead_DNIS values for special characters")
+        
+        # Get unusual Lead_DNIS values (non-alphanumeric)
+        unusual_dnis = athena_df[athena_df['Lead_DNIS'].str.contains(r'[^\w\s]', regex=True, na=False)]
+        st.write(f"Records with special characters in Lead_DNIS: {len(unusual_dnis)}")
+        if len(unusual_dnis) > 0:
+            st.write("Sample of unusual Lead_DNIS values:")
+            st.write(unusual_dnis[['Lead_DNIS', 'INSTALL_METHOD', 'Sale_Date', 'Install_Date']].head(10))
+    
+    # Direct row-by-row verification
+    st.write("\n### Direct Row-by-Row Verification")
+    all_records = []
+    web_detected = 0
+    phone_detected = 0
+    null_detected = 0
+    anomaly_detected = 0
+    
+    # Verify each record individually to identify any anomalies
+    for idx, row in athena_df.iterrows():
+        dnis = row['Lead_DNIS']
+        record_type = "unknown"
+        
+        if pd.isna(dnis):
+            record_type = "null"
+            null_detected += 1
+        elif isinstance(dnis, str):
+            if 'WEB' in dnis.upper():
+                record_type = "web"
+                web_detected += 1
+            else:
+                record_type = "phone"
+                phone_detected += 1
+        else:
+            record_type = "anomaly"
+            anomaly_detected += 1
+            
+        # Add only anomalies to our detailed list
+        if record_type in ["unknown", "anomaly"]:
+            all_records.append({
+                "index": idx,
+                "Lead_DNIS": dnis,
+                "type": record_type,
+                "method": row['INSTALL_METHOD']
+            })
+    
+    st.write(f"Web records detected: {web_detected}")
+    st.write(f"Phone records detected: {phone_detected}")
+    st.write(f"Null Lead_DNIS records: {null_detected}")
+    st.write(f"Anomalous records: {anomaly_detected}")
+    st.write(f"Total accounted for: {web_detected + phone_detected + null_detected + anomaly_detected}")
+    
+    if len(all_records) > 0:
+        st.write("Anomalous records found:")
+        st.write(pd.DataFrame(all_records))
+    
+    if total_raw_phone != standard_count:
+        st.write(f"⚠️ DISCREPANCY DETECTED: {total_raw_phone - standard_count} records difference")
+        
+        # Identify what records are in one set but not the other
+        if total_raw_phone > standard_count:
+            # More records in raw_phone_records - find which ones
+            in_comprehensive = set(raw_phone_records.index)
+            in_standard = set(standard_filter.index)
+            missing_from_standard = in_comprehensive - in_standard
+            
+            st.write(f"Records in comprehensive search but missing from standard filter: {len(missing_from_standard)}")
+            if missing_from_standard:
+                missing_records = athena_df.loc[list(missing_from_standard)]
+                st.write("Missing records:")
+                st.write(missing_records[['Lead_DNIS', 'INSTALL_METHOD', 'Sale_Date', 'Install_Date']])
+        else:
+            # More records in standard_filter - find which ones
+            in_comprehensive = set(raw_phone_records.index)
+            in_standard = set(standard_filter.index)
+            missing_from_comprehensive = in_standard - in_comprehensive
+            
+            st.write(f"Records in standard filter but missing from comprehensive search: {len(missing_from_comprehensive)}")
+            if missing_from_comprehensive:
+                missing_records = athena_df.loc[list(missing_from_comprehensive)]
+                st.write("Missing records:")
+                st.write(missing_records[['Lead_DNIS', 'INSTALL_METHOD', 'Sale_Date', 'Install_Date']])
+    
+    # Check for null values in Lead_DNIS
+    null_dnis = athena_df[athena_df['Lead_DNIS'].isna()]
+    if len(null_dnis) > 0:
+        st.write(f"\n⚠️ Found {len(null_dnis)} records with null Lead_DNIS")
+        st.write("These records are likely being miscounted in phone totals")
+        st.write(null_dnis[['Lead_DNIS', 'INSTALL_METHOD', 'Sale_Date', 'Install_Date']])
+    
+    # Now verify if special values are causing issues
+    special_chars = athena_df[
+        (~athena_df['Lead_DNIS'].str.contains("WEB", na=False, regex=True)) & 
+        (athena_df['Lead_DNIS'].str.contains(r'[^\w\s]', na=False, regex=True))
+    ]
+    if len(special_chars) > 0:
+        st.write(f"\n⚠️ Found {len(special_chars)} phone records with special characters in Lead_DNIS")
+        st.write("These might cause filtering issues:")
+        st.write(special_chars[['Lead_DNIS', 'INSTALL_METHOD', 'Sale_Date', 'Install_Date']])
+    
+    # Normal processing - split web and phone data
     web_df = athena_df[athena_df['Lead_DNIS'].str.contains("WEB", na=False)]
-    phone_df = athena_df[~athena_df['Lead_DNIS'].str.contains("WEB", na=False) & athena_df['PID'].notna()]
+    
+    # Use a more reliable method to identify phone records
+    # Use the raw_phone_records from the pre-matchback analysis
+    phone_df = raw_phone_records[raw_phone_records['PID'].notna()]
     
     # Debug info
     st.write("\n### Data Summary")
     st.write(f"Web records: {len(web_df)}")
     st.write(f"Phone records: {len(phone_df)}")
+    st.write(f"Phone records with PID: {len(phone_df[phone_df['PID'].notna()])}")
     
     # Access the TFN data from session state if available
     tfn_df = None
     if 'tfn_df' in st.session_state:
         tfn_df = st.session_state.tfn_df
-    
-    # First, analyze phone records before PID matchback
-    pre_match_stats = analyze_pre_matchback_phone_metrics(athena_df, tfn_df)
     
     # Then, analyze phone records after matchback by PID
     if len(phone_df) > 0:
@@ -1764,15 +1911,98 @@ def analyze_pre_matchback_phone_metrics(athena_df, tfn_df=None):
     Returns:
         dict: Pre-matchback phone metrics
     """
-    # First get all non-WEB records directly from Athena
-    raw_phone_records = athena_df[~athena_df['Lead_DNIS'].str.contains("WEB", na=False)].copy()
+    # First get all non-WEB records directly from Athena - but check for any case variations
+    raw_phone_records = athena_df[~athena_df['Lead_DNIS'].str.contains("WEB", case=True, na=False)].copy()
+    
+    # Check if there are any records with null Lead_DNIS (these would be missed by str.contains)
+    null_dnis_records = athena_df[athena_df['Lead_DNIS'].isna()].copy()
+    if not null_dnis_records.empty:
+        st.write(f"Found {len(null_dnis_records)} records with null Lead_DNIS values")
+        st.write("Sample of records with null Lead_DNIS:")
+        st.write(null_dnis_records.head())
+    
+    # Check for non-WEB records with different case variations
+    possible_phone_records = len(athena_df[~athena_df['Lead_DNIS'].str.contains("WEB", case=False, na=False)])
+    if possible_phone_records != len(raw_phone_records):
+        st.write(f"⚠️ Found discrepancy in phone record count when using case-insensitive search")
+        st.write(f"Case-sensitive non-WEB count: {len(raw_phone_records)}")
+        st.write(f"Case-insensitive non-WEB count: {possible_phone_records}")
+        
+        # Find the records that differ between the two methods
+        case_sensitive_mask = ~athena_df['Lead_DNIS'].str.contains("WEB", case=True, na=False)
+        case_insensitive_mask = ~athena_df['Lead_DNIS'].str.contains("WEB", case=False, na=False)
+        different_records = athena_df[case_insensitive_mask & ~case_sensitive_mask]
+        
+        st.write(f"Found {len(different_records)} records with Lead_DNIS containing 'web', 'Web', etc. but not exactly 'WEB'")
+        if not different_records.empty:
+            st.write("Sample of these records:")
+            st.write(different_records[['Lead_DNIS', 'INSTALL_METHOD', 'Sale_Date', 'Install_Date']])
+    
+    # Check for any records that contain "web" in different formats
+    st.write("\n### Checking for records with variations of 'WEB' in Lead_DNIS")
+    for variation in ["web", "Web", "WEb", "WeB"]:
+        if variation == "WEB": continue  # Skip the exact match we already checked
+        count = len(athena_df[athena_df['Lead_DNIS'].str.contains(variation, na=False)])
+        if count > 0:
+            st.write(f"Found {count} records containing '{variation}'")
+            sample = athena_df[athena_df['Lead_DNIS'].str.contains(variation, na=False)].head()
+            st.write(f"Sample Lead_DNIS values: {sample['Lead_DNIS'].tolist()}")
+    
+    # Now use more comprehensive search for non-phone records
+    comprehensive_phone_records = athena_df[~athena_df['Lead_DNIS'].str.contains("WEB|web|Web", case=False, na=False)].copy()
     
     st.write(f"\n### Pre-Matchback Phone Analysis")
-    st.write(f"Total non-WEB records before PID matchback: {len(raw_phone_records)}")
+    st.write(f"Total non-WEB records with basic filter: {len(raw_phone_records)}")
+    st.write(f"Total non-WEB records with comprehensive filter: {len(comprehensive_phone_records)}")
+    
+    # Use the comprehensive filter for further analysis
+    raw_phone_records = comprehensive_phone_records
+    
+    # Check for potentially non-phone records that might be miscounted
+    suspect_records = raw_phone_records[raw_phone_records['Lead_DNIS'].str.contains(r'\D', na=False)]
+    st.write(f"\nFound {len(suspect_records)} non-WEB records with non-numeric characters in Lead_DNIS")
+    if not suspect_records.empty:
+        st.write("Sample of these records:")
+        st.write(suspect_records[['Lead_DNIS', 'INSTALL_METHOD', 'Sale_Date', 'Install_Date']])
     
     # Check how many have Lead_DNIS values (should be all of them)
     with_dnis = raw_phone_records['Lead_DNIS'].notna().sum()
     st.write(f"Records with Lead_DNIS: {with_dnis}")
+    
+    # Count all Lead_DNIS values directly
+    st.write("\n### Direct Lead_DNIS Analysis")
+    st.write("Analyzing all unique Lead_DNIS values:")
+    
+    all_dnis_values = athena_df['Lead_DNIS'].value_counts().to_dict()
+    st.write(f"Total unique Lead_DNIS values in dataset: {len(all_dnis_values)}")
+    
+    web_values = {dnis: count for dnis, count in all_dnis_values.items() 
+                 if isinstance(dnis, str) and 'WEB' in dnis.upper()}
+    non_web_values = {dnis: count for dnis, count in all_dnis_values.items() 
+                     if not (isinstance(dnis, str) and 'WEB' in dnis.upper())}
+    
+    st.write(f"Lead_DNIS values containing 'WEB' (any case): {len(web_values)}")
+    st.write(f"Lead_DNIS values not containing 'WEB': {len(non_web_values)}")
+    
+    total_web_records = sum(web_values.values())
+    total_non_web_records = sum(non_web_values.values())
+    
+    st.write(f"Total records with WEB in Lead_DNIS: {total_web_records}")
+    st.write(f"Total records without WEB in Lead_DNIS: {total_non_web_records}")
+    st.write(f"Total records: {total_web_records + total_non_web_records}")
+    st.write(f"Dataset total: {len(athena_df)}")
+    
+    # Verify if all records are accounted for
+    if len(athena_df) != (total_web_records + total_non_web_records):
+        st.write("⚠️ Some records are not being counted properly!")
+        st.write(f"Missing records: {len(athena_df) - (total_web_records + total_non_web_records)}")
+        
+        # Look for null values
+        null_dnis = athena_df[athena_df['Lead_DNIS'].isna()]
+        st.write(f"Records with null Lead_DNIS: {len(null_dnis)}")
+        if len(null_dnis) > 0:
+            st.write("Sample of records with null Lead_DNIS:")
+            st.write(null_dnis.head())
     
     # Show unique Lead_DNIS values (first 20)
     unique_dnis = raw_phone_records['Lead_DNIS'].unique()
@@ -1809,6 +2039,20 @@ def analyze_pre_matchback_phone_metrics(athena_df, tfn_df=None):
         'Installs': list(pre_match_stats['installs_by_method'].values())
     })
     st.dataframe(sales_installs)
+    
+    # Use regex to find any Lead_DNIS with exact numeric pattern - these would be phone numbers
+    likely_phone_mask = raw_phone_records['Lead_DNIS'].str.match(r'^\d+$', na=False)
+    likely_phone_records = raw_phone_records[likely_phone_mask]
+    
+    st.write(f"\nRecords with purely numeric Lead_DNIS (likely true phone numbers): {len(likely_phone_records)}")
+    
+    # Calculate totals
+    total_phone_sales = sum(pre_match_stats['sales_by_method'].values())
+    total_phone_installs = sum(pre_match_stats['installs_by_method'].values())
+    
+    st.write(f"\n### Total Pre-Matchback Phone Metrics")
+    st.write(f"Total Phone Sales: {total_phone_sales}")
+    st.write(f"Total Phone Installs: {total_phone_installs}")
     
     # Create a bar chart for pre-matchback phone metrics
     fig = px.bar(
@@ -1852,7 +2096,7 @@ def analyze_pre_matchback_phone_metrics(athena_df, tfn_df=None):
     st.write("\nSample DNIS Matching Check (first 20):")
     st.dataframe(pd.DataFrame(checked_dnis[:20]))
     
-    return pre_match_stats
+    return pre_match_stats, raw_phone_records
 
 def analyze_post_matchback_metrics_by_pid(phone_df):
     """
