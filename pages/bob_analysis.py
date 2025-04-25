@@ -457,8 +457,22 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
             # Extract only numeric characters for matching
             numeric_dnis = ''.join(c for c in dnis if c.isdigit())
             
+            # Special debug for 8009734275 (PID 42038)
+            if '8009734275' in dnis or numeric_dnis == '8009734275' or numeric_dnis == '18009734275':
+                st.write(f"\n### SPECIAL DEBUG FOR PID 42038 ###")
+                st.write(f"Original DNIS: '{dnis}'")
+                st.write(f"Cleaned numeric DNIS: '{numeric_dnis}'")
+                st.write(f"Sale Date: {row['Sale_Date']}")
+                st.write(f"In TFN map as-is: {numeric_dnis in tfn_map}")
+                st.write(f"In TFN map with country code: {'1'+numeric_dnis in tfn_map}")
+                st.write(f"In TFN map without country code: {numeric_dnis[1:] in tfn_map if numeric_dnis.startswith('1') and len(numeric_dnis) == 11 else False}")
+            
             # Try exact match first
             matched_pid = tfn_map.get(numeric_dnis, '')
+            
+            # Debug for 8009734275
+            if '8009734275' in dnis or numeric_dnis == '8009734275' or numeric_dnis == '18009734275':
+                st.write(f"Initial match result: '{matched_pid}'")
             
             # Try alternate formats if no match found
             if not matched_pid and len(numeric_dnis) >= 10:
@@ -467,12 +481,16 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
                     matched_pid = tfn_map.get(f"1{numeric_dnis}", '')
                     if matched_pid:
                         st.write(f"Matched {numeric_dnis} by adding country code: {matched_pid}")
+                    if matched_pid and ('8009734275' in dnis or numeric_dnis == '8009734275'):
+                        st.write(f"Matched after adding country code: '{matched_pid}'")
                 
                 # Try without country code if it has one
                 elif len(numeric_dnis) == 11 and numeric_dnis.startswith('1'):
                     matched_pid = tfn_map.get(numeric_dnis[1:], '')
                     if matched_pid:
                         st.write(f"Matched {numeric_dnis} by removing country code: {matched_pid}")
+                    if matched_pid and ('8009734275' in dnis or numeric_dnis.endswith('8009734275')):
+                        st.write(f"Matched after removing country code: '{matched_pid}'")
             
             # Debug for important phone numbers to track TFN mapping issues
             important_numbers = ['8446778720', '8005717438', '8009734275', '8442069696', '8442342126']
@@ -489,6 +507,11 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
                     st.write(f"Similar TFN mappings found: {similar_keys}")
                     for key in similar_keys:
                         st.write(f"  {key} -> {tfn_map[key]}")
+            
+            # Final result for 8009734275
+            if '8009734275' in dnis or numeric_dnis == '8009734275' or numeric_dnis == '18009734275':
+                st.write(f"Final matched PID: '{matched_pid}'")
+                st.write(f"###########################")
             
             return matched_pid
         return None
@@ -2031,6 +2054,35 @@ def analyze_pre_matchback_phone_metrics(athena_df, tfn_df=None):
     # First get all non-WEB records directly from Athena - but check for any case variations
     raw_phone_records = athena_df[~athena_df['Lead_DNIS'].str.contains("WEB", case=True, na=False)].copy()
     
+    # Store raw phone records in session state for debugging
+    st.session_state.raw_phone_records = raw_phone_records
+    
+    # Add export button for raw phone records
+    st.subheader("Export Raw Phone Records")
+    if st.button("Export Raw Phone Records to CSV"):
+        try:
+            # Create a BytesIO object to hold the CSV file in memory
+            output = io.BytesIO()
+            
+            # Write the DataFrame to CSV
+            raw_phone_records.to_csv(output, index=False)
+            
+            # Seek to the beginning of the BytesIO object
+            output.seek(0)
+            
+            # Create download button
+            st.download_button(
+                label="Download Raw Phone Records",
+                data=output,
+                file_name="raw_phone_records.csv",
+                mime="text/csv"
+            )
+        except Exception as e:
+            st.error(f"Error exporting raw phone records: {str(e)}")
+            st.error("Full error details:")
+            import traceback
+            st.error(traceback.format_exc())
+    
     # Check if there are any records with null Lead_DNIS (these would be missed by str.contains)
     null_dnis_records = athena_df[athena_df['Lead_DNIS'].isna()].copy()
     if not null_dnis_records.empty:
@@ -2251,6 +2303,30 @@ def analyze_post_matchback_metrics_by_pid(phone_df):
     st.write("\n#### Records by PID")
     st.dataframe(pid_counts)
     
+    # Export button for the phone metrics by PID
+    if st.button("Export Phone Metrics by PID"):
+        try:
+            # Create a BytesIO object to hold the CSV file in memory
+            output = io.BytesIO()
+            
+            # Write the DataFrame to CSV
+            pid_counts.to_csv(output, index=False)
+            
+            # Seek to the beginning of the BytesIO object
+            output.seek(0)
+            
+            # Create download button
+            st.download_button(
+                label="Download Phone Metrics by PID",
+                data=output,
+                file_name="phone_metrics_by_pid.csv",
+                mime="text/csv"
+            )
+        except Exception as e:
+            st.error(f"Error exporting phone metrics by PID: {str(e)}")
+            import traceback
+            st.error(traceback.format_exc())
+    
     # Create a bar chart of record counts by PID
     fig_counts = px.bar(
         pid_counts,
@@ -2292,6 +2368,30 @@ def analyze_post_matchback_metrics_by_pid(phone_df):
     st.write("\n#### Sales and Installs by PID")
     st.dataframe(pid_metrics_df.sort_values('Total', ascending=False))
     
+    # Export button for detailed sales and installs by PID
+    if st.button("Export Detailed Sales and Installs by PID"):
+        try:
+            # Create a BytesIO object to hold the CSV file in memory
+            output = io.BytesIO()
+            
+            # Write the DataFrame to CSV
+            pid_metrics_df.to_csv(output, index=False)
+            
+            # Seek to the beginning of the BytesIO object
+            output.seek(0)
+            
+            # Create download button
+            st.download_button(
+                label="Download Detailed Sales and Installs by PID",
+                data=output,
+                file_name="detailed_metrics_by_pid.csv",
+                mime="text/csv"
+            )
+        except Exception as e:
+            st.error(f"Error exporting detailed metrics by PID: {str(e)}")
+            import traceback
+            st.error(traceback.format_exc())
+    
     # Create a stacked bar chart of metrics by PID
     metrics_melted = pid_metrics_df.melt(
         id_vars=['PID'],
@@ -2324,6 +2424,28 @@ def analyze_post_matchback_metrics_by_pid(phone_df):
     
     st.write("\n#### Total Counts After PID Matching")
     st.write(totals)
+    
+    # Add specific debug for PID 42038
+    st.write("\n### Special Check for PID 42038")
+    pid_42038_df = phone_df[phone_df['PID'] == '42038']
+    st.write(f"Found {len(pid_42038_df)} records for PID 42038")
+    
+    if not pid_42038_df.empty:
+        st.write("Sale dates for PID 42038:")
+        st.write(pid_42038_df['Sale_Date'].tolist())
+        
+        # Count DIFM sales for PID 42038
+        difm_sales_42038 = pid_42038_df[
+            (pid_42038_df['INSTALL_METHOD'].str.contains('DIFM', na=False)) & 
+            (pid_42038_df['Sale_Date'].notna())
+        ]
+        st.write(f"DIFM Sales for PID 42038: {len(difm_sales_42038)}")
+        
+        if len(difm_sales_42038) > 0:
+            st.write("DIFM Sales records for PID 42038:")
+            st.write(difm_sales_42038[['Lead_DNIS', 'INSTALL_METHOD', 'Sale_Date', 'Lead_Creation_Date']])
+    else:
+        st.write("No records found for PID 42038!")
     
     return pid_metrics_df
 
@@ -2453,6 +2575,32 @@ def show_bob_analysis():
                 return
             
             st.write(f"Total leads created in date range: {total_leads:,}")
+            
+            # Add an export button for the cleaned Athena data
+            st.subheader("Export Cleaned Athena Data")
+            if st.button("Export Cleaned Athena Data to CSV"):
+                try:
+                    # Create a BytesIO object to hold the CSV file in memory
+                    output = io.BytesIO()
+                    
+                    # Write the DataFrame to CSV
+                    athena_df.to_csv(output, index=False)
+                    
+                    # Seek to the beginning of the BytesIO object
+                    output.seek(0)
+                    
+                    # Create download button
+                    st.download_button(
+                        label="Download Cleaned Athena Data",
+                        data=output,
+                        file_name=f"cleaned_athena_data_{start_date.strftime('%Y%m%d')}-{end_date.strftime('%Y%m%d')}.csv",
+                        mime="text/csv"
+                    )
+                except Exception as e:
+                    st.error(f"Error exporting Athena data: {str(e)}")
+                    st.error("Full error details:")
+                    import traceback
+                    st.error(traceback.format_exc())
             
             # Step 2: Generate Web + Phone Pivots
             st.write("DEBUG: Generating pivots...")
