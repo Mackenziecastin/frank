@@ -1292,11 +1292,26 @@ def show_bob_analysis():
                     # Create a BytesIO object to hold the CSV file in memory
                     output = io.BytesIO()
                     
-                    # Write the DataFrame to CSV
-                    athena_df.to_csv(output, index=False)
+                    # Make sure we include all relevant cleaned columns
+                    export_columns = athena_df.columns.tolist()
+                    
+                    # Ensure these important columns are included
+                    critical_columns = ['Lead_DNIS', 'Clean_Lead_DNIS', 'Affiliate_Code', 'Clean_Affiliate_Code', 
+                                       'PID', 'PID_from_Affiliate', 'INSTALL_METHOD', 'Sale_Date', 'Install_Date']
+                    
+                    for col in critical_columns:
+                        if col not in export_columns and col in athena_df.columns:
+                            export_columns.append(col)
+                    
+                    # Write the DataFrame to CSV with all columns
+                    athena_df.to_csv(output, index=False, columns=export_columns)
                     
                     # Seek to the beginning of the BytesIO object
                     output.seek(0)
+                    
+                    # Add some debug information
+                    st.write(f"Exporting {len(athena_df)} rows with {len(export_columns)} columns")
+                    st.write(f"Export columns include: {', '.join(export_columns[:10])}... and more")
                     
                     # Create download button
                     st.download_button(
@@ -1854,6 +1869,112 @@ def clean_tfn_mapping(tfn_df):
     st.write(cleaned_df.head(5))
     
     return cleaned_df
+
+def generate_pivots(df):
+    """
+    Generate web and phone pivot tables from cleaned Athena data.
+    
+    Parameters:
+    ----------
+    df : DataFrame
+        Cleaned Athena data with PID matching
+        
+    Returns:
+    -------
+    tuple
+        (web_pivot, phone_pivot) DataFrames
+    """
+    st.subheader("Generating Pivot Tables")
+    
+    # Make a copy to avoid modifying the original
+    df_copy = df.copy()
+    
+    # Ensure we have all required columns
+    required_cols = ['PID', 'Clean_Affiliate_Code', 'PID_from_Affiliate', 'Lead_DNIS', 'INSTALL_METHOD', 'Sale_Date', 'Install_Date']
+    missing_cols = [col for col in required_cols if col not in df_copy.columns]
+    if missing_cols:
+        st.error(f"Missing required columns for pivot generation: {missing_cols}")
+        for col in missing_cols:
+            df_copy[col] = None
+    
+    # 1. Split into WEB and Phone records
+    web_mask = df_copy['Lead_DNIS'].str.contains('WEB', case=False, na=False)
+    web_df = df_copy[web_mask].copy()
+    phone_df = df_copy[~web_mask].copy()
+    
+    st.write(f"Split records: {len(web_df)} WEB records, {len(phone_df)} Phone records")
+    
+    # For web records, use PID from affiliate code
+    web_df['WEB_PID'] = web_df['PID_from_Affiliate']
+    
+    # 2. Create Web Pivot
+    st.write("Generating Web Pivot...")
+    
+    # Group and aggregate web data by Clean_Affiliate_Code
+    web_pivot = web_df.groupby('Clean_Affiliate_Code').agg(
+        Concatenated=('Clean_Affiliate_Code', 'first'),
+        PID=('PID_from_Affiliate', lambda x: x.iloc[0] if len(x) > 0 and not pd.isna(x.iloc[0]) else None),
+        Leads=('Clean_Affiliate_Code', 'count'),
+        Web_DIFM_Sales=('Sale_Date', lambda x: x[web_df['INSTALL_METHOD'].str.contains('DIFM', na=False)].notna().sum()),
+        Web_DIY_Sales=('Sale_Date', lambda x: x[web_df['INSTALL_METHOD'].str.contains('DIY', na=False)].notna().sum()),
+        DIFM_Web_Installs=('Install_Date', lambda x: x[web_df['INSTALL_METHOD'].str.contains('DIFM', na=False)].notna().sum()),
+        DIY_Web_Installs=('Install_Date', lambda x: x[web_df['INSTALL_METHOD'].str.contains('DIY', na=False)].notna().sum())
+    ).reset_index()
+    
+    # Rename columns to match expected format
+    web_pivot = web_pivot.rename(columns={
+        'Web_DIFM_Sales': 'Web DIFM Sales',
+        'Web_DIY_Sales': 'Web DIY Sales',
+        'DIFM_Web_Installs': 'DIFM Web Installs',
+        'DIY_Web_Installs': 'DIY Web Installs'
+    })
+    
+    st.write(f"Web pivot created with {len(web_pivot)} rows")
+    st.write("Sample of web pivot:")
+    st.write(web_pivot.head(3))
+    
+    # 3. Create Phone Pivot - grouped by PID
+    st.write("Generating Phone Pivot...")
+    
+    if len(phone_df) > 0:
+        phone_pivot = phone_df.groupby('PID').agg(
+            Phone_DIFM_Sales=('Sale_Date', lambda x: x[phone_df['INSTALL_METHOD'].str.contains('DIFM', na=False)].notna().sum()),
+            Phone_DIY_Sales=('Sale_Date', lambda x: x[phone_df['INSTALL_METHOD'].str.contains('DIY', na=False)].notna().sum()),
+            DIFM_Phone_Installs=('Install_Date', lambda x: x[phone_df['INSTALL_METHOD'].str.contains('DIFM', na=False)].notna().sum())
+        ).reset_index()
+        
+        # Rename columns to match expected format
+        phone_pivot = phone_pivot.rename(columns={
+            'Phone_DIFM_Sales': 'Phone DIFM Sales',
+            'Phone_DIY_Sales': 'Phone DIY Sales',
+            'DIFM_Phone_Installs': 'DIFM Phone Installs'
+        })
+        
+        # Set index for easier lookup
+        phone_pivot = phone_pivot.set_index('PID')
+        
+        st.write(f"Phone pivot created with {len(phone_pivot)} rows")
+        if not phone_pivot.empty:
+            st.write("Sample of phone pivot:")
+            st.write(phone_pivot.head(3))
+    else:
+        st.warning("No phone records found. Creating empty phone pivot.")
+        phone_pivot = pd.DataFrame(columns=['PID', 'Phone DIFM Sales', 'Phone DIY Sales', 'DIFM Phone Installs'])
+        phone_pivot = phone_pivot.set_index('PID')
+    
+    # 4. Verify the data
+    total_web_sales = web_pivot['Web DIFM Sales'].sum() + web_pivot['Web DIY Sales'].sum()
+    total_web_installs = web_pivot['DIFM Web Installs'].sum() + web_pivot['DIY Web Installs'].sum()
+    total_phone_sales = phone_pivot['Phone DIFM Sales'].sum() + phone_pivot['Phone DIY Sales'].sum()
+    total_phone_installs = phone_pivot['DIFM Phone Installs'].sum()
+    
+    st.write("\n### Pivot Totals")
+    st.write(f"Total Web Sales: {total_web_sales}")
+    st.write(f"Total Web Installs: {total_web_installs}")
+    st.write(f"Total Phone Sales: {total_phone_sales}")
+    st.write(f"Total Phone Installs: {total_phone_installs}")
+    
+    return web_pivot, phone_pivot
 
 if __name__ == "__main__":
     show_bob_analysis()
