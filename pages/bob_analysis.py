@@ -104,10 +104,14 @@ def load_combined_resi_tfn_data(sheet_url):
     pd.DataFrame
         Combined DataFrame with TFN to PID mapping
     """
-    # Extract base URL and GIDs from sheet_url
-    base_url = sheet_url.split('/edit')[0]
-    resi_csv_url = f"{base_url}/export?format=csv&gid=0"
-    display_csv_url = f"{base_url}/export?format=csv&gid=1708211536"
+    # Updated URLs to use the correct GIDs
+    base_url = "https://docs.google.com/spreadsheets/d/10BHN_-Wz_ZPmi7rezNtqiDPTguHOoNzmkXzovFOTbaU"
+    
+    # RESI TFN sheet (GID 1629976834)
+    resi_csv_url = f"{base_url}/export?format=csv&gid=1629976834"
+    
+    # Display TFN sheet (GID 383243987)
+    display_csv_url = f"{base_url}/export?format=csv&gid=383243987"
     
     st.write(f"Loading RESI TFN from: {resi_csv_url}")
     
