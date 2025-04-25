@@ -478,6 +478,53 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
                 except Exception as e:
                     st.warning(f"Error converting date column '{date_column}': {str(e)}. Using all data.")
     
+    # FILTER OUT HEALTH BUSINESS LINES
+    # 1. Filter out any "Health" rows in the Ln_of_Busn column
+    if 'Ln_of_Busn' in athena_df.columns:
+        health_count = athena_df[athena_df['Ln_of_Busn'].str.contains('Health', na=False, case=False)].shape[0]
+        st.write(f"Filtering out {health_count} Health business line records")
+        athena_df = athena_df[~athena_df['Ln_of_Busn'].str.contains('Health', na=False, case=False)]
+    else:
+        st.warning("Ln_of_Busn column not found - cannot filter Health business lines")
+        # Try to find similar columns
+        business_cols = [col for col in athena_df.columns if 'busn' in col.lower() or 'business' in col.lower() or 'line' in col.lower()]
+        if business_cols:
+            st.write(f"Similar columns that might contain business line info: {business_cols}")
+            
+    # 2. Filter out any US: Health rows in the DNIS_BUSN_SEG_CD column
+    if 'DNIS_BUSN_SEG_CD' in athena_df.columns:
+        health_segment_count = athena_df[athena_df['DNIS_BUSN_SEG_CD'].str.contains('Health', na=False, case=False)].shape[0]
+        st.write(f"Filtering out {health_segment_count} Health DNIS business segment records")
+        athena_df = athena_df[~athena_df['DNIS_BUSN_SEG_CD'].str.contains('Health', na=False, case=False)]
+    else:
+        st.warning("DNIS_BUSN_SEG_CD column not found - cannot filter Health DNIS segments")
+        # Try to find similar columns
+        segment_cols = [col for col in athena_df.columns if 'dnis' in col.lower() or 'segment' in col.lower() or 'seg' in col.lower()]
+        if segment_cols:
+            st.write(f"Similar columns that might contain DNIS segment info: {segment_cols}")
+    
+    # Additional check for any columns containing "Health"
+    for col in athena_df.columns:
+        if 'health' in col.lower():
+            st.write(f"Found potential health-related column: {col}")
+            if athena_df[col].dtype == object:  # Only check string columns
+                health_values = athena_df[athena_df[col].str.contains('Health', na=False, case=False)]
+                if len(health_values) > 0:
+                    st.write(f"Column {col} contains {len(health_values)} rows with 'Health' value")
+                    # Show sample
+                    st.write(f"Sample of health values in {col}:")
+                    st.write(health_values[col].value_counts().head(5))
+    
+    # Look for HLTHDRA001 in the DNIS values
+    if 'Lead_DNIS' in athena_df.columns:
+        hlth_dnis = athena_df[athena_df['Lead_DNIS'].str.contains('HLTH', na=False, case=False)]
+        if len(hlth_dnis) > 0:
+            st.error(f"Found {len(hlth_dnis)} records with HLTH in the DNIS. These will be filtered out.")
+            st.write("Sample of HLTH DNIS values:")
+            st.write(hlth_dnis['Lead_DNIS'].head(5))
+            # Filter out these records
+            athena_df = athena_df[~athena_df['Lead_DNIS'].str.contains('HLTH', na=False, case=False)]
+    
     # Verify Lead_DNIS exists
     if 'Lead_DNIS' not in athena_df.columns:
         st.error("Critical column 'Lead_DNIS' not found in the data! Available columns:")
@@ -573,6 +620,16 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     
     # Clean Lead_DNIS in athena_df for consistent matching
     athena_df['Clean_Lead_DNIS'] = athena_df['Lead_DNIS'].apply(clean_phone_number)
+    
+    # Do another check for HLTHDRA001 in the cleaned DNIS values
+    hlth_dnis = athena_df[athena_df['Clean_Lead_DNIS'].str.contains('HLTH', na=False, case=False)]
+    if len(hlth_dnis) > 0:
+        st.error(f"Found {len(hlth_dnis)} records with HLTH in the cleaned DNIS. These will be filtered out.")
+        # Filter out these records
+        athena_df = athena_df[~athena_df['Clean_Lead_DNIS'].str.contains('HLTH', na=False, case=False)]
+        non_web_mask = ~athena_df['Lead_DNIS'].str.contains('WEB', na=False, case=False)
+        non_web_count = non_web_mask.sum()
+        st.write(f"Non-WEB records after filtering HLTH: {non_web_count}")
     
     # Debugging: Check for critical phone numbers in the data
     critical_numbers = {
