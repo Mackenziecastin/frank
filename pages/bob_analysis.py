@@ -210,7 +210,7 @@ def load_combined_resi_tfn_data(sheet_url):
             # Try multiple formats of the number
             matches = resi_df[
                 resi_df['Phone #'].astype(str).str.contains(number, na=False) | 
-                resi_df['Phone #'].astype(str).str.contains(f"+1{number}", na=False) |
+                resi_df['Phone #'].astype(str).str.contains(f"\\+1{number}", na=False) |
                 resi_df['Phone #'].astype(str).str.contains(f"1{number}", na=False) |
                 resi_df['Phone #'].astype(str).str.contains(f"{number[:3]}-{number[3:6]}-{number[6:]}", na=False)
             ]
