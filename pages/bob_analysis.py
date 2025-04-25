@@ -111,104 +111,206 @@ def load_combined_resi_tfn_data(sheet_url):
     
     st.write(f"Loading RESI TFN from: {resi_csv_url}")
     
-    # Load RESI TFN sheet
-    resi_df = pd.read_csv(resi_csv_url)
-    
-    # Clean the PID column - convert to numeric and replace NaN with empty string
-    resi_df['PID'] = pd.to_numeric(resi_df['PID'], errors='coerce')
-    resi_df = resi_df.fillna('')
-    
-    # Filter out rows where PID or TFN is empty
-    resi_df = resi_df[(resi_df['PID'] != '') & (resi_df['TFN'] != '')]
-    
-    # Check the format of PID after loading
-    st.write(f"RESI TFN PIDs (first 5): {resi_df['PID'].head(5).tolist()}")
-    
-    # Define critical phone numbers to check in the RESI sheet
-    critical_numbers = {
-        '8446778720': 4790,
-        '8005717438': 42299,
-        '8009734275': 42038
-    }
-    
-    # Check if critical numbers exist in the RESI sheet
-    for phone, expected_pid in critical_numbers.items():
-        clean_phone = clean_phone_number(phone)
-        matches = resi_df[resi_df['TFN'].apply(lambda x: clean_phone_number(x) == clean_phone)]
+    try:
+        # Load RESI TFN sheet
+        resi_df = pd.read_csv(resi_csv_url)
         
-        if len(matches) == 0:
-            st.warning(f"Critical number {phone} not found in RESI sheet")
-        else:
-            pid_in_sheet = matches['PID'].iloc[0]
-            if pid_in_sheet != expected_pid:
-                st.warning(f"Critical number {phone} maps to PID {pid_in_sheet} in RESI sheet, but expected {expected_pid}")
-    
-    st.write(f"Loaded {len(resi_df)} rows from RESI TFN sheet")
-    
-    # Load Display TFN sheet
-    st.write(f"Loading Display TFN from: {display_csv_url}")
-    display_df = pd.read_csv(display_csv_url)
-    
-    # Identify the PID and TFN columns
-    pid_columns = [col for col in display_df.columns if 'pid' in col.lower()]
-    tfn_columns = [col for col in display_df.columns if 'tfn' in col.lower() or 'phone' in col.lower()]
-    
-    if pid_columns and tfn_columns:
-        pid_col = pid_columns[0]
-        tfn_col = tfn_columns[0]
+        # Display all column names for debugging
+        st.write("RESI TFN sheet columns:", resi_df.columns.tolist())
         
-        # Rename columns to match RESI format
-        display_df = display_df.rename(columns={pid_col: 'PID', tfn_col: 'TFN'})
+        # Check if PID column exists
+        if 'PID' not in resi_df.columns:
+            # Try to find column containing 'pid' case insensitive
+            pid_columns = [col for col in resi_df.columns if 'pid' in col.lower()]
+            if pid_columns:
+                st.write(f"Found potential PID column: {pid_columns[0]}")
+                resi_df = resi_df.rename(columns={pid_columns[0]: 'PID'})
+            else:
+                st.error("No PID column found in RESI TFN sheet. Available columns: " + ", ".join(resi_df.columns))
+                # Create placeholder columns to continue processing
+                resi_df['PID'] = ""
+                
+        # Check if TFN column exists
+        if 'TFN' not in resi_df.columns:
+            # Try to find column containing 'tfn' or 'phone' case insensitive
+            tfn_columns = [col for col in resi_df.columns if 'tfn' in col.lower() or 'phone' in col.lower()]
+            if tfn_columns:
+                st.write(f"Found potential TFN column: {tfn_columns[0]}")
+                resi_df = resi_df.rename(columns={tfn_columns[0]: 'TFN'})
+            else:
+                st.error("No TFN column found in RESI TFN sheet. Available columns: " + ", ".join(resi_df.columns))
+                # Create placeholder columns to continue processing
+                resi_df['TFN'] = ""
+        
+        # Display sample data for debugging
+        st.write("Sample data from RESI TFN sheet:")
+        st.write(resi_df.head())
         
         # Clean the PID column - convert to numeric and replace NaN with empty string
-        display_df['PID'] = pd.to_numeric(display_df['PID'], errors='coerce')
-        display_df = display_df.fillna('')
+        resi_df['PID'] = pd.to_numeric(resi_df['PID'], errors='coerce')
+        resi_df = resi_df.fillna('')
         
         # Filter out rows where PID or TFN is empty
-        display_df = display_df[(display_df['PID'] != '') & (display_df['TFN'] != '')]
+        resi_df = resi_df[(resi_df['PID'] != '') & (resi_df['TFN'] != '')]
         
-        st.write(f"Loaded {len(display_df)} rows from Display TFN sheet")
+        # Check the format of PID after loading
+        st.write(f"RESI TFN PIDs (first 5): {resi_df['PID'].head(5).tolist()}")
         
-        # Combine both dataframes
-        combined_df = pd.concat([resi_df[['PID', 'TFN']], display_df[['PID', 'TFN']]], ignore_index=True)
+        # Define critical phone numbers to check in the RESI sheet
+        critical_numbers = {
+            '8446778720': 4790,
+            '8005717438': 42299,
+            '8009734275': 42038
+        }
         
-        # Add clean TFN column
-        combined_df['Clean_TFN'] = combined_df['TFN'].apply(clean_phone_number)
-        
-        # Remove duplicates based on Clean_TFN
-        combined_df = combined_df.drop_duplicates(subset=['Clean_TFN'])
-        
-        # Ensure critical numbers are in the final mapping
+        # Check if critical numbers exist in the RESI sheet
         for phone, expected_pid in critical_numbers.items():
             clean_phone = clean_phone_number(phone)
-            if clean_phone not in combined_df['Clean_TFN'].values:
-                st.warning(f"Adding missing critical number {phone} to TFN mapping with PID {expected_pid}")
-                new_row = pd.DataFrame({
-                    'PID': [expected_pid],
-                    'TFN': [phone],
-                    'Clean_TFN': [clean_phone]
-                })
-                combined_df = pd.concat([combined_df, new_row], ignore_index=True)
+            matches = resi_df[resi_df['TFN'].apply(lambda x: clean_phone_number(x) == clean_phone)]
+            
+            if len(matches) == 0:
+                st.warning(f"Critical number {phone} not found in RESI sheet")
             else:
-                row_idx = combined_df[combined_df['Clean_TFN'] == clean_phone].index[0]
-                pid_in_mapping = combined_df.loc[row_idx, 'PID']
+                pid_in_sheet = matches['PID'].iloc[0]
+                if pid_in_sheet != expected_pid:
+                    st.warning(f"Critical number {phone} maps to PID {pid_in_sheet} in RESI sheet, but expected {expected_pid}")
+        
+        st.write(f"Loaded {len(resi_df)} rows from RESI TFN sheet")
+        
+        # Load Display TFN sheet
+        st.write(f"Loading Display TFN from: {display_csv_url}")
+        try:
+            display_df = pd.read_csv(display_csv_url)
+            
+            # Display all column names for debugging
+            st.write("Display TFN sheet columns:", display_df.columns.tolist())
+            
+            # Identify the PID and TFN columns
+            pid_columns = [col for col in display_df.columns if 'pid' in col.lower()]
+            tfn_columns = [col for col in display_df.columns if 'tfn' in col.lower() or 'phone' in col.lower()]
+            
+            if pid_columns and tfn_columns:
+                pid_col = pid_columns[0]
+                tfn_col = tfn_columns[0]
                 
-                if pid_in_mapping != expected_pid:
-                    st.warning(f"Correcting PID for {phone} from {pid_in_mapping} to {expected_pid}")
-                    combined_df.loc[row_idx, 'PID'] = expected_pid
+                st.write(f"Using columns '{pid_col}' as PID and '{tfn_col}' as TFN")
+                
+                # Rename columns to match RESI format
+                display_df = display_df.rename(columns={pid_col: 'PID', tfn_col: 'TFN'})
+                
+                # Clean the PID column - convert to numeric and replace NaN with empty string
+                display_df['PID'] = pd.to_numeric(display_df['PID'], errors='coerce')
+                display_df = display_df.fillna('')
+                
+                # Filter out rows where PID or TFN is empty
+                display_df = display_df[(display_df['PID'] != '') & (display_df['TFN'] != '')]
+                
+                st.write(f"Loaded {len(display_df)} rows from Display TFN sheet")
+                
+                # Combine both dataframes
+                combined_df = pd.concat([resi_df[['PID', 'TFN']], display_df[['PID', 'TFN']]], ignore_index=True)
+                
+                # Add clean TFN column
+                combined_df['Clean_TFN'] = combined_df['TFN'].apply(clean_phone_number)
+                
+                # Remove duplicates based on Clean_TFN
+                combined_df = combined_df.drop_duplicates(subset=['Clean_TFN'])
+                
+                # Ensure critical numbers are in the final mapping
+                for phone, expected_pid in critical_numbers.items():
+                    clean_phone = clean_phone_number(phone)
+                    if clean_phone not in combined_df['Clean_TFN'].values:
+                        st.warning(f"Adding missing critical number {phone} to TFN mapping with PID {expected_pid}")
+                        new_row = pd.DataFrame({
+                            'PID': [expected_pid],
+                            'TFN': [phone],
+                            'Clean_TFN': [clean_phone]
+                        })
+                        combined_df = pd.concat([combined_df, new_row], ignore_index=True)
+                    else:
+                        row_idx = combined_df[combined_df['Clean_TFN'] == clean_phone].index[0]
+                        pid_in_mapping = combined_df.loc[row_idx, 'PID']
+                        
+                        if pid_in_mapping != expected_pid:
+                            st.warning(f"Correcting PID for {phone} from {pid_in_mapping} to {expected_pid}")
+                            combined_df.loc[row_idx, 'PID'] = expected_pid
+                
+                # Create a mapping from clean TFN to PID
+                tfn_to_pid = dict(zip(combined_df['Clean_TFN'], combined_df['PID']))
+                
+                st.write(f"Final combined TFN mapping contains {len(tfn_to_pid)} entries")
+                
+                # Print a summary of the final mapping
+                print(f"TFN mapping summary: {len(tfn_to_pid)} total entries")
+                
+                return combined_df
+            else:
+                st.error(f"Could not identify PID and TFN columns in Display TFN sheet. Available columns: {display_df.columns.tolist()}")
+                # Fallback to just use RESI sheet
+                resi_df['Clean_TFN'] = resi_df['TFN'].apply(clean_phone_number)
+                
+                # Ensure critical numbers are in the mapping
+                for phone, expected_pid in critical_numbers.items():
+                    clean_phone = clean_phone_number(phone)
+                    if clean_phone not in resi_df['Clean_TFN'].values:
+                        st.warning(f"Adding critical number {phone} to TFN mapping with PID {expected_pid}")
+                        new_row = pd.DataFrame({
+                            'PID': [expected_pid],
+                            'TFN': [phone],
+                            'Clean_TFN': [clean_phone]
+                        })
+                        resi_df = pd.concat([resi_df, new_row], ignore_index=True)
+                
+                return resi_df
+        except Exception as e:
+            st.error(f"Error loading Display TFN sheet: {str(e)}")
+            st.write("Proceeding with RESI TFN sheet only")
+            
+            # Add Clean_TFN column to RESI sheet
+            resi_df['Clean_TFN'] = resi_df['TFN'].apply(clean_phone_number)
+            
+            # Ensure critical numbers are in the mapping
+            for phone, expected_pid in critical_numbers.items():
+                clean_phone = clean_phone_number(phone)
+                if clean_phone not in resi_df['Clean_TFN'].values:
+                    st.warning(f"Adding critical number {phone} to TFN mapping with PID {expected_pid}")
+                    new_row = pd.DataFrame({
+                        'PID': [expected_pid],
+                        'TFN': [phone],
+                        'Clean_TFN': [clean_phone]
+                    })
+                    resi_df = pd.concat([resi_df, new_row], ignore_index=True)
+            
+            return resi_df
+    
+    except Exception as e:
+        st.error(f"Error loading RESI TFN sheet: {str(e)}")
+        st.write("Traceback:")
+        import traceback
+        st.code(traceback.format_exc())
         
-        # Create a mapping from clean TFN to PID
-        tfn_to_pid = dict(zip(combined_df['Clean_TFN'], combined_df['PID']))
+        # Create a minimal DataFrame with required columns
+        st.write("Creating fallback TFN mapping with critical numbers only")
+        critical_numbers = {
+            '8446778720': 4790,
+            '8005717438': 42299,
+            '8009734275': 42038
+        }
         
-        st.write(f"Final combined TFN mapping contains {len(tfn_to_pid)} entries")
+        # Create a fallback DataFrame with just the critical numbers
+        fallback_data = []
+        for phone, pid in critical_numbers.items():
+            fallback_data.append({
+                'PID': pid,
+                'TFN': phone,
+                'Clean_TFN': clean_phone_number(phone)
+            })
         
-        # Print a summary of the final mapping
-        print(f"TFN mapping summary: {len(tfn_to_pid)} total entries")
+        fallback_df = pd.DataFrame(fallback_data)
+        st.write("Fallback TFN mapping created with critical numbers only:")
+        st.write(fallback_df)
         
-        return combined_df
-    else:
-        st.error("Could not identify PID and TFN columns in Display TFN sheet")
-        return resi_df[['PID', 'TFN']]
+        return fallback_df
 
 def clean_phone_number(phone_str):
     """
