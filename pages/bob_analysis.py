@@ -469,7 +469,55 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
                 except Exception as e:
                     st.warning(f"Error converting date column '{date_column}': {str(e)}. Using all data.")
     
+    # Verify Lead_DNIS exists
+    if 'Lead_DNIS' not in athena_df.columns:
+        st.error("Critical column 'Lead_DNIS' not found in the data! Available columns:")
+        st.write(athena_df.columns.tolist())
+        # Try to find a similar column
+        dnis_candidates = [col for col in athena_df.columns if 'dnis' in col.lower() or 'phone' in col.lower() or 'number' in col.lower()]
+        if dnis_candidates:
+            st.write(f"Found potential Lead_DNIS columns: {dnis_candidates}")
+            # Rename the first candidate to Lead_DNIS
+            athena_df = athena_df.rename(columns={dnis_candidates[0]: 'Lead_DNIS'})
+            st.write(f"Using '{dnis_candidates[0]}' as the Lead_DNIS column")
+        else:
+            st.error("No suitable column found for Lead_DNIS. PID matching will not work!")
+            # Add a dummy Lead_DNIS column to prevent errors
+            athena_df['Lead_DNIS'] = "Unknown"
+    
     # Clean affiliate code and filter records
+    if 'Affiliate_Code' not in athena_df.columns:
+        st.error("Critical column 'Affiliate_Code' not found in the data!")
+        # Try to find a similar column
+        aff_candidates = [col for col in athena_df.columns if 'affil' in col.lower() or 'code' in col.lower()]
+        if aff_candidates:
+            st.write(f"Found potential Affiliate_Code columns: {aff_candidates}")
+            # Rename the first candidate to Affiliate_Code
+            athena_df = athena_df.rename(columns={aff_candidates[0]: 'Affiliate_Code'})
+            st.write(f"Using '{aff_candidates[0]}' as the Affiliate_Code column")
+        else:
+            st.error("No suitable column found for Affiliate_Code!")
+            # Add a dummy Affiliate_Code column to prevent errors
+            athena_df['Affiliate_Code'] = "Unknown"
+    
+    # Display sample of Lead_DNIS and Affiliate_Code
+    st.write("Sample data (first 5 rows):")
+    st.write(athena_df[['Lead_DNIS', 'Affiliate_Code']].head(5))
+    
+    # Check for INSTALL_METHOD column
+    if 'INSTALL_METHOD' not in athena_df.columns:
+        st.warning("INSTALL_METHOD column not found. Some analysis functions may not work properly.")
+        # Try to find a similar column
+        install_candidates = [col for col in athena_df.columns if 'install' in col.lower() or 'method' in col.lower()]
+        if install_candidates:
+            st.write(f"Found potential INSTALL_METHOD columns: {install_candidates}")
+            # Rename the first candidate to INSTALL_METHOD
+            athena_df = athena_df.rename(columns={install_candidates[0]: 'INSTALL_METHOD'})
+            st.write(f"Using '{install_candidates[0]}' as the INSTALL_METHOD column")
+        else:
+            # Add a dummy INSTALL_METHOD column
+            athena_df['INSTALL_METHOD'] = "Unknown"
+    
     athena_df['Clean_Affiliate_Code'] = athena_df['Affiliate_Code'].apply(clean_affiliate_code)
     athena_df = athena_df[
         (athena_df['Clean_Affiliate_Code'].notna()) & 
@@ -485,6 +533,18 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     # Initialize PID column
     athena_df['PID'] = None
     
+    # Check tfn_df structure
+    st.write("TFN DataFrame structure:")
+    st.write(f"Columns: {tfn_df.columns.tolist()}")
+    st.write(f"Row count: {len(tfn_df)}")
+    
+    # Check for Clean_TFN column
+    if 'Clean_TFN' not in tfn_df.columns:
+        st.error("Clean_TFN column not found in TFN data!")
+        if 'TFN' in tfn_df.columns:
+            st.write("Creating Clean_TFN column from TFN column")
+            tfn_df['Clean_TFN'] = tfn_df['TFN'].apply(lambda x: clean_phone_number(str(x)))
+    
     # Create TFN mapping from clean TFN to PID
     tfn_map = dict(zip(tfn_df['Clean_TFN'], tfn_df['PID']))
     st.write(f"TFN mapping contains {len(tfn_map)} entries")
@@ -493,25 +553,66 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     sample_map = {k: v for i, (k, v) in enumerate(tfn_map.items()) if i < 5}
     st.write("Sample of TFN mapping:", sample_map)
     
+    # Direct check for critical numbers in the TFN mapping
+    critical_numbers = ['8446778720', '8005717438', '8009734275']
+    st.write("Checking if critical numbers are in TFN mapping:")
+    for phone in critical_numbers:
+        clean_phone = clean_phone_number(phone)
+        if clean_phone in tfn_map:
+            st.write(f"✅ {phone} (cleaned: {clean_phone}) -> PID: {tfn_map[clean_phone]}")
+        else:
+            st.error(f"❌ {phone} (cleaned: {clean_phone}) NOT FOUND in TFN mapping!")
+    
     # For non-WEB records, try to match PIDs
     non_web_mask = ~athena_df['Lead_DNIS'].str.contains('WEB', na=False, case=False)
     non_web_count = non_web_mask.sum()
     st.write(f"Non-WEB records to match: {non_web_count}")
     
     # Debugging: Check for critical phone numbers in the data
-    critical_numbers = ['8446778720', '8005717438', '8009734275']
     for phone in critical_numbers:
         clean_phone = clean_phone_number(phone)
         mask = athena_df['Lead_DNIS'].apply(lambda x: clean_phone_number(str(x)) == clean_phone if pd.notna(x) else False)
         st.write(f"Critical phone {phone} found in {mask.sum()} records")
+        
+        # If found, show a sample
+        if mask.sum() > 0:
+            st.write("Sample records with this number:")
+            st.write(athena_df[mask][['Lead_DNIS', 'Affiliate_Code']].head(3))
+    
+    # Sample a few non-web records for debugging
+    if non_web_count > 0:
+        sample_records = athena_df[non_web_mask].sample(min(5, non_web_count))
+        st.write("Sample of non-WEB records for debugging:")
+        for i, (idx, row) in enumerate(sample_records.iterrows()):
+            original_dnis = row['Lead_DNIS']
+            cleaned_dnis = clean_phone_number(str(original_dnis))
+            in_map = cleaned_dnis in tfn_map
+            mapped_to = tfn_map.get(cleaned_dnis, "Not found") if in_map else "N/A"
+            
+            st.write(f"Record {i+1}:")
+            st.write(f"  - Original DNIS: {original_dnis}")
+            st.write(f"  - Cleaned DNIS: {cleaned_dnis}")
+            st.write(f"  - In TFN map: {in_map}")
+            st.write(f"  - Maps to PID: {mapped_to}")
+    
+    # Manual test of match_pid function with a sample record
+    if non_web_count > 0:
+        st.write("\n### Testing match_pid function directly")
+        test_row = athena_df[non_web_mask].iloc[0]
+        st.write(f"Test row Lead_DNIS: {test_row['Lead_DNIS']}")
+        matched_pid = match_pid(test_row, tfn_map)
+        st.write(f"match_pid result: {matched_pid}")
     
     match_count = 0
     unmatched_sample = []
+    mapped_pids = []  # To track all matched PIDs
+    
     for idx, row in athena_df[non_web_mask].iterrows():
         pid = match_pid(row, tfn_map)
         if pid is not None:
             athena_df.at[idx, 'PID'] = pid
             match_count += 1
+            mapped_pids.append(pid)
         else:
             # Collect a sample of unmatched records for debugging
             if len(unmatched_sample) < 5:
@@ -522,6 +623,12 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
                 })
     
     st.write(f"Successfully matched {match_count} out of {non_web_count} non-WEB records")
+    st.write(f"Unique PIDs matched: {len(set(mapped_pids))}")
+    
+    if mapped_pids:
+        st.write("Sample of matched PIDs:", mapped_pids[:5])
+    else:
+        st.error("No PIDs were matched! The PID column contains only None values.")
     
     # Display sample of unmatched records for debugging
     if unmatched_sample:
