@@ -9,7 +9,7 @@ import io
 # Constants
 # -------------------------------
 
-TFN_SHEET_URL = "https://docs.google.com/spreadsheets/d/10BHN_-Wz_ZPmi7rezNtqiDPTguHOoNzmkXzovFOTbaU/edit#gid=1629976834"
+TFN_SHEET_URL = "https://docs.google.com/spreadsheets/d/10BHN_-Wz_ZPmi7rezNtqiDPTguHOoNzmkXzovFOTbaU/edit?gid=1629976834#gid=1629976834"
 
 # -------------------------------
 # Helper Functions
@@ -178,16 +178,22 @@ def load_combined_resi_tfn_data(sheet_url):
                 st.error("No suitable TFN column found in the RESI TFN sheet. Using a placeholder.")
                 return pd.DataFrame(columns=['PID', 'TFN', 'Clean_TFN'])
         
-        # Clean the PID column - convert to numeric and replace NaN with empty string
+        # Convert the PID column to integers (first to numeric, then to integer)
+        # Convert to numeric first to handle any non-numeric values
         resi_df['PID'] = pd.to_numeric(resi_df['PID'], errors='coerce')
-        resi_df = resi_df.fillna('')
+        # Then convert to integer, handling NaN values
+        resi_df['PID'] = resi_df['PID'].fillna(0).astype(int)
+        
+        # Convert TFN to string and clean it (remove any decimal points)
+        resi_df['TFN'] = resi_df['TFN'].astype(str)
+        resi_df['TFN'] = resi_df['TFN'].apply(lambda x: x.split('.')[0] if '.' in x else x)
         
         # Sample data to verify content
         st.write("Sample rows from RESI TFN sheet:")
         st.write(resi_df.head(3))
         
-        # Filter out rows where PID or TFN is empty
-        resi_df = resi_df[(resi_df['PID'] != '') & (resi_df['TFN'] != '')]
+        # Filter out rows where PID or TFN is empty or zero
+        resi_df = resi_df[(resi_df['PID'] != 0) & (resi_df['TFN'] != '') & (resi_df['TFN'] != '0')]
         
         # Check the format of PID after loading
         st.write(f"RESI TFN PIDs (first 5): {resi_df['PID'].head(5).tolist()}")
@@ -248,12 +254,16 @@ def load_combined_resi_tfn_data(sheet_url):
                 # Rename columns to match RESI format
                 display_df = display_df.rename(columns={pid_col: 'PID', tfn_col: 'TFN'})
                 
-                # Clean the PID column - convert to numeric and replace NaN with empty string
+                # Convert the PID column to integers (first to numeric, then to integer)
                 display_df['PID'] = pd.to_numeric(display_df['PID'], errors='coerce')
-                display_df = display_df.fillna('')
+                display_df['PID'] = display_df['PID'].fillna(0).astype(int)
                 
-                # Filter out rows where PID or TFN is empty
-                display_df = display_df[(display_df['PID'] != '') & (display_df['TFN'] != '')]
+                # Convert TFN to string and clean it (remove any decimal points)
+                display_df['TFN'] = display_df['TFN'].astype(str)
+                display_df['TFN'] = display_df['TFN'].apply(lambda x: x.split('.')[0] if '.' in x else x)
+                
+                # Filter out rows where PID or TFN is empty or zero
+                display_df = display_df[(display_df['PID'] != 0) & (display_df['TFN'] != '') & (display_df['TFN'] != '0')]
                 
                 st.write(f"Loaded {len(display_df)} rows from Display TFN sheet")
                 
@@ -266,7 +276,7 @@ def load_combined_resi_tfn_data(sheet_url):
             st.warning(f"Error loading Display TFN sheet: {str(e)}. Using only RESI data.")
             combined_df = resi_df[['PID', 'TFN']]
         
-        # Add clean TFN column
+        # Add clean TFN column - make sure all TFNs are cleaned properly
         combined_df['Clean_TFN'] = combined_df['TFN'].apply(lambda x: clean_phone_number(str(x)))
         
         # Remove duplicates based on Clean_TFN
@@ -291,10 +301,16 @@ def load_combined_resi_tfn_data(sheet_url):
                     st.warning(f"Correcting PID for {phone} from {pid_in_mapping} to {expected_pid}")
                     combined_df.loc[row_idx, 'PID'] = expected_pid
         
+        # Make sure all PIDs are integers
+        combined_df['PID'] = combined_df['PID'].astype(int)
+        
         # Create a mapping from clean TFN to PID
         tfn_to_pid = dict(zip(combined_df['Clean_TFN'], combined_df['PID']))
         
         st.write(f"Final combined TFN mapping contains {len(tfn_to_pid)} entries")
+        st.write("Sample of TFN to PID mapping:")
+        sample_mapping = {k: v for i, (k, v) in enumerate(tfn_to_pid.items()) if i < 5}
+        st.write(sample_mapping)
         
         # Print a summary of the final mapping
         print(f"TFN mapping summary: {len(tfn_to_pid)} total entries")
@@ -317,7 +333,7 @@ def load_combined_resi_tfn_data(sheet_url):
         fallback_data = []
         for phone, pid in critical_numbers.items():
             fallback_data.append({
-                'PID': pid,
+                'PID': int(pid),  # Ensure PID is an integer
                 'TFN': phone,
                 'Clean_TFN': clean_phone_number(phone)
             })
@@ -1241,107 +1257,6 @@ def analyze_records_by_pid(athena_df):
     # Show table of key PIDs
     st.write("Details for Key PIDs:")
     st.dataframe(pd.DataFrame(key_pid_data))
-    
-    # Check if we have metrics for these PIDs and compare with expected values
-    if 'INSTALL_METHOD' in athena_df.columns and 'SALES' in athena_df.columns and 'INSTALLS' in athena_df.columns:
-        st.subheader("Metrics for Key PIDs")
-        
-        # Define expected metrics for validation
-        expected_metrics = {
-            '42299': {'DIFM Sales': 41, 'DIFM Installs': 25, 'DIY Sales': 1, 'DIY Installs': 1},
-            '4790': {'DIFM Sales': 22, 'DIFM Installs': 9, 'DIY Sales': 1, 'DIY Installs': 1},
-            '42038': {'DIFM Sales': 4, 'DIFM Installs': 1, 'DIY Sales': 0, 'DIY Installs': 0}
-        }
-        
-        # Get actual metrics
-        metric_data = []
-        for pid in key_pids:
-            pid_df = athena_df[athena_df['PID'] == pid]
-            
-            # Calculate actual metrics
-            difm_sales = pid_df[(pid_df['INSTALL_METHOD'] == 'DIFM') & (pid_df['SALES'] == 1)].shape[0]
-            difm_installs = pid_df[(pid_df['INSTALL_METHOD'] == 'DIFM') & (pid_df['INSTALLS'] == 1)].shape[0]
-            diy_sales = pid_df[(pid_df['INSTALL_METHOD'] == 'DIY') & (pid_df['SALES'] == 1)].shape[0]
-            diy_installs = pid_df[(pid_df['INSTALL_METHOD'] == 'DIY') & (pid_df['INSTALLS'] == 1)].shape[0]
-            
-            # Add to dataframe
-            metric_data.append({
-                'PID': pid,
-                'DIFM Sales (Actual)': difm_sales,
-                'DIFM Sales (Expected)': expected_metrics[pid]['DIFM Sales'],
-                'DIFM Installs (Actual)': difm_installs,
-                'DIFM Installs (Expected)': expected_metrics[pid]['DIFM Installs'],
-                'DIY Sales (Actual)': diy_sales,
-                'DIY Sales (Expected)': expected_metrics[pid]['DIY Sales'],
-                'DIY Installs (Actual)': diy_installs,
-                'DIY Installs (Expected)': expected_metrics[pid]['DIY Installs']
-            })
-        
-        # Show metrics table
-        metrics_df = pd.DataFrame(metric_data)
-        st.dataframe(metrics_df)
-        
-        # Create comparison visualization
-        comparison_data = []
-        for pid in key_pids:
-            pid_row = metrics_df[metrics_df['PID'] == pid].iloc[0]
-            
-            # Add actual metrics
-            comparison_data.append({'PID': pid, 'Metric': 'DIFM Sales', 'Value': pid_row['DIFM Sales (Actual)'], 'Type': 'Actual'})
-            comparison_data.append({'PID': pid, 'Metric': 'DIFM Installs', 'Value': pid_row['DIFM Installs (Actual)'], 'Type': 'Actual'})
-            comparison_data.append({'PID': pid, 'Metric': 'DIY Sales', 'Value': pid_row['DIY Sales (Actual)'], 'Type': 'Actual'})
-            comparison_data.append({'PID': pid, 'Metric': 'DIY Installs', 'Value': pid_row['DIY Installs (Actual)'], 'Type': 'Actual'})
-            
-            # Add expected metrics
-            comparison_data.append({'PID': pid, 'Metric': 'DIFM Sales', 'Value': pid_row['DIFM Sales (Expected)'], 'Type': 'Expected'})
-            comparison_data.append({'PID': pid, 'Metric': 'DIFM Installs', 'Value': pid_row['DIFM Installs (Expected)'], 'Type': 'Expected'})
-            comparison_data.append({'PID': pid, 'Metric': 'DIY Sales', 'Value': pid_row['DIY Sales (Expected)'], 'Type': 'Expected'})
-            comparison_data.append({'PID': pid, 'Metric': 'DIY Installs', 'Value': pid_row['DIY Installs (Expected)'], 'Type': 'Expected'})
-        
-        comparison_df = pd.DataFrame(comparison_data)
-        
-        # Create grouped bar chart
-        fig = px.bar(
-            comparison_df, 
-            x='Metric', 
-            y='Value', 
-            color='Type',
-            barmode='group',
-            facet_col='PID',
-            title='Actual vs Expected Metrics for Key PIDs',
-            color_discrete_map={'Actual': 'blue', 'Expected': 'red'}
-        )
-        fig.update_layout(height=500)
-        st.plotly_chart(fig)
-        
-        # Add explanation for any discrepancies
-        for pid in key_pids:
-            pid_row = metrics_df[metrics_df['PID'] == pid].iloc[0]
-            
-            # Check for discrepancies
-            has_discrepancy = False
-            discrepancies = []
-            
-            if pid_row['DIFM Sales (Actual)'] != pid_row['DIFM Sales (Expected)']:
-                discrepancies.append(f"DIFM Sales: {pid_row['DIFM Sales (Actual)']} vs expected {pid_row['DIFM Sales (Expected)']}")
-                has_discrepancy = True
-                
-            if pid_row['DIFM Installs (Actual)'] != pid_row['DIFM Installs (Expected)']:
-                discrepancies.append(f"DIFM Installs: {pid_row['DIFM Installs (Actual)']} vs expected {pid_row['DIFM Installs (Expected)']}")
-                has_discrepancy = True
-                
-            if pid_row['DIY Sales (Actual)'] != pid_row['DIY Sales (Expected)']:
-                discrepancies.append(f"DIY Sales: {pid_row['DIY Sales (Actual)']} vs expected {pid_row['DIY Sales (Expected)']}")
-                has_discrepancy = True
-                
-            if pid_row['DIY Installs (Actual)'] != pid_row['DIY Installs (Expected)']:
-                discrepancies.append(f"DIY Installs: {pid_row['DIY Installs (Actual)']} vs expected {pid_row['DIY Installs (Expected)']}")
-                has_discrepancy = True
-            
-            if has_discrepancy:
-                st.warning(f"PID {pid} has metric discrepancies: {', '.join(discrepancies)}")
-            else:
-                st.success(f"PID {pid} metrics match expected values")
 
 if __name__ == "__main__":
     show_bob_analysis()
