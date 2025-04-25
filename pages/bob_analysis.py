@@ -2358,8 +2358,13 @@ def show_bob_analysis():
         return
     
     # Convert dates to datetime
+    # Start date is automatically set to 00:00:00 of the selected day
     start_date = pd.Timestamp(start_date)
-    end_date = pd.Timestamp(end_date)
+    # Ensure the end date includes the entire day (up to 23:59:59)
+    end_date = pd.Timestamp(end_date) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)
+    
+    # Display the exact date range being used for analysis
+    st.info(f"Analyzing leads created from {start_date.strftime('%Y-%m-%d %H:%M:%S')} to {end_date.strftime('%Y-%m-%d %H:%M:%S')}")
     
     # File uploaders in three columns
     st.subheader("Upload Files")
@@ -2428,9 +2433,6 @@ def show_bob_analysis():
             except Exception as e:
                 st.error(f"Error loading TFN data: {str(e)}")
                 return
-            
-            # Display date range being analyzed
-            st.info(f"Analyzing leads created from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
             
             # Step 1: Clean Athena + Leads Report
             st.write("DEBUG: Starting clean_athena function...")
