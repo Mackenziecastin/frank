@@ -1293,17 +1293,56 @@ def show_bob_analysis():
                     output = io.BytesIO()
                     
                     # Make sure we include all relevant cleaned columns
-                    export_columns = athena_df.columns.tolist()
+                    export_columns = []
                     
-                    # Ensure these important columns are included
-                    critical_columns = ['Lead_DNIS', 'Clean_Lead_DNIS', 'Affiliate_Code', 'Clean_Affiliate_Code', 
-                                       'PID', 'PID_from_Affiliate', 'INSTALL_METHOD', 'Sale_Date', 'Install_Date']
+                    # List of most critical columns to ensure they're first in the CSV
+                    primary_columns = [
+                        'Lead_DNIS', 
+                        'Clean_Lead_DNIS', 
+                        'Affiliate_Code', 
+                        'Clean_Affiliate_Code',  # Explicitly include Clean_Affiliate_Code
+                        'PID', 
+                        'PID_from_Affiliate', 
+                        'INSTALL_METHOD', 
+                        'Sale_Date', 
+                        'Install_Date'
+                    ]
                     
-                    for col in critical_columns:
-                        if col not in export_columns and col in athena_df.columns:
+                    # Add primary columns first (if they exist in the dataframe)
+                    for col in primary_columns:
+                        if col in athena_df.columns:
                             export_columns.append(col)
                     
-                    # Write the DataFrame to CSV with all columns
+                    # Then add all remaining columns that aren't already included
+                    for col in athena_df.columns:
+                        if col not in export_columns:
+                            export_columns.append(col)
+                    
+                    # Debug: Show whether critical columns are being included
+                    critical_cols_check = ["Affiliate_Code", "Clean_Affiliate_Code", "PID", "PID_from_Affiliate"]
+                    st.write("Critical column checks:")
+                    for col in critical_cols_check:
+                        if col in export_columns:
+                            st.write(f"✅ {col} will be included at position {export_columns.index(col)+1}")
+                        else:
+                            st.write(f"❌ {col} NOT FOUND in dataframe columns!")
+                    
+                    # Show sample of Clean_Affiliate_Code values for verification
+                    if 'Clean_Affiliate_Code' in athena_df.columns:
+                        st.write("Sample of Clean_Affiliate_Code values being exported:")
+                        clean_aff_sample = athena_df['Clean_Affiliate_Code'].dropna().sample(min(5, athena_df['Clean_Affiliate_Code'].notna().sum())).tolist()
+                        st.write(clean_aff_sample)
+                    else:
+                        st.error("Clean_Affiliate_Code column not found in the dataframe!")
+                    
+                    # Check the actual column data type and count of non-null values
+                    if 'Clean_Affiliate_Code' in athena_df.columns:
+                        clean_aff_dtype = athena_df['Clean_Affiliate_Code'].dtype
+                        clean_aff_count = athena_df['Clean_Affiliate_Code'].notna().sum()
+                        clean_aff_empty = (athena_df['Clean_Affiliate_Code'] == '').sum()
+                        st.write(f"Clean_Affiliate_Code: {clean_aff_count} non-null values (dtype: {clean_aff_dtype}), {clean_aff_empty} empty strings")
+                    
+                    # Write the DataFrame to CSV with all columns in the specified order
                     athena_df.to_csv(output, index=False, columns=export_columns)
                     
                     # Seek to the beginning of the BytesIO object
@@ -1311,7 +1350,9 @@ def show_bob_analysis():
                     
                     # Add some debug information
                     st.write(f"Exporting {len(athena_df)} rows with {len(export_columns)} columns")
-                    st.write(f"Export columns include: {', '.join(export_columns[:10])}... and more")
+                    st.write(f"First 10 export columns: {', '.join(export_columns[:10])}")
+                    if len(export_columns) > 10:
+                        st.write(f"...and {len(export_columns)-10} more columns")
                     
                     # Create download button
                     st.download_button(
