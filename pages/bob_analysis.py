@@ -482,24 +482,51 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     web_count = athena_df[athena_df['Lead_DNIS'].str.contains('WEB', na=False, case=False)].shape[0]
     st.write(f"Records with 'WEB' in Lead_DNIS: {web_count}")
     
-    # For non-WEB records, try to match PIDs
+    # Initialize PID column
     athena_df['PID'] = None
-    non_web_mask = ~athena_df['Lead_DNIS'].str.contains('WEB', na=False, case=False)
-    non_web_count = non_web_mask.sum()
-    st.write(f"Non-WEB records to match: {non_web_count}")
     
     # Create TFN mapping from clean TFN to PID
     tfn_map = dict(zip(tfn_df['Clean_TFN'], tfn_df['PID']))
     st.write(f"TFN mapping contains {len(tfn_map)} entries")
     
+    # Sample the TFN mapping to verify content
+    sample_map = {k: v for i, (k, v) in enumerate(tfn_map.items()) if i < 5}
+    st.write("Sample of TFN mapping:", sample_map)
+    
+    # For non-WEB records, try to match PIDs
+    non_web_mask = ~athena_df['Lead_DNIS'].str.contains('WEB', na=False, case=False)
+    non_web_count = non_web_mask.sum()
+    st.write(f"Non-WEB records to match: {non_web_count}")
+    
+    # Debugging: Check for critical phone numbers in the data
+    critical_numbers = ['8446778720', '8005717438', '8009734275']
+    for phone in critical_numbers:
+        clean_phone = clean_phone_number(phone)
+        mask = athena_df['Lead_DNIS'].apply(lambda x: clean_phone_number(str(x)) == clean_phone if pd.notna(x) else False)
+        st.write(f"Critical phone {phone} found in {mask.sum()} records")
+    
     match_count = 0
+    unmatched_sample = []
     for idx, row in athena_df[non_web_mask].iterrows():
         pid = match_pid(row, tfn_map)
         if pid is not None:
             athena_df.at[idx, 'PID'] = pid
             match_count += 1
+        else:
+            # Collect a sample of unmatched records for debugging
+            if len(unmatched_sample) < 5:
+                unmatched_sample.append({
+                    'Lead_DNIS': row['Lead_DNIS'],
+                    'Clean_DNIS': clean_phone_number(str(row['Lead_DNIS'])),
+                    'Affiliate_Code': row['Affiliate_Code']
+                })
     
     st.write(f"Successfully matched {match_count} out of {non_web_count} non-WEB records")
+    
+    # Display sample of unmatched records for debugging
+    if unmatched_sample:
+        st.write("Sample of unmatched records:")
+        st.write(pd.DataFrame(unmatched_sample))
     
     # Special debug for DNIS that maps to PID 42038
     if '8009734275' in athena_df['Lead_DNIS'].values:
@@ -1227,25 +1254,25 @@ def match_pid(row, tfn_map):
     clean_problematic = [clean_phone_number(num) for num in problematic_numbers]
     
     if phone_num in clean_problematic:
-        print(f"DEBUG: Processing problematic number {phone_num}")
+        st.write(f"DEBUG: Processing problematic number {phone_num}")
         
     # Try to match the cleaned phone number to a PID
     if phone_num in tfn_map:
-        pid = tfn_map[phone_num]
+        pid = str(tfn_map[phone_num])  # Ensure PID is a string for consistent comparison
         
         if phone_num in clean_problematic:
-            print(f"DEBUG: Matched {phone_num} to PID {pid}")
+            st.write(f"DEBUG: Matched {phone_num} to PID {pid}")
         
         return pid
     else:
         if phone_num in clean_problematic:
-            print(f"DEBUG: Failed to match problematic number {phone_num}")
-            print(f"DEBUG: Available keys in tfn_map: {list(tfn_map.keys())[:10]}... (total: {len(tfn_map)})")
+            st.write(f"DEBUG: Failed to match problematic number {phone_num}")
+            st.write(f"DEBUG: Available keys in tfn_map sample: {list(tfn_map.keys())[:5]}... (total: {len(tfn_map)})")
             
             # Check if any similar numbers exist in the mapping
             similar_keys = [k for k in tfn_map.keys() if phone_num in k or k in phone_num]
             if similar_keys:
-                print(f"DEBUG: Found similar keys: {similar_keys}")
+                st.write(f"DEBUG: Found similar keys: {similar_keys}")
         
         return np.nan
 
@@ -1264,8 +1291,18 @@ def analyze_records_by_pid(athena_df):
     """
     st.subheader("Analysis of Records by PID")
     
+    # First, ensure PID column is not None and convert to string for consistency
+    st.write("DEBUG: PID types before conversion:", athena_df['PID'].apply(type).unique())
+    athena_df['PID'] = athena_df['PID'].astype(str)
+    
+    # Filter out None/NaN values (which become 'None' or 'nan' as strings)
+    mask = ~athena_df['PID'].isin(['None', 'nan', 'NaN', 'none'])
+    filtered_df = athena_df[mask]
+    
+    st.write(f"Total records with non-null PIDs: {len(filtered_df)}")
+    
     # Count records by PID
-    pid_counts = athena_df[athena_df['PID'].notna()].groupby('PID').size().reset_index(name='count')
+    pid_counts = filtered_df.groupby('PID').size().reset_index(name='count')
     pid_counts = pid_counts.sort_values('count', ascending=False)
     
     st.write(f"Total PIDs with records: {len(pid_counts)}")
@@ -1276,9 +1313,12 @@ def analyze_records_by_pid(athena_df):
     
     # Create bar chart of top 20 PIDs
     top_pids = pid_counts.head(20)
-    fig = px.bar(top_pids, x='PID', y='count', title='Top 20 PIDs by Record Count')
-    fig.update_layout(xaxis_title='PID', yaxis_title='Number of Records')
-    st.plotly_chart(fig)
+    if len(top_pids) > 0:
+        fig = px.bar(top_pids, x='PID', y='count', title='Top 20 PIDs by Record Count')
+        fig.update_layout(xaxis_title='PID', yaxis_title='Number of Records')
+        st.plotly_chart(fig)
+    else:
+        st.warning("No PIDs found to display in chart.")
     
     # Key PIDs of interest
     key_pids = ['42299', '4790', '42038']
@@ -1292,7 +1332,7 @@ def analyze_records_by_pid(athena_df):
             observed = pid_counts.loc[pid_counts['PID'] == pid, 'count'].iloc[0]
         
         # Get DNIS for this PID
-        dnis_values = athena_df[athena_df['PID'] == pid]['Lead_DNIS'].unique()
+        dnis_values = filtered_df[filtered_df['PID'] == pid]['Lead_DNIS'].unique()
         dnis_str = ', '.join(str(d) for d in dnis_values) if len(dnis_values) > 0 else 'None found'
         
         # Append to data for visualization
@@ -1305,6 +1345,15 @@ def analyze_records_by_pid(athena_df):
     # Show table of key PIDs
     st.write("Details for Key PIDs:")
     st.dataframe(pd.DataFrame(key_pid_data))
+    
+    # Extra debugging output
+    st.write("\n### PID Matchback Debugging")
+    st.write("Distribution of PID types in dataframe:", athena_df['PID'].apply(type).value_counts())
+    st.write("Sample of PID values in dataframe:", athena_df['PID'].sample(min(10, len(athena_df))).tolist())
+    st.write("Critical PIDs in dataframe:")
+    for critical_pid in key_pids:
+        count = (athena_df['PID'] == critical_pid).sum()
+        st.write(f"PID {critical_pid}: {count} records")
 
 if __name__ == "__main__":
     show_bob_analysis()
