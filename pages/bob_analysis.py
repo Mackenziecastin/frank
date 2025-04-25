@@ -112,8 +112,8 @@ def load_combined_resi_tfn_data(sheet_url):
     st.write(f"Loading RESI TFN from: {resi_csv_url}")
     
     try:
-        # Load RESI TFN sheet
-        resi_df = pd.read_csv(resi_csv_url)
+        # Load RESI TFN sheet - explicitly use row 1 as header (skip_blank_lines=True helps with empty rows)
+        resi_df = pd.read_csv(resi_csv_url, header=0, skip_blank_lines=True)
         
         # Debug: print column names to identify the actual PID column
         st.write("RESI TFN sheet columns:", resi_df.columns.tolist())
@@ -129,14 +129,40 @@ def load_combined_resi_tfn_data(sheet_url):
                 resi_df = resi_df.rename(columns={pid_candidates[0]: 'PID'})
                 st.write(f"Using '{pid_candidates[0]}' as the PID column")
             else:
-                # Create an empty DataFrame with required columns if no PID column found
-                st.error("No suitable PID column found in the RESI TFN sheet. Using a placeholder.")
-                return pd.DataFrame(columns=['PID', 'TFN', 'Clean_TFN'])
+                # Try loading again with no header and setting first row as column names
+                st.warning("No PID column found. Trying to load with first row as header...")
+                
+                try:
+                    # Re-read the file with no header and manually set the first row as columns
+                    resi_df = pd.read_csv(resi_csv_url, header=None, skip_blank_lines=True)
+                    resi_df.columns = resi_df.iloc[0]
+                    resi_df = resi_df.drop(0)  # Remove the first row which is now the header
+                    resi_df = resi_df.reset_index(drop=True)
+                    
+                    st.write("After setting first row as header, columns:", resi_df.columns.tolist())
+                    
+                    # Check if PID column exists after the fix
+                    if 'PID' not in resi_df.columns:
+                        # Look for alternative column names again
+                        pid_candidates = [col for col in resi_df.columns if 'pid' in str(col).lower() or 'id' in str(col).lower()]
+                        st.write(f"PID column still not found. Potential PID columns: {pid_candidates}")
+                        
+                        if pid_candidates:
+                            # Rename the first candidate to 'PID'
+                            resi_df = resi_df.rename(columns={pid_candidates[0]: 'PID'})
+                            st.write(f"Using '{pid_candidates[0]}' as the PID column")
+                        else:
+                            # Create an empty DataFrame with required columns if no PID column found
+                            st.error("No suitable PID column found in the RESI TFN sheet. Using a placeholder.")
+                            return pd.DataFrame(columns=['PID', 'TFN', 'Clean_TFN'])
+                except Exception as e:
+                    st.error(f"Error reloading RESI TFN sheet: {str(e)}")
+                    return pd.DataFrame(columns=['PID', 'TFN', 'Clean_TFN'])
         
         # Also check for TFN column
         if 'TFN' not in resi_df.columns:
             # Look for alternative column names
-            tfn_candidates = [col for col in resi_df.columns if 'tfn' in col.lower() or 'phone' in col.lower() or 'number' in col.lower()]
+            tfn_candidates = [col for col in resi_df.columns if 'tfn' in str(col).lower() or 'phone' in str(col).lower() or 'number' in str(col).lower()]
             st.write(f"TFN column not found. Potential TFN columns: {tfn_candidates}")
             
             if tfn_candidates:
@@ -186,14 +212,30 @@ def load_combined_resi_tfn_data(sheet_url):
         # Load Display TFN sheet
         st.write(f"Loading Display TFN from: {display_csv_url}")
         try:
-            display_df = pd.read_csv(display_csv_url)
+            # Load Display TFN sheet - explicitly use row 1 as header
+            display_df = pd.read_csv(display_csv_url, header=0, skip_blank_lines=True)
             
             # Debug: print column names to identify the actual PID column
             st.write("Display TFN sheet columns:", display_df.columns.tolist())
             
+            # Check if we need to try loading with first row as header
+            if 'pid' not in [col.lower() for col in display_df.columns]:
+                st.warning("No PID column found in Display TFN sheet. Trying to load with first row as header...")
+                
+                try:
+                    # Re-read the file with no header and manually set the first row as columns
+                    display_df = pd.read_csv(display_csv_url, header=None, skip_blank_lines=True)
+                    display_df.columns = display_df.iloc[0]
+                    display_df = display_df.drop(0)  # Remove the first row which is now the header
+                    display_df = display_df.reset_index(drop=True)
+                    
+                    st.write("After setting first row as header, Display TFN columns:", display_df.columns.tolist())
+                except Exception as e:
+                    st.error(f"Error reloading Display TFN sheet: {str(e)}")
+            
             # Identify the PID and TFN columns
-            pid_columns = [col for col in display_df.columns if 'pid' in col.lower()]
-            tfn_columns = [col for col in display_df.columns if 'tfn' in col.lower() or 'phone' in col.lower() or 'number' in col.lower()]
+            pid_columns = [col for col in display_df.columns if 'pid' in str(col).lower()]
+            tfn_columns = [col for col in display_df.columns if 'tfn' in str(col).lower() or 'phone' in str(col).lower() or 'number' in str(col).lower()]
             
             if pid_columns and tfn_columns:
                 pid_col = pid_columns[0]
