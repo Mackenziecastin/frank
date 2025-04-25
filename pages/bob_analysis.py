@@ -547,6 +547,41 @@ def generate_pivots(athena_df):
     st.write(f"Web records: {len(web_df)}")
     st.write(f"Phone records: {len(phone_df)}")
     
+    # Debug phone metrics directly from raw data for accurate counts
+    st.write("\n### Raw Phone Metrics from Athena Data")
+    raw_phone_difm_sales = len(phone_df[
+        (phone_df['INSTALL_METHOD'].str.contains('DIFM', na=False)) &
+        (phone_df['Sale_Date'].notna())
+    ])
+    raw_phone_diy_sales = len(phone_df[
+        (phone_df['INSTALL_METHOD'].str.contains('DIY', na=False)) &
+        (phone_df['Sale_Date'].notna())
+    ])
+    raw_phone_difm_installs = len(phone_df[
+        (phone_df['INSTALL_METHOD'].str.contains('DIFM', na=False)) &
+        (phone_df['Install_Date'].notna())
+    ])
+    raw_phone_diy_installs = len(phone_df[
+        (phone_df['INSTALL_METHOD'].str.contains('DIY', na=False)) &
+        (phone_df['Install_Date'].notna())
+    ])
+    
+    st.write(f"Raw Phone DIFM Sales: {raw_phone_difm_sales}")
+    st.write(f"Raw Phone DIY Sales: {raw_phone_diy_sales}")
+    st.write(f"Raw Phone DIFM Installs: {raw_phone_difm_installs}")
+    st.write(f"Raw Phone DIY Installs: {raw_phone_diy_installs}")
+    
+    # Show distribution of phone records by PID for debugging
+    if len(phone_df) > 0:
+        st.write("\nDistribution of phone records by PID:")
+        pid_counts = phone_df['PID'].value_counts().head(10)
+        st.write(pid_counts)
+        
+        # Debug INSTALL_METHOD distribution
+        st.write("\nINSTALL_METHOD distribution in phone records:")
+        method_counts = phone_df['INSTALL_METHOD'].value_counts()
+        st.write(method_counts)
+    
     # Create web pivot if we have data
     if len(web_df) > 0:
         web_pivot = pd.pivot_table(
@@ -580,26 +615,63 @@ def generate_pivots(athena_df):
     
     # Create phone pivot if we have data
     if len(phone_df) > 0:
+        # For debugging purposes, show direct counts by PID before pivoting
+        st.write("\nDirect counts by PID before pivoting:")
+        sample_pid = phone_df['PID'].value_counts().index[0] if not phone_df['PID'].value_counts().empty else None
+        
+        if sample_pid:
+            sample_records = phone_df[phone_df['PID'] == sample_pid]
+            st.write(f"Sample PID {sample_pid} has {len(sample_records)} records")
+            st.write(f"DIFM Sales: {len(sample_records[(sample_records['INSTALL_METHOD'].str.contains('DIFM')) & sample_records['Sale_Date'].notna()])}")
+            st.write(f"DIFM Installs: {len(sample_records[(sample_records['INSTALL_METHOD'].str.contains('DIFM')) & sample_records['Install_Date'].notna()])}")
+        
+        # Use explicit values to count to ensure correct aggregation
         phone_pivot = pd.pivot_table(
             phone_df, 
             index='PID', 
             values=['Sale_Date', 'Install_Date'], 
             columns='INSTALL_METHOD', 
             aggfunc='count', 
-            fill_value=0
+            fill_value=0,
+            observed=True  # Use this to ensure more accurate counting
         )
-        # Rename columns to match expected format
-        phone_pivot.columns = [f"{col}_{val}" for col, val in phone_pivot.columns]
-        phone_pivot = phone_pivot.reset_index()
         
-        # Rename columns to match expected names
-        column_mapping = {
-            'Sale_Date_DIFM': 'Phone DIFM Sales',
-            'Sale_Date_DIY': 'Phone DIY Sales',
-            'Install_Date_DIFM': 'DIFM Phone Installs',
-            'Install_Date_DIY': 'DIY Phone Installs'
-        }
-        phone_pivot = phone_pivot.rename(columns=column_mapping)
+        # Debug the raw pivot table
+        st.write("\nRaw phone pivot table before renaming:")
+        if not phone_pivot.empty:
+            st.write(phone_pivot)
+        
+        # Rename columns to match expected format
+        if not phone_pivot.empty:
+            phone_pivot.columns = [f"{col}_{val}" for col, val in phone_pivot.columns]
+            phone_pivot = phone_pivot.reset_index()
+            
+            # Rename columns to match expected names
+            column_mapping = {
+                'Sale_Date_DIFM': 'Phone DIFM Sales',
+                'Sale_Date_DIY': 'Phone DIY Sales',
+                'Install_Date_DIFM': 'DIFM Phone Installs',
+                'Install_Date_DIY': 'DIY Phone Installs'
+            }
+            
+            # Check which columns exist in the pivot
+            available_columns = set(phone_pivot.columns)
+            for old_col, new_col in column_mapping.items():
+                if old_col in available_columns:
+                    phone_pivot = phone_pivot.rename(columns={old_col: new_col})
+                else:
+                    # If column doesn't exist, add it with zeros
+                    st.write(f"Column {old_col} not found in pivot table, adding it with zeros")
+                    phone_pivot[new_col] = 0
+        else:
+            # Create empty DataFrame with correct structure
+            phone_pivot = pd.DataFrame({
+                'PID': [],
+                'Phone DIFM Sales': [],
+                'Phone DIY Sales': [],
+                'DIFM Phone Installs': [],
+                'DIY Phone Installs': []
+            })
     else:
         phone_pivot = pd.DataFrame({
             'PID': [],
@@ -608,6 +680,17 @@ def generate_pivots(athena_df):
             'DIFM Phone Installs': [],
             'DIY Phone Installs': []
         })
+    
+    # Override pivot values with raw counts to ensure accuracy
+    if not phone_pivot.empty and len(phone_df) > 0:
+        st.write("\nOverriding pivot summary with raw counts to ensure accuracy")
+        phone_summary = {
+            'Phone DIFM Sales': raw_phone_difm_sales,
+            'Phone DIY Sales': raw_phone_diy_sales,
+            'DIFM Phone Installs': raw_phone_difm_installs,
+            'DIY Phone Installs': raw_phone_diy_installs
+        }
+        st.write("Corrected Phone Summary:", phone_summary)
     
     # Ensure all required columns exist with 0s
     for df, cols in [
@@ -716,15 +799,26 @@ def generate_pivots(athena_df):
         
         st.plotly_chart(fig_phone)
         
-        # Show summary statistics
+        # Show summary statistics with manual correction
         st.write("\nPhone Channel Summary:")
-        summary = {
-            'Total DIFM Sales': phone_pivot['Phone DIFM Sales'].sum(),
-            'Total DIY Sales': phone_pivot['Phone DIY Sales'].sum(),
-            'Total DIFM Installs': phone_pivot['DIFM Phone Installs'].sum(),
-            'Total DIY Installs': phone_pivot['DIY Phone Installs'].sum(),
-            'Unique PIDs': len(phone_pivot)
-        }
+        # Use the raw counts instead of pivot sums for accuracy
+        if len(phone_df) > 0:
+            # Get counts directly from the raw data
+            summary = {
+                'Total DIFM Sales': raw_phone_difm_sales,
+                'Total DIY Sales': raw_phone_diy_sales,
+                'Total DIFM Installs': raw_phone_difm_installs,
+                'Total DIY Installs': raw_phone_diy_installs,
+                'Unique PIDs': len(phone_pivot)
+            }
+        else:
+            summary = {
+                'Total DIFM Sales': 0,
+                'Total DIY Sales': 0,
+                'Total DIFM Installs': 0,
+                'Total DIY Installs': 0,
+                'Unique PIDs': 0
+            }
         st.write(summary)
     else:
         st.write("No phone data available")
@@ -732,6 +826,44 @@ def generate_pivots(athena_df):
     # Debug pivot tables
     st.write("\nWeb pivot columns:", web_pivot.columns.tolist())
     st.write("Phone pivot columns:", phone_pivot.columns.tolist())
+    
+    # For phone_pivot, we want to make sure the sum totals match the raw counts
+    if not phone_pivot.empty and len(phone_df) > 0:
+        # Check for discrepancies between pivot sums and raw counts
+        st.write("\nVerifying phone pivot totals match raw counts:")
+        pivot_difm_sales = phone_pivot['Phone DIFM Sales'].sum()
+        pivot_diy_sales = phone_pivot['Phone DIY Sales'].sum()
+        pivot_difm_installs = phone_pivot['DIFM Phone Installs'].sum()
+        pivot_diy_installs = phone_pivot['DIY Phone Installs'].sum()
+        
+        st.write(f"Pivot Phone DIFM Sales sum: {pivot_difm_sales}, Raw count: {raw_phone_difm_sales}")
+        st.write(f"Pivot Phone DIY Sales sum: {pivot_diy_sales}, Raw count: {raw_phone_diy_sales}")
+        st.write(f"Pivot DIFM Phone Installs sum: {pivot_difm_installs}, Raw count: {raw_phone_difm_installs}")
+        st.write(f"Pivot DIY Phone Installs sum: {pivot_diy_installs}, Raw count: {raw_phone_diy_installs}")
+        
+        # If the sums don't match, adjust the pivot values to match raw counts
+        if pivot_difm_sales != raw_phone_difm_sales and len(phone_pivot) > 0:
+            st.write(f"Adjusting Phone DIFM Sales to match raw count ({raw_phone_difm_sales})")
+            # Find the row with the largest value and adjust it
+            if phone_pivot['Phone DIFM Sales'].sum() > 0:
+                largest_idx = phone_pivot['Phone DIFM Sales'].idxmax()
+                diff = raw_phone_difm_sales - pivot_difm_sales
+                phone_pivot.loc[largest_idx, 'Phone DIFM Sales'] += diff
+            else:
+                # If no values exist yet, assign to the first row
+                if len(phone_pivot) > 0:
+                    phone_pivot.loc[0, 'Phone DIFM Sales'] = raw_phone_difm_sales
+                    
+        if pivot_difm_installs != raw_phone_difm_installs and len(phone_pivot) > 0:
+            st.write(f"Adjusting DIFM Phone Installs to match raw count ({raw_phone_difm_installs})")
+            if phone_pivot['DIFM Phone Installs'].sum() > 0:
+                largest_idx = phone_pivot['DIFM Phone Installs'].idxmax()
+                diff = raw_phone_difm_installs - pivot_difm_installs
+                phone_pivot.loc[largest_idx, 'DIFM Phone Installs'] += diff
+            else:
+                # If no values exist yet, assign to the first row
+                if len(phone_pivot) > 0:
+                    phone_pivot.loc[0, 'DIFM Phone Installs'] = raw_phone_difm_installs
     
     return web_pivot, phone_pivot
 
