@@ -16,20 +16,41 @@ TFN_SHEET_URL = "https://docs.google.com/spreadsheets/d/10BHN_-Wz_ZPmi7rezNtqiDP
 # -------------------------------
 
 def clean_affiliate_code(code):
+    """
+    Clean affiliate code by removing offerID prefix and keeping only numeric subID.
+    Format: OfferID_PID_SubID -> PID_SubID (if SubID is numeric)
+    or: OfferID_PID -> PID_
+    
+    Parameters:
+    ----------
+    code : str
+        The raw affiliate code to clean
+        
+    Returns:
+    -------
+    str
+        Cleaned affiliate code in the format PID_SubID or PID_
+    """
     if pd.isna(code): return ''
     
-    # Split into parts
-    parts = code.split('_')
-    if len(parts) < 2: return ''  # Need at least OfferID_PID
+    # Check if this is a valid affiliate code
+    if '_' not in str(code): return ''
     
-    # Always keep the PID (second part)
+    # Split into parts
+    parts = str(code).split('_')
+    
+    # Need at least OfferID_PID
+    if len(parts) < 2: return ''
+    
+    # Extract PID (second part)
     pid = parts[1]
+    if not pid: return ''
     
     # If there's a subID (third part), check if it's numeric
     if len(parts) > 2:
         subid = parts[2]
         # Only include subID if it's purely numeric
-        if subid.isdigit():
+        if subid and subid.isdigit():
             return f"{pid}_{subid}"
     
     # Default case: just return PID_
@@ -631,6 +652,10 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
         
         # Check if we now have all required columns
         if all(col in leads_df.columns for col in required_cols):
+            # Clean up PID and Subid values in leads_df
+            leads_df['PID'] = leads_df['PID'].astype(str)
+            leads_df['Subid'] = leads_df['Subid'].astype(str)
+            
             # Clean phone numbers in leads_df
             leads_df['Clean_Phone'] = leads_df['Phone'].astype(str).apply(clean_phone_number)
             
@@ -639,14 +664,22 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
             for _, row in leads_df.iterrows():
                 if not pd.isna(row['Clean_Phone']) and row['Clean_Phone'] != '':
                     # Store as tuple (PID, Subid)
+                    # Ensure subID is numeric
+                    subid = row['Subid'] if not pd.isna(row['Subid']) and str(row['Subid']).isdigit() else ''
                     phone_to_pid_subid[row['Clean_Phone']] = (
                         str(row['PID']), 
-                        str(row['Subid']) if not pd.isna(row['Subid']) else ''
+                        subid
                     )
             
             st.write(f"Created phone-to-PID mapping with {len(phone_to_pid_subid)} entries")
             
-            # Match missing affiliate codes using phone numbers
+            # Display sample of the mapping
+            sample_entries = list(phone_to_pid_subid.items())[:5]
+            st.write("Sample phone-to-PID mappings:")
+            for phone, (pid, subid) in sample_entries:
+                st.write(f"  {phone} -> PID: {pid}, SubID: {subid}")
+            
+            # Match missing or empty affiliate codes using phone numbers
             missing_affiliate_mask = (athena_df['Affiliate_Code'].isna()) | (athena_df['Affiliate_Code'] == '')
             matchable_phone_mask = athena_df['Clean_Lead_DNIS'].isin(phone_to_pid_subid.keys())
             
@@ -661,11 +694,15 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
                 if phone in phone_to_pid_subid:
                     pid, subid = phone_to_pid_subid[phone]
                     if subid:
+                        # If we have a valid subID, include it
                         athena_df.loc[idx, 'Affiliate_Code'] = f"{pid}_{subid}"
                         athena_df.loc[idx, 'Clean_Affiliate_Code'] = f"{pid}_{subid}"
                     else:
+                        # Otherwise just use PID_
                         athena_df.loc[idx, 'Affiliate_Code'] = f"{pid}_"
                         athena_df.loc[idx, 'Clean_Affiliate_Code'] = f"{pid}_"
+                        
+                    # Set PID_from_Affiliate for use in later matching
                     athena_df.loc[idx, 'PID_from_Affiliate'] = pid
                     matched_count += 1
             
@@ -677,6 +714,11 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
             st.write(f"Affiliate Code Stats after matchback:")
             st.write(f"  - Null affiliate codes: {null_affiliates_after} (was {null_affiliates})")
             st.write(f"  - Empty affiliate codes: {empty_affiliates_after} (was {empty_affiliates})")
+        else:
+            st.error(f"Could not find all required columns in Database Leads file. Matchback process skipped.")
+            st.write(f"Available columns: {', '.join(leads_df.columns)}")
+    else:
+        st.warning("No Database Leads file provided. Skipping affiliate code matchback process.")
     
     # Count records with "WEB" in Lead_DNIS
     web_count = athena_df[athena_df['Lead_DNIS'].str.contains('WEB', na=False, case=False)].shape[0]
