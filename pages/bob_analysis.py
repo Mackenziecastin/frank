@@ -344,12 +344,22 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
         (athena_df['Lead_Creation_Date'] >= start_date) &
         (athena_df['Lead_Creation_Date'] <= end_date)
     ]
+    
+    # Record count before business filters
+    count_before_business_filters = len(athena_df)
+    st.write(f"\nRecords after date filter: {count_before_business_filters}")
+    
     athena_df = athena_df[
         (athena_df['Ln_of_Busn'].str.lower() != 'health') &
         (athena_df['DNIS_BUSN_SEG_CD'].str.lower() != 'us: health') &
         (athena_df['Sale_Date'].notna()) &
         (athena_df['Ordr_Type'].str.upper().isin(['NEW', 'RESALE']))
     ]
+    
+    # Record count after business filters
+    count_after_business_filters = len(athena_df)
+    st.write(f"Records after business filters: {count_after_business_filters}")
+    st.write(f"Records filtered out: {count_before_business_filters - count_after_business_filters}")
     
     # Clean Affiliate_Code and show examples
     athena_df['Original_Code'] = athena_df['Affiliate_Code']  # Keep original for reference
@@ -399,7 +409,7 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
             return matched_pid
         return None
     
-    # Apply PID matching
+    # Apply PID matching for phone records
     athena_df['PID'] = athena_df.apply(match_pid, axis=1)
     
     # Process leads data
@@ -408,7 +418,7 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     leads_df['pid'] = leads_df['pid'].astype(str)
     leads_df['Concatenated'] = leads_df.apply(lambda r: f"{r['pid']}_{r['subid']}" if r['subid'] else f"{r['pid']}_", axis=1)
     
-    # Clean phone numbers - just extract digits
+    # Clean phone numbers
     leads_df['clean_phone'] = leads_df['phone'].apply(clean_phone)
     
     # Debug phone cleaning
@@ -417,40 +427,19 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     sample_phones = leads_df[['phone', 'clean_phone']].head(10)
     st.write(sample_phones)
     
-    # Directly check for specific affiliate in leads data
+    # Look for specific affiliate code in leads data
     target_affiliate = '41610_160005'
     target_rows = leads_df[leads_df['Concatenated'] == target_affiliate]
-    
     st.write(f"\n### Looking for {target_affiliate} in leads data")
     st.write(f"Found {len(target_rows)} rows")
     
     if not target_rows.empty:
         st.write("Sample of matching rows:")
         st.write(target_rows[['Concatenated', 'clean_phone']].head(10))
-        
-        # Extract phone numbers for this affiliate
-        target_phones = target_rows['clean_phone'].tolist()
-        st.write(f"First 10 phone numbers for {target_affiliate}:")
-        st.write(target_phones[:10])
-        
-        # Check for specific phone numbers
-        specific_phones = ['2183980681', '3133102122', '7035058337']
-        for phone in specific_phones:
-            if phone in target_phones:
-                st.write(f"Found {phone} in {target_affiliate} data")
-            else:
-                st.write(f"Did NOT find {phone} in {target_affiliate} data")
     
     # Create a mapping from cleaned phone to Concatenated value
     phone_map = dict(zip(leads_df['clean_phone'], leads_df['Concatenated']))
     st.write(f"Total unique phone mappings in database: {len(phone_map)}")
-    
-    # Check if specific phone numbers are in the mapping
-    for phone in ['2183980681', '3133102122', '7035058337']:
-        if phone in phone_map:
-            st.write(f"Phone {phone} maps to: {phone_map[phone]}")
-        else:
-            st.write(f"Phone {phone} is NOT in the mapping")
     
     # Clean Customer ANI in Athena data
     athena_df['Clean_ANI'] = athena_df['Primary_Phone_Customer_ANI'].apply(clean_phone)
@@ -461,83 +450,6 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     ani_sample = athena_df[['Primary_Phone_Customer_ANI', 'Clean_ANI']].sample(10)
     st.write(ani_sample)
     
-    # Check specifically for the problematic phone numbers
-    st.write("\n### Checking for specific phone numbers:")
-    target_anis = ['2183980681', '3133102122', '7035058337']
-    
-    for ani in target_anis:
-        # Check in original format
-        orig_matches = athena_df[athena_df['Primary_Phone_Customer_ANI'].astype(str) == ani]
-        st.write(f"Exact matches for {ani} in original format: {len(orig_matches)}")
-        
-        # Check for variations with extra digit (the issue we found)
-        extra_digit_matches = athena_df[athena_df['Primary_Phone_Customer_ANI'].astype(str).str.startswith(ani)]
-        st.write(f"Matches starting with {ani}: {len(extra_digit_matches)}")
-        if len(extra_digit_matches) > 0:
-            st.write("Sample of matches with potential extra digit:")
-            st.write(extra_digit_matches[['Primary_Phone_Customer_ANI', 'Clean_ANI']].head(5))
-        
-        # Now check if our clean function fixed the issue
-        clean_matches = athena_df[athena_df['Clean_ANI'] == ani]
-        st.write(f"Matches for {ani} after cleaning: {len(clean_matches)}")
-        if len(clean_matches) > 0:
-            st.write("Sample of matched records after cleaning:")
-            st.write(clean_matches[['Primary_Phone_Customer_ANI', 'Clean_ANI', 'Lead_DNIS']].head(5))
-    
-    # Check if the phone numbers exist in the leads data
-    st.write("\n### Checking for phone numbers in leads data:")
-    leads_df['clean_phone'] = leads_df['phone'].apply(clean_phone)
-    
-    for ani in target_anis:
-        matches = leads_df[leads_df['clean_phone'] == ani]
-        st.write(f"Found {len(matches)} records with phone {ani} in leads data")
-        if len(matches) > 0:
-            st.write("Sample matches:")
-            st.write(matches[['clean_phone', 'Concatenated']].head(5))
-    
-    # Count instances of non-numeric characters in ANIs
-    non_numeric_anis = athena_df[athena_df['Primary_Phone_Customer_ANI'].astype(str).str.contains(r'[^0-9]')]
-    st.write(f"\nRecords with non-numeric characters in ANI: {len(non_numeric_anis)}")
-    if len(non_numeric_anis) > 0:
-        st.write("Sample of records with non-numeric ANIs:")
-        st.write(non_numeric_anis[['Primary_Phone_Customer_ANI', 'Clean_ANI']].head(5))
-    
-    # Look for the target ANIs in the Database Leads file
-    st.write("\n### Checking for ANIs in the Database Leads file")
-    for ani in target_anis:
-        phone_matches = leads_df[leads_df['clean_phone'] == ani]
-        if not phone_matches.empty:
-            st.write(f"Found {ani} in {len(phone_matches)} Database records")
-            st.write("Sample row:")
-            st.write(phone_matches[['clean_phone', 'Concatenated']].head(1))
-        else:
-            st.write(f"ANI {ani} NOT found in Database Leads file")
-            
-            # Check for partial matches
-            partial_matches = leads_df[leads_df['clean_phone'].astype(str).str.contains(ani, na=False)]
-            if not partial_matches.empty:
-                st.write(f"But found {len(partial_matches)} partial matches in Database file:")
-                st.write(partial_matches[['clean_phone', 'Concatenated']].head(5))
-    
-    # Add additional search for 41610_160005
-    st.write("\n### Searching for phone numbers associated with 41610_160005")
-    affiliated_phones = leads_df[leads_df['Concatenated'] == '41610_160005']['clean_phone'].tolist()
-    
-    st.write(f"Found {len(affiliated_phones)} phone numbers associated with 41610_160005")
-    if affiliated_phones:
-        st.write("First 10 phone numbers from 41610_160005:")
-        st.write(affiliated_phones[:10])
-        
-        # Check if any of these phones exist in the Athena data
-        for phone in affiliated_phones[:10]:
-            matches = athena_df[athena_df['Clean_ANI'] == phone]
-            if not matches.empty:
-                st.write(f"Found {len(matches)} Athena records with phone {phone}")
-            # Also check for matches in original ANI format
-            orig_matches = athena_df[athena_df['Primary_Phone_Customer_ANI'].astype(str).str.contains(phone)]
-            if not matches.empty and len(orig_matches) > len(matches):
-                st.write(f"Found {len(orig_matches)} records with phone {phone} in original format")
-    
     # Count blank affiliate codes in WEB records before matchback
     blank_web_mask = (
         athena_df['Lead_DNIS'].str.contains('WEB', na=False) & 
@@ -545,72 +457,60 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     )
     blank_web_count_before = blank_web_mask.sum()
     
-    # Find blank WEB records with specified ANIs
-    blank_web_with_target_ani = athena_df[
-        blank_web_mask & 
-        athena_df['Clean_ANI'].isin(['2183980681', '3133102122', '7035058337'])
-    ]
+    # Record web counts before phone matchback
+    web_records_count = len(athena_df[athena_df['Lead_DNIS'].str.contains('WEB', na=False)])
+    st.write(f"\nTotal web records before matchback: {web_records_count}")
+    st.write(f"Web records with blank affiliate code: {blank_web_count_before}")
     
-    st.write("\n### Blank WEB records with target ANIs (before matchback)")
-    st.write(f"Found {len(blank_web_with_target_ani)} records")
-    if not blank_web_with_target_ani.empty:
-        st.write(blank_web_with_target_ani[['Clean_ANI', 'Lead_DNIS', 'INSTALL_METHOD']].head())
+    # Store original affiliate codes
+    athena_df['Pre_Matchback_Code'] = athena_df['Affiliate_Code']
     
-    # Store original phone map for debugging
-    original_phone_map = phone_map.copy()
+    # -------------------------------------------------------------------------
+    # CHANGE TO MATCHBACK PROCESS: Apply to ALL WEB records, not just blank ones
+    # -------------------------------------------------------------------------
+    st.write("\n### IMPROVED MATCHBACK: Applying phone matchback to ALL web records")
     
-    # Match phone numbers for WEB leads
-    def fill_code(row):
-        # Only match if the Affiliate_Code is blank or NaN
-        if (row['Affiliate_Code'] == '' or pd.isna(row['Affiliate_Code'])) and 'WEB' in str(row['Lead_DNIS']):
-            mapped_code = phone_map.get(row['Clean_ANI'], '')
-            
-            # Special debug for target ANIs
-            if row['Clean_ANI'] in ['2183980681', '3133102122', '7035058337']:
-                st.write(f"Matching ANI {row['Clean_ANI']} -> {mapped_code}")
-            
-            return mapped_code
+    # First pass - try to match ALL web records by phone (overriding existing codes)
+    web_mask = athena_df['Lead_DNIS'].str.contains('WEB', na=False)
+    web_records = athena_df[web_mask].copy()
+    web_records_with_phone = web_records[web_records['Clean_ANI'] != '']
+    
+    st.write(f"Total web records: {len(web_records)}")
+    st.write(f"Web records with phone numbers: {len(web_records_with_phone)}")
+    
+    # Count how many have matching phones in the database
+    matched_phones = [ani for ani in web_records_with_phone['Clean_ANI'] if ani in phone_map]
+    st.write(f"Web records with phone numbers found in database: {len(matched_phones)}")
+    
+    # Apply matchback to ALL web records
+    def enhanced_matchback(row):
+        # Only process web records
+        if 'WEB' in str(row['Lead_DNIS']):
+            # Check if this phone exists in our database mapping
+            if row['Clean_ANI'] and row['Clean_ANI'] in phone_map:
+                return phone_map[row['Clean_ANI']]
+            # If not found, keep the original code
+            return row['Affiliate_Code']
         return row['Affiliate_Code']
     
-    # Store original Affiliate_Codes before matchback
-    athena_df['Original_Affiliate_Code'] = athena_df['Affiliate_Code']
+    # Apply enhanced matchback
+    athena_df['Affiliate_Code'] = athena_df.apply(enhanced_matchback, axis=1)
     
-    # Apply phone matching
-    st.write("\n### Phone Matchback Debug")
-    athena_df['Affiliate_Code'] = athena_df.apply(fill_code, axis=1)
-    
-    # Count matchback changes
-    changed_mask = (
-        athena_df['Lead_DNIS'].str.contains('WEB', na=False) & 
-        (athena_df['Affiliate_Code'] != athena_df['Original_Affiliate_Code'])
-    )
+    # Count changed records
+    changed_mask = (web_mask) & (athena_df['Affiliate_Code'] != athena_df['Pre_Matchback_Code'])
     changed_count = changed_mask.sum()
-    
-    st.write(f"\nTotal WEB records with filled Affiliate_Code: {changed_count}")
+    st.write(f"\nWeb records with updated affiliate codes: {changed_count}")
     
     # Show examples of changed records
     if changed_count > 0:
-        st.write("\nSample of records where Affiliate_Code was filled:")
+        st.write("\nSample of records with updated affiliate codes:")
         changed_records = athena_df[changed_mask].head(10)
-        st.write(changed_records[['Clean_ANI', 'Lead_DNIS', 'Original_Affiliate_Code', 'Affiliate_Code']])
+        st.write(changed_records[['Clean_ANI', 'Lead_DNIS', 'Pre_Matchback_Code', 'Affiliate_Code']])
         
         # Count by INSTALL_METHOD for changed records
-        st.write("\nINSTALL_METHOD distribution for filled records:")
+        st.write("\nINSTALL_METHOD distribution for updated records:")
         install_method_counts = athena_df[changed_mask].groupby('INSTALL_METHOD').size()
         st.write(install_method_counts)
-        
-        # Count by new Affiliate_Code for changed records
-        st.write("\nNew Affiliate_Code distribution for filled records:")
-        code_counts = athena_df[changed_mask]['Affiliate_Code'].value_counts().head(10)
-        st.write(code_counts)
-    
-    # Check if target ANIs were matched correctly
-    for ani in ['2183980681', '3133102122', '7035058337']:
-        matched_rows = athena_df[athena_df['Clean_ANI'] == ani]
-        if not matched_rows.empty:
-            st.write(f"\nAfter matchback, ANI {ani} has affiliate code: {matched_rows['Affiliate_Code'].values[0]}")
-            if matched_rows['Original_Affiliate_Code'].values[0] != matched_rows['Affiliate_Code'].values[0]:
-                st.write(f"Changed from blank to: {matched_rows['Affiliate_Code'].values[0]}")
     
     # Count blank affiliate codes in WEB records after matchback
     blank_web_mask_after = (
@@ -619,31 +519,21 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     )
     blank_web_count_after = blank_web_mask_after.sum()
     
-    # Make sure the phone matchback is done before generating the web pivot
-    st.write("\n### Matchback Verification")
-    st.write(f"Records with blank affiliate code after matchback: {blank_web_count_after}")
+    # Verify improvements
+    st.write("\n### Matchback Results")
+    st.write(f"Web records with blank affiliate code before: {blank_web_count_before}")
+    st.write(f"Web records with blank affiliate code after: {blank_web_count_after}")
+    st.write(f"Blank codes eliminated: {blank_web_count_before - blank_web_count_after}")
     
-    # Check for 41610_160005 specifically
-    affil_41610 = athena_df[athena_df['Affiliate_Code'] == '41610_160005']
-    st.write(f"\nRecords with Affiliate_Code 41610_160005: {len(affil_41610)}")
-    if len(affil_41610) > 0:
-        st.write("INSTALL_METHOD distribution for 41610_160005:")
-        st.write(affil_41610.groupby('INSTALL_METHOD').size())
+    # Distribution of web records by INSTALL_METHOD
+    st.write("\n### Web Record Distribution by INSTALL_METHOD")
+    web_install_counts = athena_df[web_mask].groupby('INSTALL_METHOD').size()
+    st.write(web_install_counts)
     
-    # Example of the target affiliate code
-    target_affiliate = '41610_160005'
-    st.write(f"\nMatchback results for {target_affiliate}:")
-    matched_target = athena_df[athena_df['Affiliate_Code'] == target_affiliate]
-    st.write(f"Total matched records: {len(matched_target)}")
-    
-    if not matched_target.empty:
-        st.write("Sample of matched records:")
-        st.write(matched_target[['Clean_ANI', 'Lead_DNIS', 'INSTALL_METHOD']].head(5))
-        
-        # Count by installation method
-        install_counts = matched_target.groupby('INSTALL_METHOD').size()
-        st.write("Installation method counts:")
-        st.write(install_counts)
+    # Distribution of matched web records by top affiliate codes
+    st.write("\n### Top Affiliate Codes for Web Records")
+    top_affiliates = athena_df[web_mask]['Affiliate_Code'].value_counts().head(20)
+    st.write(top_affiliates)
     
     return athena_df
 
@@ -872,9 +762,34 @@ def allocate_phone_metrics(cake_df, phone_df):
     for metric in phone_metrics:
         cake_df[metric] = 0  # Initialize all phone metrics to 0
     
+    # Debug specific affiliate that has discrepancies
+    st.write("\n### Debugging 42299_ Phone DIFM Installs")
+    
     # Group by PID to handle each partner's phone metrics
     for pid in phone_df.index.unique():
         if pd.isna(pid) or pid == '': continue
+        
+        # Special debug for 42299
+        if pid == '42299':
+            st.write(f"\n--- Detailed Debug for PID {pid} ---")
+            st.write("Phone pivot data for this PID:")
+            st.write(phone_df.loc[pid])
+            
+            # Check raw Athena data for this PID
+            st.write("\nRaw Athena data counts for this PID:")
+            from_athena = len(athena_df[
+                (~athena_df['Lead_DNIS'].str.contains("WEB", na=False)) & 
+                (athena_df['PID'] == pid) &
+                (athena_df['INSTALL_METHOD'].str.contains('DIFM', na=False)) &
+                (athena_df['Install_Date'].notna())
+            ])
+            st.write(f"Phone DIFM installs in raw Athena for PID {pid}: {from_athena}")
+            
+            # Show 42299_ rows in cake_df before allocation
+            st.write("\n42299_ rows in optimization table before allocation:")
+            rows_42299 = cake_df[cake_df['PID'] == pid]
+            st.write(f"Number of 42299_ rows: {len(rows_42299)}")
+            st.write(rows_42299[['Concatenated', 'PID', 'Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs']])
         
         # Get phone metrics for this PID
         phone_metrics_for_pid = phone_df.loc[pid]
@@ -896,6 +811,16 @@ def allocate_phone_metrics(cake_df, phone_df):
         total_web_difm = float(pid_rows['Web DIFM Sales'].sum())
         total_web_diy = float(pid_rows['Web DIY Sales'].sum())
         total_web_installs = float(pid_rows['DIFM Web Installs'].sum())
+        
+        # Special debug for 42299
+        if pid == '42299':
+            st.write(f"Total web metrics for 42299_:")
+            st.write(f"Total Web DIFM Sales: {total_web_difm}")
+            st.write(f"Total Web DIY Sales: {total_web_diy}")
+            st.write(f"Total DIFM Web Installs: {total_web_installs}")
+            
+            # Track allocations in detail
+            allocation_details = []
         
         if total_web_difm > 0 or total_web_diy > 0 or total_web_installs > 0:
             # Allocate proportionally
@@ -925,6 +850,17 @@ def allocate_phone_metrics(cake_df, phone_df):
                         (float(row['DIFM Web Installs']) / total_web_installs)
                     ))
                     cake_df.loc[idx, 'DIFM Phone Installs'] = allocated
+                    
+                    # Special debug for 42299
+                    if pid == '42299':
+                        allocation_details.append({
+                            'Concatenated': row['Concatenated'],
+                            'Web DIFM Installs': float(row['DIFM Web Installs']),
+                            'Proportion': float(row['DIFM Web Installs']) / total_web_installs,
+                            'Calculation': f"{float(phone_metrics_for_pid['DIFM Phone Installs'])} * {float(row['DIFM Web Installs']) / total_web_installs}",
+                            'Raw Value': float(phone_metrics_for_pid['DIFM Phone Installs']) * (float(row['DIFM Web Installs']) / total_web_installs),
+                            'Rounded': allocated,
+                        })
             
             # Step 2: Fix Under-Allocated Totals
             for metric, phone_metric in [
@@ -935,6 +871,14 @@ def allocate_phone_metrics(cake_df, phone_df):
                 total_allocated = int(cake_df.loc[pid_mask, metric].sum())
                 total_available = int(phone_metrics_for_pid[phone_metric])
                 
+                # Special debug for 42299
+                if pid == '42299' and metric == 'DIFM Phone Installs':
+                    st.write(f"\nDIFM Phone Installs allocation for 42299_:")
+                    st.write(f"Total DIFM Phone Installs in pivot: {total_available}")
+                    st.write(f"Total allocated in first pass: {total_allocated}")
+                    st.write("\nAllocation details by row:")
+                    st.write(pd.DataFrame(allocation_details))
+                
                 if total_allocated < total_available:
                     remaining = total_available - total_allocated
                     st.write(f"Under-allocated {metric}: {remaining} units remaining")
@@ -942,8 +886,20 @@ def allocate_phone_metrics(cake_df, phone_df):
                     # Sort by Leads or Web DIFM Sales
                     sorted_idx = pid_rows.sort_values(['Web DIFM Sales', 'Leads'], 
                                                     ascending=[False, False]).index
+                    
+                    # Special debug for 42299
+                    if pid == '42299' and metric == 'DIFM Phone Installs':
+                        st.write(f"\nDistributing {remaining} remaining DIFM Phone Installs")
+                        st.write("Sorted rows to receive remaining installs:")
+                        sorted_rows = pid_rows.loc[sorted_idx[:remaining], ['Concatenated', 'Web DIFM Sales', 'Leads']]
+                        st.write(sorted_rows)
+                    
                     for idx in sorted_idx[:remaining]:
                         cake_df.loc[idx, metric] += 1
+                        
+                        # Special debug for 42299
+                        if pid == '42299' and metric == 'DIFM Phone Installs':
+                            st.write(f"Added 1 to {cake_df.loc[idx, 'Concatenated']}")
         
         else:
             # Step 3: Catch-All Attribution (No Web Activity)
@@ -956,10 +912,22 @@ def allocate_phone_metrics(cake_df, phone_df):
             cake_df.loc[max_leads_idx, 'Phone DIFM Sales'] = int(phone_metrics_for_pid['Phone DIFM Sales'])
             cake_df.loc[max_leads_idx, 'Phone DIY Sales'] = int(phone_metrics_for_pid['Phone DIY Sales'])
             cake_df.loc[max_leads_idx, 'DIFM Phone Installs'] = int(phone_metrics_for_pid['DIFM Phone Installs'])
+        
+        # Special debug for 42299
+        if pid == '42299':
+            st.write("\nFinal allocation results for 42299_:")
+            st.write(cake_df[pid_mask][['Concatenated', 'Phone DIFM Sales', 'Phone DIY Sales', 'DIFM Phone Installs']])
+            st.write(f"Total DIFM Phone Installs allocated: {cake_df.loc[pid_mask, 'DIFM Phone Installs'].sum()}")
     
     # Ensure all phone metrics are integers
     for metric in phone_metrics:
         cake_df[metric] = cake_df[metric].fillna(0).astype(int)
+    
+    # Final check for 42299
+    pid = '42299'
+    pid_mask = cake_df['PID'] == pid
+    st.write(f"\nFinal check for {pid}:")
+    st.write(f"Total DIFM Phone Installs for {pid}: {cake_df.loc[pid_mask, 'DIFM Phone Installs'].sum()}")
     
     return cake_df
 
