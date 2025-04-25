@@ -544,7 +544,10 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     # Ensure Lead_DNIS is a string
     athena_df['Lead_DNIS'] = athena_df['Lead_DNIS'].astype(str)
     
-    # Clean affiliate code and filter records
+    # Clean phone numbers in Lead_DNIS for consistent matching
+    athena_df['Clean_Lead_DNIS'] = athena_df['Lead_DNIS'].apply(clean_phone_number)
+    
+    # Clean affiliate code and do matchback from database report
     if 'Affiliate_Code' not in athena_df.columns:
         st.error("Critical column 'Affiliate_Code' not found in the data!")
         # Try to find a similar column
@@ -577,22 +580,103 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
             # Add a dummy INSTALL_METHOD column
             athena_df['INSTALL_METHOD'] = "Unknown"
     
-    # Apply clean_affiliate_code but DON'T FILTER OUT ROWS
+    # AFFILIATE CODE CLEANING PROCESS - No rows should be filtered out
+    st.write("\n### Affiliate Code Cleaning Process")
+    # Apply clean_affiliate_code function to create Clean_Affiliate_Code
     athena_df['Clean_Affiliate_Code'] = athena_df['Affiliate_Code'].apply(clean_affiliate_code)
     
     # Count different types of affiliate codes
     null_affiliates = athena_df['Clean_Affiliate_Code'].isna().sum()
     empty_affiliates = (athena_df['Clean_Affiliate_Code'] == "").sum()
     cake_affiliates = (athena_df['Clean_Affiliate_Code'] == "CAKE").sum()
-    st.write(f"Affiliate Code Stats (for info only, no rows filtered):")
+    st.write(f"Affiliate Code Stats (for information only, NO rows filtered):")
     st.write(f"  - Null affiliate codes: {null_affiliates}")
     st.write(f"  - Empty affiliate codes: {empty_affiliates}")
     st.write(f"  - CAKE affiliate codes: {cake_affiliates}")
     
-    # Extract PID directly from Clean_Affiliate_Code as another option
+    # Extract PID directly from Clean_Affiliate_Code
     athena_df['PID_from_Affiliate'] = athena_df['Clean_Affiliate_Code'].apply(
         lambda x: x.split('_')[0] if isinstance(x, str) and '_' in x else None
     )
+    
+    # MATCHBACK FROM DATABASE REPORT
+    # Prepare leads_df for matching
+    if leads_df is not None:
+        st.write("\n### Matchback from Database Report")
+        st.write(f"Database leads file contains {len(leads_df)} records")
+        
+        # Check for required columns in leads_df
+        required_cols = ['Subid', 'PID', 'Phone']
+        missing_cols = [col for col in required_cols if col not in leads_df.columns]
+        
+        if missing_cols:
+            st.warning(f"Missing columns in Database Leads file: {missing_cols}")
+            # Try to find similar columns
+            for missing_col in missing_cols:
+                if missing_col.lower() == 'subid':
+                    subid_candidates = [col for col in leads_df.columns if 'sub' in col.lower() or 'id' in col.lower()]
+                    if subid_candidates:
+                        st.write(f"Found potential Subid columns: {subid_candidates}")
+                        leads_df = leads_df.rename(columns={subid_candidates[0]: 'Subid'})
+                elif missing_col.lower() == 'pid':
+                    pid_candidates = [col for col in leads_df.columns if 'pid' in col.lower() or 'partner' in col.lower()]
+                    if pid_candidates:
+                        st.write(f"Found potential PID columns: {pid_candidates}")
+                        leads_df = leads_df.rename(columns={pid_candidates[0]: 'PID'})
+                elif missing_col.lower() == 'phone':
+                    phone_candidates = [col for col in leads_df.columns if 'phone' in col.lower() or 'number' in col.lower() or 'tfn' in col.lower()]
+                    if phone_candidates:
+                        st.write(f"Found potential Phone columns: {phone_candidates}")
+                        leads_df = leads_df.rename(columns={phone_candidates[0]: 'Phone'})
+        
+        # Check if we now have all required columns
+        if all(col in leads_df.columns for col in required_cols):
+            # Clean phone numbers in leads_df
+            leads_df['Clean_Phone'] = leads_df['Phone'].astype(str).apply(clean_phone_number)
+            
+            # Create a mapping from phone to PID and Subid
+            phone_to_pid_subid = {}
+            for _, row in leads_df.iterrows():
+                if not pd.isna(row['Clean_Phone']) and row['Clean_Phone'] != '':
+                    # Store as tuple (PID, Subid)
+                    phone_to_pid_subid[row['Clean_Phone']] = (
+                        str(row['PID']), 
+                        str(row['Subid']) if not pd.isna(row['Subid']) else ''
+                    )
+            
+            st.write(f"Created phone-to-PID mapping with {len(phone_to_pid_subid)} entries")
+            
+            # Match missing affiliate codes using phone numbers
+            missing_affiliate_mask = (athena_df['Affiliate_Code'].isna()) | (athena_df['Affiliate_Code'] == '')
+            matchable_phone_mask = athena_df['Clean_Lead_DNIS'].isin(phone_to_pid_subid.keys())
+            
+            # Find records with both missing affiliate codes and matchable phones
+            matchable_records = missing_affiliate_mask & matchable_phone_mask
+            st.write(f"Found {matchable_records.sum()} records with missing affiliate codes but matchable phones")
+            
+            # Apply the matchback
+            matched_count = 0
+            for idx in athena_df[matchable_records].index:
+                phone = athena_df.loc[idx, 'Clean_Lead_DNIS']
+                if phone in phone_to_pid_subid:
+                    pid, subid = phone_to_pid_subid[phone]
+                    if subid:
+                        athena_df.loc[idx, 'Affiliate_Code'] = f"{pid}_{subid}"
+                        athena_df.loc[idx, 'Clean_Affiliate_Code'] = f"{pid}_{subid}"
+                    else:
+                        athena_df.loc[idx, 'Affiliate_Code'] = f"{pid}_"
+                        athena_df.loc[idx, 'Clean_Affiliate_Code'] = f"{pid}_"
+                    athena_df.loc[idx, 'PID_from_Affiliate'] = pid
+                    matched_count += 1
+            
+            st.write(f"Successfully added affiliate codes to {matched_count} records")
+            
+            # Update counts after matchback
+            null_affiliates_after = athena_df['Clean_Affiliate_Code'].isna().sum()
+            empty_affiliates_after = (athena_df['Clean_Affiliate_Code'] == "").sum()
+            st.write(f"Affiliate Code Stats after matchback:")
+            st.write(f"  - Null affiliate codes: {null_affiliates_after} (was {null_affiliates})")
+            st.write(f"  - Empty affiliate codes: {empty_affiliates_after} (was {empty_affiliates})")
     
     # Count records with "WEB" in Lead_DNIS
     web_count = athena_df[athena_df['Lead_DNIS'].str.contains('WEB', na=False, case=False)].shape[0]
@@ -618,9 +702,6 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     non_web_mask = ~athena_df['Lead_DNIS'].str.contains('WEB', na=False, case=False)
     non_web_count = non_web_mask.sum()
     st.write(f"Non-WEB records to match: {non_web_count}")
-    
-    # Clean Lead_DNIS in athena_df for consistent matching
-    athena_df['Clean_Lead_DNIS'] = athena_df['Lead_DNIS'].apply(clean_phone_number)
     
     # Do another check for HLTHDRA001 in the cleaned DNIS values
     hlth_dnis = athena_df[athena_df['Clean_Lead_DNIS'].str.contains('HLTH', na=False, case=False)]
@@ -706,7 +787,8 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
                     matched_rows.append(idx)
                     break
         
-        # Approach 4: Use PID from Affiliate_Code if available
+        # Approach 4: Use PID from Affiliate_Code if available and ONLY for non-WEB DNIS
+        # This is only for non-WEB records as we're already iterating through non_web_mask
         elif row['PID_from_Affiliate'] is not None:
             athena_df.at[idx, 'PID'] = str(row['PID_from_Affiliate'])
             match_count += 1
