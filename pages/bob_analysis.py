@@ -400,12 +400,28 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     count_before_business_filters = len(athena_df)
     st.write(f"\nRecords after date filter: {count_before_business_filters}")
     
+    # Log unique Ln_of_Busn values to debug the health filter
+    st.write("\nUnique Ln_of_Busn values before filtering:")
+    unique_business_lines = athena_df['Ln_of_Busn'].unique()
+    st.write(sorted(unique_business_lines))
+    
+    # Log counts by business line
+    st.write("\nCount by business line before filtering:")
+    business_counts = athena_df['Ln_of_Busn'].value_counts()
+    st.write(business_counts)
+    
+    # Improved filtering - case insensitive and checking for any variation of Health
     athena_df = athena_df[
-        (athena_df['Ln_of_Busn'].str.lower() != 'health') &
-        (athena_df['DNIS_BUSN_SEG_CD'].str.lower() != 'us: health') &
+        (~athena_df['Ln_of_Busn'].str.contains('health', case=False, na=False)) &
+        (~athena_df['DNIS_BUSN_SEG_CD'].str.contains('health', case=False, na=False)) &
         (athena_df['Sale_Date'].notna()) &
         (athena_df['Ordr_Type'].str.upper().isin(['NEW', 'RESALE']))
     ]
+    
+    # Log unique Ln_of_Busn values after filtering to confirm the filter worked
+    st.write("\nUnique Ln_of_Busn values after filtering:")
+    unique_business_lines_after = athena_df['Ln_of_Busn'].unique()
+    st.write(sorted(unique_business_lines_after))
     
     # Record count after business filters
     count_after_business_filters = len(athena_df)
