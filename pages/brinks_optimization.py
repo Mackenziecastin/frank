@@ -31,30 +31,37 @@ def show_brinks_optimization():
     partner_list_df = None
     
     try:
-        # Try to locate the file at a known path with new filename
-        brinks_tfn_path = "/Users/mackenziecastin/Downloads/Internal _ Brinks Performance + TFNS.xlsx"
-        if os.path.exists(brinks_tfn_path):
-            partner_list_df = pd.read_excel(brinks_tfn_path, engine='openpyxl')
-            partner_list_loaded = True
-            st.success("✅ Brinks Performance + TFNs Report loaded automatically!")
-        else:
-            # Try alternate locations if the file might be in Streamlit's deployment
-            alt_paths = [
-                "./Internal _ Brinks Performance + TFNS.xlsx",
-                "/mount/src/frank/Internal _ Brinks Performance + TFNS.xlsx"
-            ]
-            
-            for path in alt_paths:
-                if os.path.exists(path):
+        # Define the filename with proper space handling
+        filename = "Internal _ Brinks Performance + TFNS.xlsx"
+        # Try multiple possible locations
+        possible_paths = [
+            os.path.join(os.path.expanduser("~"), "Downloads", filename),  # User's Downloads folder
+            os.path.join("/Users/mackenziecastin/Downloads", filename),    # Direct path to Downloads
+            os.path.join(".", filename),                                   # Current directory
+            os.path.join("/mount/src/frank", filename)                     # Mount directory
+        ]
+        
+        # Try each path until we find the file
+        for path in possible_paths:
+            if os.path.exists(path):
+                try:
                     partner_list_df = pd.read_excel(path, engine='openpyxl')
                     partner_list_loaded = True
-                    st.success(f"✅ Brinks Performance + TFNs Report loaded from: {path}")
+                    st.success(f"✅ Brinks Performance + TFNs Report loaded successfully!")
                     break
-            
-            if not partner_list_loaded:
-                st.error("❌ Could not locate Brinks Performance + TFNs Report. Please ensure it's available at one of the expected locations.")
+                except Exception as e:
+                    st.error(f"Found file at {path} but couldn't read it: {str(e)}")
+                    continue
+        
+        if not partner_list_loaded:
+            st.error("❌ Could not locate the Brinks Performance + TFNs Report in any of the expected locations.")
+            st.write("Looked in the following locations:")
+            for path in possible_paths:
+                st.write(f"- {path}")
+    
     except Exception as e:
-        st.error(f"❌ Error loading Brinks Performance + TFNs Report: {str(e)}")
+        st.error(f"❌ Error while trying to load the Brinks Performance + TFNs Report: {str(e)}")
+        st.write("Please ensure the file exists and is accessible.")
     
     # Check if we have all required files
     if lead_source_file and conversion_file and partner_list_loaded:
