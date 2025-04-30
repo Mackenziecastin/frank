@@ -281,7 +281,7 @@ def create_affiliate_pivot(df):
     df['Transaction Count'] = pd.to_numeric(df['Transaction Count'], errors='coerce').fillna(0)
     
     # Ensure other numeric columns are properly converted
-    numeric_cols = ['Booked Count', 'Net Sales Amount', 'Unique Lead']
+    numeric_cols = ['Booked Count', 'Net Sales Amount', 'Unique Leads']
     for col in numeric_cols:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
@@ -291,7 +291,7 @@ def create_affiliate_pivot(df):
         'Transaction Count': 'sum',
         'Booked Count': 'sum',
         'Net Sales Amount': 'sum',
-        'Unique Lead': 'sum'  # Always include Unique Lead in aggregation
+        'Unique Leads': 'sum'  # Changed from 'Unique Lead' to 'Unique Leads'
     }
     
     pivot = df.groupby('partnerID').agg(agg_dict).reset_index()
@@ -331,7 +331,7 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
         'Booked Count': 'Bookings',
         'Transaction Count': 'Sales',
         'Net Sales Amount': 'Revenue',
-        'Unique Lead': 'Leads'  # Directly use Unique Lead as Leads
+        'Unique Leads': 'Leads'  # Changed from 'Unique Lead' to 'Unique Leads'
     }
     
     renamed_affiliate = renamed_affiliate.rename(columns=renamed_cols)
