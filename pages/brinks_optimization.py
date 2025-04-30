@@ -95,34 +95,61 @@ def show_brinks_optimization():
         """)
 
 def load_file(file):
-    """Extremely simple file loading function focused on reliability"""
-    try:
-        # Save the file content to a temporary file
-        import tempfile
-        import os
-        
-        # Create a temporary file with the same extension
-        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.name)[1]) as tmp:
-            # Write binary content to the temp file
-            tmp.write(file.getvalue())
-            tmp_path = tmp.name
-        
-        # Read the file based on extension
-        if file.name.lower().endswith(('.xlsx', '.xls')):
-            # For Excel files
-            result_df = pd.read_excel(tmp_path)
-        else:
-            # For CSV files, try latin-1 encoding which handles almost everything
-            result_df = pd.read_csv(tmp_path, encoding='latin-1')
-        
-        # Clean up
-        os.unlink(tmp_path)
-        
-        return result_df
+    """
+    Load a file using an approach specifically optimized for Streamlit's environment
+    """
+    # First, let's check what we're dealing with
+    st.write(f"Attempting to load file: {file.name}")
     
-    except Exception as e:
-        st.error(f"Error loading file {file.name}: {str(e)}")
-        raise
+    # Try direct Excel reading for .xlsx/.xls files
+    if file.name.endswith(('.xlsx', '.xls')):
+        try:
+            # The most direct approach for Excel
+            return pd.read_excel(file)
+        except Exception as excel_error:
+            st.error(f"Excel reading error: {str(excel_error)}")
+            raise
+    
+    # For CSV files, we need to be more careful
+    elif file.name.endswith('.csv'):
+        try:
+            # Try method 1: Direct reading with specific encoding 
+            df = pd.read_csv(file, encoding='latin-1')
+            st.success(f"Successfully loaded CSV file with direct method")
+            return df
+        except Exception as e1:
+            # If that fails, try method 2: Manual string handling
+            try:
+                st.info("Direct loading failed, trying alternative method...")
+                # Reset file position
+                file.seek(0)
+                
+                # Read as bytes
+                bytes_data = file.getvalue()
+                
+                # Try to decode and re-encode to clean the data
+                text_data = bytes_data.decode('latin-1')
+                
+                # Replace problematic characters
+                for char in ['\0', '\x00']:
+                    text_data = text_data.replace(char, '')
+                
+                # Write to a StringIO buffer
+                from io import StringIO
+                buffer = StringIO(text_data)
+                
+                # Read with pandas
+                df = pd.read_csv(buffer)
+                st.success(f"Successfully loaded CSV file with alternative method")
+                return df
+            except Exception as e2:
+                st.error(f"All CSV reading attempts failed. Error: {str(e2)}")
+                st.write("Please try converting your file to Excel format (.xlsx) before uploading.")
+                raise
+    else:
+        st.error(f"Unsupported file format: {file.name}")
+        st.write("Please use only .csv, .xlsx, or .xls files.")
+        raise ValueError(f"Unsupported file format: {file.name}")
 
 def clean_pardot_partner_id(pid):
     """Clean up the Pardot Partner ID according to the rules"""
