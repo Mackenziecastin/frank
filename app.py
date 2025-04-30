@@ -837,9 +837,23 @@ def main():
         # Use the directly defined function instead of importing
         show_adt_pixel()
     elif page == "Brinks":
-        # Import and show Brinks optimization page
-        from pages.brinks_optimization import show_brinks_optimization
-        show_brinks_optimization()
+        # Show Brinks page
+        show_brinks_page()
+
+# Add a simple placeholder function for the Brinks page
+def show_brinks_page():
+    st.title("Brinks Optimization Report")
+    
+    st.write("""
+    Welcome to the Brinks Optimization Report generator. 
+    This tool will help you process and analyze Brinks marketing data.
+    
+    ## Coming Soon
+    We're currently building this feature. Check back soon for updates!
+    """)
+    
+    # Add a placeholder image or icon if available
+    st.info("This feature is under development. Please contact support for more information.")
 
 if __name__ == "__main__":
     main() 
