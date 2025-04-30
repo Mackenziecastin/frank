@@ -95,152 +95,58 @@ def show_brinks_optimization():
         """)
 
 def load_file(file):
-    """Load a file into a pandas dataframe using a more direct approach"""
-    st.write(f"Loading file: {file.name}")
-    
-    # Get the file extension
-    file_ext = file.name.split('.')[-1].lower()
-    
-    # Create a copy of the file in memory
-    file_bytes = file.getvalue()
-    
+    """Simplified function to load files with fallback conversions"""
     try:
-        # Handle Excel files
-        if file_ext in ['xlsx', 'xls']:
-            st.write("Processing as Excel file")
-            buffer = io.BytesIO(file_bytes)
+        # For Excel files
+        if file.name.endswith(('.xlsx', '.xls')):
             try:
-                # Try with openpyxl first (for newer Excel files)
-                df = pd.read_excel(buffer, engine='openpyxl')
-                st.write("Successfully loaded with openpyxl")
-                return df
-            except Exception as e1:
-                st.write(f"openpyxl failed: {str(e1)}")
-                # Try with xlrd (for older Excel files)
-                buffer.seek(0)
+                # Try direct reading first
+                return pd.read_excel(file)
+            except Exception as excel_error:
+                # If direct reading fails, try converting to CSV first
+                st.warning(f"Direct Excel reading failed. Attempting conversion to CSV.")
+                
+                # Save file content
+                file_content = file.getvalue()
+                
+                # Try using BytesIO to read the Excel file
                 try:
-                    df = pd.read_excel(buffer, engine='xlrd')
-                    st.write("Successfully loaded with xlrd")
+                    # Use a memory buffer
+                    buffer = BytesIO(file_content)
+                    
+                    # Try to read with openpyxl (newer Excel files)
+                    df = pd.read_excel(buffer, engine='openpyxl')
                     return df
-                except Exception as e2:
-                    st.error(f"Excel reading failed with both engines: {str(e2)}")
-                    raise
-        
-        # Handle CSV files
-        elif file_ext == 'csv':
-            st.write("Processing as CSV file")
-            
-            # First attempt: Use the python engine directly which is more robust
-            st.write("Trying with python engine first (most robust)")
-            buffer = io.BytesIO(file_bytes)
-            try:
-                df = pd.read_csv(buffer, engine='python')
-                st.write("Successfully loaded with python engine")
-                return df
-            except Exception as e:
-                st.write(f"Python engine failed: {str(e)}")
-            
-            # If that fails, try different encodings
-            encodings = ['utf-8', 'latin-1', 'cp1252', 'ISO-8859-1']
-            
-            for encoding in encodings:
-                try:
-                    buffer = io.BytesIO(file_bytes)
-                    st.write(f"Trying with encoding: {encoding}")
-                    df = pd.read_csv(buffer, encoding=encoding, engine='python')
-                    st.write(f"Successfully loaded with {encoding}")
-                    return df
-                except UnicodeDecodeError:
-                    st.write(f"Failed with {encoding}")
-                    continue
                 except Exception as e:
-                    st.write(f"Error with {encoding}: {str(e)}")
-                    continue
-            
-            # Try to detect encoding if possible (chardet may not be available)
-            try:
-                import chardet
-                st.write("Trying to detect encoding automatically")
-                result = chardet.detect(file_bytes)
-                detected_encoding = result['encoding']
-                st.write(f"Detected encoding: {detected_encoding}")
-                
-                if detected_encoding:
-                    buffer = io.BytesIO(file_bytes)
-                    df = pd.read_csv(buffer, encoding=detected_encoding, engine='python')
-                    st.write(f"Successfully loaded with detected encoding: {detected_encoding}")
-                    return df
-            except ImportError:
-                st.write("Chardet not available for encoding detection")
-            except Exception as e:
-                st.write(f"Auto-detection failed: {str(e)}")
-            
-            # Final fallback - try with very strict settings
-            st.write("Using final fallback method")
-            buffer = io.BytesIO(file_bytes)
-            
-            # For newer pandas versions
-            try:
-                df = pd.read_csv(
-                    buffer,
-                    encoding='latin-1',
-                    engine='python',
-                    on_bad_lines='skip'
-                )
-                st.write("Successfully loaded with modern pandas parameters")
-                return df
-            except (TypeError, ValueError) as e:
-                st.write(f"Modern parameter approach failed: {str(e)}")
-                
-                # For older pandas versions
-                try:
-                    buffer.seek(0)
-                    df = pd.read_csv(
-                        buffer,
-                        encoding='latin-1',
-                        engine='python',
-                        error_bad_lines=False,
-                        warn_bad_lines=True
-                    )
-                    st.write("Successfully loaded with older pandas parameters")
-                    return df
-                except Exception as e2:
-                    # Final bare-bones attempt
+                    # If that fails, try with xlrd (older Excel files)
                     try:
-                        buffer.seek(0)
-                        df = pd.read_csv(
-                            buffer,
-                            encoding='latin-1',
-                            engine='python'
-                        )
-                        st.write("Successfully loaded with minimal parameters")
+                        buffer = BytesIO(file_content)
+                        df = pd.read_excel(buffer, engine='xlrd')
                         return df
-                    except Exception as e3:
-                        # Try with common separators
-                        for sep in [',', ';', '\t', '|']:
-                            try:
-                                buffer.seek(0)
-                                df = pd.read_csv(
-                                    buffer,
-                                    encoding='latin-1',
-                                    engine='python',
-                                    sep=sep
-                                )
-                                st.write(f"Successfully loaded with separator: '{sep}'")
-                                return df
-                            except Exception:
-                                continue
-                                
-                        st.error(f"All loading methods failed")
-                        raise ValueError(f"Unable to read file {file.name} with any method")
-        
-        # For any other file type
+                    except Exception as e:
+                        st.error(f"All Excel reading methods failed: {str(e)}")
+                        raise ValueError(f"Could not read Excel file: {file.name}")
+            
+        # For CSV files
+        elif file.name.endswith('.csv'):
+            try:
+                # Try the most basic approach first
+                return pd.read_csv(file)
+            except UnicodeDecodeError:
+                # Rewind the file and try with Latin-1 encoding
+                file.seek(0)
+                try:
+                    return pd.read_csv(file, encoding='latin-1')
+                except Exception as csv_error:
+                    st.error(f"CSV reading failed: {str(csv_error)}")
+                    raise ValueError(f"Could not read CSV file: {file.name}")
+                
         else:
-            st.error(f"Unsupported file type: {file_ext}")
+            st.error(f"Unsupported file format: {file.name}")
             raise ValueError(f"Unsupported file format: {file.name}")
             
     except Exception as e:
-        st.error(f"Fatal error loading file: {str(e)}")
+        st.error(f"Error loading file: {str(e)}")
         raise
 
 def clean_pardot_partner_id(pid):
