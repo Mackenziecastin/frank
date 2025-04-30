@@ -95,58 +95,33 @@ def show_brinks_optimization():
         """)
 
 def load_file(file):
-    """Simplified function to load files with fallback conversions"""
+    """Extremely simple file loading function focused on reliability"""
     try:
-        # For Excel files
-        if file.name.endswith(('.xlsx', '.xls')):
-            try:
-                # Try direct reading first
-                return pd.read_excel(file)
-            except Exception as excel_error:
-                # If direct reading fails, try converting to CSV first
-                st.warning(f"Direct Excel reading failed. Attempting conversion to CSV.")
-                
-                # Save file content
-                file_content = file.getvalue()
-                
-                # Try using BytesIO to read the Excel file
-                try:
-                    # Use a memory buffer
-                    buffer = BytesIO(file_content)
-                    
-                    # Try to read with openpyxl (newer Excel files)
-                    df = pd.read_excel(buffer, engine='openpyxl')
-                    return df
-                except Exception as e:
-                    # If that fails, try with xlrd (older Excel files)
-                    try:
-                        buffer = BytesIO(file_content)
-                        df = pd.read_excel(buffer, engine='xlrd')
-                        return df
-                    except Exception as e:
-                        st.error(f"All Excel reading methods failed: {str(e)}")
-                        raise ValueError(f"Could not read Excel file: {file.name}")
-            
-        # For CSV files
-        elif file.name.endswith('.csv'):
-            try:
-                # Try the most basic approach first
-                return pd.read_csv(file)
-            except UnicodeDecodeError:
-                # Rewind the file and try with Latin-1 encoding
-                file.seek(0)
-                try:
-                    return pd.read_csv(file, encoding='latin-1')
-                except Exception as csv_error:
-                    st.error(f"CSV reading failed: {str(csv_error)}")
-                    raise ValueError(f"Could not read CSV file: {file.name}")
-                
+        # Save the file content to a temporary file
+        import tempfile
+        import os
+        
+        # Create a temporary file with the same extension
+        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.name)[1]) as tmp:
+            # Write binary content to the temp file
+            tmp.write(file.getvalue())
+            tmp_path = tmp.name
+        
+        # Read the file based on extension
+        if file.name.lower().endswith(('.xlsx', '.xls')):
+            # For Excel files
+            result_df = pd.read_excel(tmp_path)
         else:
-            st.error(f"Unsupported file format: {file.name}")
-            raise ValueError(f"Unsupported file format: {file.name}")
-            
+            # For CSV files, try latin-1 encoding which handles almost everything
+            result_df = pd.read_csv(tmp_path, encoding='latin-1')
+        
+        # Clean up
+        os.unlink(tmp_path)
+        
+        return result_df
+    
     except Exception as e:
-        st.error(f"Error loading file: {str(e)}")
+        st.error(f"Error loading file {file.name}: {str(e)}")
         raise
 
 def clean_pardot_partner_id(pid):
