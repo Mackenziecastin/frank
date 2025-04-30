@@ -94,34 +94,95 @@ def show_brinks_optimization():
         """)
 
 def load_file(file):
-    """Load a file into a pandas dataframe, handling CSV or Excel formats and different encodings"""
-    if file.name.endswith('.csv'):
-        # Try multiple encodings
-        encodings = ['utf-8', 'latin-1', 'cp1252', 'ISO-8859-1']
+    """Load a file into a pandas dataframe, handling CSV or Excel formats and special file types"""
+    try:
+        # Check file type from content instead of just extension
+        # Get the first few bytes to check file signature
+        file_content = file.read(8)  # Read first 8 bytes
+        file.seek(0)  # Reset file pointer
         
-        for encoding in encodings:
+        # Debug file information
+        st.write(f"Loading file: {file.name}")
+        st.write(f"File type: {file.type if hasattr(file, 'type') else 'Unknown'}")
+        
+        # Check if it's an Excel file by looking for Excel file signature
+        is_excel = False
+        if file_content.startswith(b'\xd0\xcf\x11\xe0') or file_content.startswith(b'PK\x03\x04'):  # Excel signatures
+            is_excel = True
+            st.write("Detected Excel file format from content")
+        
+        # If file has .xlsx or .xls extension or binary signature matches Excel
+        if file.name.endswith(('.xlsx', '.xls')) or is_excel:
             try:
-                return pd.read_csv(file, encoding=encoding)
-            except UnicodeDecodeError:
-                # Reset file pointer for next attempt
-                file.seek(0)
-                continue
-            except Exception as e:
-                st.error(f"Error reading file with {encoding} encoding: {str(e)}")
-                raise
+                # For Excel files, use read_excel with engine='openpyxl'
+                st.write("Reading as Excel file")
+                return pd.read_excel(file, engine='openpyxl')
+            except Exception as excel_error:
+                st.error(f"Error reading Excel file with openpyxl: {str(excel_error)}")
+                # Try with xlrd engine as fallback
+                try:
+                    file.seek(0)
+                    st.write("Trying with xlrd engine")
+                    return pd.read_excel(file, engine='xlrd')
+                except Exception as xlrd_error:
+                    st.error(f"Error reading Excel file with xlrd: {str(xlrd_error)}")
+                    raise
         
-        # If all encodings fail
-        st.error(f"Failed to read CSV file with any encoding. Please check the file format.")
-        raise ValueError(f"Could not decode file {file.name} with any supported encoding")
+        # For CSV files
+        elif file.name.endswith('.csv'):
+            st.write("Reading as CSV file")
+            # Try multiple encodings
+            encodings = ['utf-8', 'latin-1', 'cp1252', 'ISO-8859-1']
+            
+            for encoding in encodings:
+                try:
+                    st.write(f"Trying encoding: {encoding}")
+                    # Save to temporary file to avoid streaming issues
+                    file.seek(0)
+                    df = pd.read_csv(file, encoding=encoding)
+                    st.write(f"Successfully read with {encoding} encoding")
+                    return df
+                except UnicodeDecodeError:
+                    st.write(f"Failed with {encoding} encoding")
+                    file.seek(0)  # Reset file pointer for next attempt
+                    continue
+                except Exception as e:
+                    st.error(f"Error reading CSV with {encoding} encoding: {str(e)}")
+                    file.seek(0)
+                    continue
+            
+            # If all encodings fail, try to read it as binary
+            st.write("All text encodings failed, trying binary read method")
+            try:
+                file.seek(0)
+                # Try to use pandas binary read (assuming file is in binary format)
+                return pd.read_csv(file, encoding=None)
+            except Exception as binary_error:
+                st.error(f"Binary reading failed: {str(binary_error)}")
+                
+            # If everything fails
+            st.error("All methods failed to read this file.")
+            raise ValueError(f"Could not read file {file.name} with any supported method")
+        
+        # For any other file type
+        else:
+            # Try to determine the file type and use appropriate method
+            st.write("Unknown file type, attempting to detect format")
+            try:
+                if file_content.startswith(b'PK'):  # Zip file signature
+                    st.write("Detected zip file signature, trying Excel reader")
+                    return pd.read_excel(file, engine='openpyxl')
+                else:
+                    # Last resort - try as CSV
+                    st.write("Trying as CSV with latin-1 encoding")
+                    return pd.read_csv(file, encoding='latin-1')
+            except Exception as e:
+                st.error(f"Failed to load unknown file type: {str(e)}")
+                raise ValueError(f"Unsupported file format: {file.name}")
     
-    elif file.name.endswith(('.xlsx', '.xls')):
-        try:
-            return pd.read_excel(file)
-        except Exception as e:
-            st.error(f"Error reading Excel file: {str(e)}")
-            raise
-    else:
-        raise ValueError(f"Unsupported file format: {file.name}")
+    except Exception as e:
+        st.error(f"Error in load_file function: {str(e)}")
+        raise
 
 def clean_pardot_partner_id(pid):
     """Clean up the Pardot Partner ID according to the rules"""
