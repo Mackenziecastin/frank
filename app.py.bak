@@ -1,0 +1,892 @@
+import streamlit as st
+import pandas as pd
+import numpy as np
+import re
+from io import BytesIO
+from datetime import datetime, timedelta
+import logging
+import sys
+import os
+import uuid
+import requests
+import io
+
+# Set page config at the start
+st.set_page_config(page_title="Partner Optimization Report Generator", layout="wide")
+
+def show_main_page():
+    st.title("Partner Optimization Report Generator")
+
+    st.write("""
+    This tool processes your marketing data files and generates a comprehensive optimization report.
+    Please upload the required files below.
+    """)
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        affiliate_file = st.file_uploader("Upload Affiliate Leads QA File (CSV)", type=['csv'])
+    
+    with col2:
+        advanced_file = st.file_uploader("Upload Advanced Action Sheet (CSV)", type=['csv'])
+
+    if affiliate_file and advanced_file:
+        try:
+            # Read files
+            affiliate_df = pd.read_csv(affiliate_file)
+            advanced_df = pd.read_csv(advanced_file)
+            
+            # Read partner list automatically
+            try:
+                partner_list_df = pd.read_csv('Full DA Performance Marketing Team Partner List - Sheet1.csv')
+            except Exception as e:
+                st.warning(f"Could not read partner list file: {str(e)}. VLOOKUP functionality will be disabled.")
+                partner_list_df = None
+            
+            # Process both dataframes
+            affiliate_df_processed = process_dataframe(affiliate_df, 'Click URL')
+            if affiliate_df_processed is None:
+                st.error("Failed to process Affiliate file. Please check if it contains a 'Click URL' column.")
+                st.stop()
+                
+            advanced_df_processed = process_dataframe(advanced_df, 'Landing Page URL')
+            if advanced_df_processed is None:
+                st.error("Failed to process Advanced Action file. Please check if it contains a 'Landing Page URL' column.")
+                st.stop()
+            
+            # Show preview of processed data
+            st.subheader("Preview of Processed Affiliate Data")
+            st.dataframe(affiliate_df_processed[['Click URL', 'PID', 'SUBID', 'partnerID']].head())
+            
+            st.subheader("Preview of Processed Advanced Action Data")
+            st.dataframe(advanced_df_processed[['Landing Page URL', 'PID', 'SUBID', 'partnerID']].head())
+            
+            # Create maturation-adjusted dataframes
+            if 'Created Date' in affiliate_df_processed.columns and 'Action Date' in advanced_df_processed.columns:
+                # Convert dates to datetime
+                affiliate_df_processed['Created Date'] = pd.to_datetime(affiliate_df_processed['Created Date'])
+                advanced_df_processed['Action Date'] = pd.to_datetime(advanced_df_processed['Action Date'])
+                
+                # Get the date range from Advanced Action report
+                full_end_date = advanced_df_processed['Action Date'].max()
+                full_start_date = advanced_df_processed['Action Date'].min()
+                
+                # For matured report: exclude the last 7 days but keep same start date
+                matured_end_date = full_end_date - pd.Timedelta(days=7)
+                matured_start_date = full_start_date  # Same as full report start date
+                
+                # Debug information before filtering
+                st.write("Debug - Before filtering:")
+                st.write(f"Total records in affiliate data: {len(affiliate_df_processed)}")
+                st.write(f"Total Transaction Count: {affiliate_df_processed['Transaction Count'].sum()}")
+                
+                # Create full report dataframes with date filtering
+                # Filter both datasets to match exactly
+                affiliate_df_full = affiliate_df_processed[
+                    (affiliate_df_processed['Created Date'].dt.date >= full_start_date.date()) &
+                    (affiliate_df_processed['Created Date'].dt.date <= full_end_date.date())
+                ]
+                advanced_df_full = advanced_df_processed[
+                    (advanced_df_processed['Action Date'].dt.date >= full_start_date.date()) &
+                    (advanced_df_processed['Action Date'].dt.date <= full_end_date.date())
+                ]
+                
+                # Debug information after full report filtering
+                st.write("\nDebug - After full report filtering:")
+                st.write(f"Records in affiliate data: {len(affiliate_df_full)}")
+                st.write(f"Transaction Count: {affiliate_df_full['Transaction Count'].sum()}")
+                st.write(f"Date range: {affiliate_df_full['Created Date'].min()} to {affiliate_df_full['Created Date'].max()}")
+                
+                # Create matured report dataframes with date filtering
+                affiliate_df_matured = affiliate_df_processed[
+                    (affiliate_df_processed['Created Date'].dt.date >= matured_start_date.date()) &
+                    (affiliate_df_processed['Created Date'].dt.date <= matured_end_date.date())
+                ]
+                advanced_df_matured = advanced_df_processed[
+                    (advanced_df_processed['Action Date'].dt.date >= matured_start_date.date()) &
+                    (advanced_df_processed['Action Date'].dt.date <= matured_end_date.date())
+                ]
+                
+                # Debug information after matured report filtering
+                st.write("\nDebug - After matured report filtering:")
+                st.write(f"Records in affiliate data: {len(affiliate_df_matured)}")
+                st.write(f"Transaction Count: {affiliate_df_matured['Transaction Count'].sum()}")
+                st.write(f"Date range: {affiliate_df_matured['Created Date'].min()} to {affiliate_df_matured['Created Date'].max()}")
+                
+                # Show date ranges for both reports
+                st.subheader("Date Ranges")
+                st.write("Full Report Dates:")
+                st.write(f"- Start Date: {full_start_date.strftime('%Y-%m-%d')} (Based on Advanced Action report)")
+                st.write(f"- End Date: {full_end_date.strftime('%Y-%m-%d')} (Based on Advanced Action report)")
+                
+                st.write("\nMatured Report Dates (excluding last 7 days):")
+                st.write(f"- Start Date: {matured_start_date.strftime('%Y-%m-%d')}")
+                st.write(f"- End Date: {matured_end_date.strftime('%Y-%m-%d')}")
+                
+                # Add date range validation and warning
+                if affiliate_df_processed['Created Date'].max() > full_end_date:
+                    extra_days = (affiliate_df_processed['Created Date'].max() - full_end_date).days
+                    st.warning(f"Note: Affiliate data contains {extra_days} additional day(s) beyond {full_end_date.strftime('%Y-%m-%d')}. These dates have been excluded for consistency with Advanced Action data.")
+                
+                # Create pivot tables and reports
+                # Full report
+                affiliate_pivot_full = create_affiliate_pivot(affiliate_df_full)
+                advanced_pivot_full = create_advanced_pivot(advanced_df_full)
+                optimization_report_full = create_optimization_report(
+                    affiliate_pivot_full, advanced_pivot_full, partner_list_df
+                )
+                
+                # Matured report
+                affiliate_pivot_matured = create_affiliate_pivot(affiliate_df_matured)
+                advanced_pivot_matured = create_advanced_pivot(advanced_df_matured)
+                optimization_report_matured = create_optimization_report(
+                    affiliate_pivot_matured, advanced_pivot_matured, partner_list_df
+                )
+                
+                # Show preview of both reports
+                st.subheader("Preview of Full Optimization Report")
+                st.dataframe(optimization_report_full)
+                
+                st.subheader("Preview of Matured Optimization Report (Excluding Last 7 Days)")
+                st.dataframe(optimization_report_matured)
+                
+                # Create download buttons for both reports
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    excel_data = to_excel_download(
+                        affiliate_df_full, advanced_df_full, optimization_report_full
+                    )
+                    st.download_button(
+                        label="Download Full Report",
+                        data=excel_data,
+                        file_name=f"partner_optimization_report_full_{full_end_date.strftime('%Y%m%d')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+                
+                with col2:
+                    excel_data_matured = to_excel_download(
+                        affiliate_df_matured, advanced_df_matured, optimization_report_matured
+                    )
+                    st.download_button(
+                        label="Download Matured Report",
+                        data=excel_data_matured,
+                        file_name=f"partner_optimization_report_matured_{matured_end_date.strftime('%Y%m%d')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+            else:
+                missing_columns = []
+                if 'Created Date' not in affiliate_df_processed.columns:
+                    missing_columns.append("'Created Date' in Affiliate Leads file")
+                if 'Action Date' not in advanced_df_processed.columns:
+                    missing_columns.append("'Action Date' in Advanced Action file")
+                    
+                st.error(f"Required date columns not found: {', '.join(missing_columns)}. Available columns are:")
+                st.write("Affiliate Leads columns:", ", ".join(affiliate_df_processed.columns))
+                st.write("Advanced Action columns:", ", ".join(advanced_df_processed.columns))
+                
+                # Show only the full report if date columns are missing
+                st.subheader("Preview of Full Optimization Report (without date filtering)")
+                st.dataframe(optimization_report_full)
+                
+                excel_data = to_excel_download(
+                    affiliate_df_full, advanced_df_full, optimization_report_full
+                )
+                st.download_button(
+                    label="Download Full Report",
+                    data=excel_data,
+                    file_name="partner_optimization_report.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+            
+        except Exception as e:
+            st.error(f"An error occurred while processing the files: {str(e)}")
+            st.error("Please ensure your files contain all required columns and are in the correct format.")
+            # Add more detailed error information
+            import traceback
+            st.code(traceback.format_exc())
+    else:
+        st.info("Please upload both required files to generate the report.")
+
+def extract_values_after_3d(url):
+    """Extract all values after %3D in the URL."""
+    try:
+        if pd.isna(url):
+            return ""
+        
+        # Find the part after %3D
+        match = re.search(r'%3D(.*?)(?:$|&)', url)
+        if match:
+            return match.group(1)
+        return ""
+    except:
+        return ""
+
+def extract_pid_subid(after_3d_value):
+    """Extract PID and SUBID from the string after %3D."""
+    try:
+        if not after_3d_value:
+            return "", ""
+        
+        # Split by underscore
+        parts = after_3d_value.split('_')
+        
+        # First part is PID
+        pid = parts[0] if parts and parts[0].isdigit() else ""
+        
+        # Second part is SUBID (if it exists and contains only digits)
+        subid = parts[1] if len(parts) > 1 and parts[1].isdigit() else ""
+        
+        return pid, subid
+    except:
+        return "", ""
+
+def process_dataframe(df, url_column):
+    """Process dataframe to add PID, SUBID, and partnerID columns."""
+    # Make a copy to avoid modifying the original
+    df = df.copy()
+    
+    # Convert date column to datetime if it exists
+    if 'Date' in df.columns:
+        df['Date'] = pd.to_datetime(df['Date'])
+    
+    # Check for variations of URL column names
+    url_column_variations = {
+        'Click URL': ['Click URL', 'ClickURL', 'Click_URL', 'click url', 'click_url'],
+        'Landing Page URL': ['Landing Page URL', 'LandingPageURL', 'Landing_Page_URL', 'landing page url', 'landing_page_url', 'URL']
+    }
+    
+    # Find the actual column name in the dataframe
+    actual_column = None
+    expected_type = 'Click URL' if url_column == 'Click URL' else 'Landing Page URL'
+    
+    for col in df.columns:
+        if col in url_column_variations[expected_type]:
+            actual_column = col
+            break
+    
+    if actual_column is None:
+        available_columns = ", ".join(df.columns)
+        st.error(f"Could not find {expected_type} column. Available columns are: {available_columns}")
+        return None
+    
+    # Filter out rows where URL contains "coolsculpting"
+    coolsculpting_count = df[df[actual_column].str.contains('coolsculpting', case=False, na=False)].shape[0]
+    if coolsculpting_count > 0:
+        st.info(f"Filtered out {coolsculpting_count} rows containing 'coolsculpting' in the URL.")
+    
+    df = df[~df[actual_column].str.contains('coolsculpting', case=False, na=False)]
+    
+    # Create new columns
+    df['After_3D'] = df[actual_column].apply(extract_values_after_3d)
+    df['PID'] = ""
+    df['SUBID'] = ""
+    df['partnerID'] = ""
+    
+    # Process each row
+    for idx, row in df.iterrows():
+        pid, subid = extract_pid_subid(row['After_3D'])
+        df.at[idx, 'PID'] = pid
+        df.at[idx, 'SUBID'] = subid
+        
+        # Create partnerID
+        if pid:
+            if subid:
+                df.at[idx, 'partnerID'] = f"{pid}_{subid}"
+            else:
+                df.at[idx, 'partnerID'] = f"{pid}_"
+        else:
+            df.at[idx, 'partnerID'] = "Unattributed"
+    
+    # Replace any partnerID that is just "_" with "Unattributed"
+    df.loc[df['partnerID'] == "_", 'partnerID'] = "Unattributed"
+    
+    # Drop the temporary column
+    df = df.drop('After_3D', axis=1)
+    
+    return df
+
+def create_affiliate_pivot(df):
+    """Create pivot table for Affiliate Leads QA data."""
+    # Debug: Print initial data stats
+    st.write("\n=== Lead Count Debugging ===")
+    st.write("Initial Data Statistics:")
+    st.write(f"Total rows in affiliate data: {len(df)}")
+    
+    # First verify Transaction Count column exists
+    if 'Transaction Count' not in df.columns:
+        st.error("Transaction Count column not found in affiliate data")
+        return None
+        
+    # Convert Transaction Count to numeric, treating any non-numeric values as 0
+    df['Transaction Count'] = pd.to_numeric(df['Transaction Count'], errors='coerce').fillna(0)
+    
+    # Ensure other numeric columns are properly converted if they exist
+    numeric_cols = ['Booked Count', 'Net Sales Amount', 'Unique Lead']
+    for col in numeric_cols:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+            st.write(f"\nConverted {col} to numeric. Sum: {df[col].sum()}")
+    
+    # Create pivot table with specific aggregation methods
+    agg_dict = {
+        'Transaction Count': 'sum',
+        'Booked Count': 'sum',
+        'Net Sales Amount': 'sum'
+    }
+    
+    # Always try to include Unique Lead in aggregation if it exists
+    if 'Unique Lead' in df.columns:
+        st.write(f"\nFound 'Unique Lead' column with sum: {df['Unique Lead'].sum()}")
+        agg_dict['Unique Lead'] = 'sum'
+        st.write("Added Unique Lead to aggregation dictionary")
+    else:
+        st.write("\nWARNING: 'Unique Lead' column not found in data!")
+        st.write("Available columns:", df.columns.tolist())
+    
+    st.write("\nBefore pivot operation:")
+    st.write(f"Number of unique partnerIDs: {df['partnerID'].nunique()}")
+    st.write("Aggregation dictionary:", agg_dict)
+    
+    pivot = df.groupby('partnerID').agg(agg_dict).reset_index()
+    
+    st.write("\nAfter pivot operation:")
+    st.write(f"Number of rows in pivot: {len(pivot)}")
+    if 'Unique Lead' in pivot.columns:
+        st.write(f"Total Unique Leads in pivot: {pivot['Unique Lead'].sum()}")
+        # Show top 5 partners by lead count
+        st.write("\nTop 5 partners by lead count:")
+        st.write(pivot.nlargest(5, 'Unique Lead')[['partnerID', 'Unique Lead']])
+    
+    return pivot
+
+def create_advanced_pivot(df):
+    """Create pivot table for Advanced Action data.
+    
+    As per instructions:
+    1. Pull in the Landing Page URL_PartnerID into the rows (index='partnerID')
+    2. In the values, pull in Count of Event Type but filter for ONLY the Lead Submissions
+    3. Also pull in the Sum of Action Earnings
+    """
+    # Ensure numeric columns are properly converted
+    df['Action Id'] = pd.to_numeric(df['Action Id'], errors='coerce').fillna(0)
+    df['Action Earnings'] = pd.to_numeric(df['Action Earnings'], errors='coerce').fillna(0)
+    
+    # Filter for Lead Submissions
+    lead_submissions = df[df['Event Type'] == 'Lead Submission']
+    
+    # Count the number of rows with Lead Submission per partnerID
+    lead_counts = lead_submissions.groupby('partnerID').size().reset_index(name='Leads')
+    
+    # Sum the Action Earnings per partnerID
+    earnings_sums = lead_submissions.groupby('partnerID')['Action Earnings'].sum().reset_index()
+    
+    # Merge the two dataframes
+    pivot = pd.merge(lead_counts, earnings_sums, on='partnerID')
+    
+    # Rename columns for clarity
+    pivot.columns = ['partnerID', 'Leads', 'Spend']
+    
+    return pivot
+
+def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=None):
+    """Create the final optimization report by combining pivot tables."""
+    st.write("\n=== Optimization Report Lead Count Debugging ===")
+    
+    # First, rename the affiliate pivot columns for clarity
+    renamed_affiliate = affiliate_pivot.copy()
+    has_unique_lead = 'Unique Lead' in renamed_affiliate.columns
+    
+    st.write(f"\nUnique Lead column present: {has_unique_lead}")
+    if has_unique_lead:
+        st.write(f"Total Unique Leads before merge: {renamed_affiliate['Unique Lead'].sum()}")
+    
+    if 'Transaction Count' in renamed_affiliate.columns:
+        # Standard column renaming
+        renamed_cols = {
+            'Booked Count': 'Bookings',
+            'Transaction Count': 'Sales',
+            'Net Sales Amount': 'Revenue'
+        }
+        
+        # If Unique Lead exists, include it in renaming
+        if has_unique_lead:
+            st.write("Found 'Unique Lead' column - will use for lead count instead of Advanced Action leads")
+            renamed_cols['Unique Lead'] = 'Leads_From_Affiliate'
+            
+        renamed_affiliate = renamed_affiliate.rename(columns=renamed_cols)
+        
+        if has_unique_lead:
+            st.write(f"Total Leads_From_Affiliate after renaming: {renamed_affiliate['Leads_From_Affiliate'].sum()}")
+    else:
+        st.warning("Expected columns not found in affiliate data. Using default column names.")
+        renamed_affiliate = renamed_affiliate.rename(columns={
+            renamed_affiliate.columns[1]: 'Bookings',
+            renamed_affiliate.columns[2]: 'Sales',
+            renamed_affiliate.columns[3]: 'Revenue'
+        })
+    
+    # If we have Unique Lead data, use that for Leads directly
+    if has_unique_lead:
+        st.write("\nMerging with Unique Lead data:")
+        # First merge the affiliate data (including Leads_From_Affiliate)
+        merged_df = pd.merge(
+            renamed_affiliate,
+            advanced_pivot[['partnerID', 'Spend']],  # Only take Spend from advanced_pivot
+            on='partnerID',
+            how='outer'
+        ).fillna(0)
+        
+        st.write(f"Leads from affiliate before final rename: {merged_df['Leads_From_Affiliate'].sum()}")
+        
+        # Then rename the Leads_From_Affiliate column to Leads
+        merged_df = merged_df.rename(columns={'Leads_From_Affiliate': 'Leads'})
+        
+        st.write(f"Final lead count in optimization report: {merged_df['Leads'].sum()}")
+    else:
+        st.write("\nNo Unique Lead data found, using Advanced Action leads")
+        # Otherwise use the standard merge approach
+        merged_df = pd.merge(
+            advanced_pivot,
+            renamed_affiliate,
+            on='partnerID',
+            how='outer'
+        ).fillna(0)
+        st.write(f"Lead count from Advanced Action: {merged_df['Leads'].sum()}")
+    
+    # Ensure all numeric columns are properly converted
+    for col in ['Leads', 'Spend', 'Bookings', 'Sales', 'Revenue']:
+        if col in merged_df.columns:
+            merged_df[col] = pd.to_numeric(merged_df[col], errors='coerce').fillna(0)
+    
+    # Remove rows with all zeros
+    merged_df = merged_df[~((merged_df['Leads'] == 0) & 
+                           (merged_df['Spend'] == 0) & 
+                           (merged_df['Bookings'] == 0) & 
+                           (merged_df['Sales'] == 0) & 
+                           (merged_df['Revenue'] == 0))]
+    
+    # Calculate additional metrics
+    merged_df['Lead to Sale'] = merged_df['Sales'] / merged_df['Leads'].replace(0, np.inf)
+    merged_df['ROAS'] = merged_df['Revenue'] / merged_df['Spend'].replace(0, np.inf)
+    merged_df['eCPL at $1.50'] = (merged_df['Revenue'] / merged_df['Leads'].replace(0, np.inf)) / 1.5
+    
+    # Clean up infinity values
+    merged_df = merged_df.replace([np.inf, -np.inf], 0)
+    
+    # Add VLOOKUP data if partner list is provided
+    if partner_list is not None:
+        try:
+            # Extract affiliate ID from partnerID (part before underscore)
+            merged_df['Affiliate ID'] = merged_df['partnerID'].apply(
+                lambda x: x.split('_')[0] if x != "Unattributed" and '_' in x else x)
+            
+            # Ensure required columns exist in partner list
+            required_cols = ['Affiliate ID', 'Affiliate Name', 'Account Manager Name']
+            if not all(col in partner_list.columns for col in required_cols):
+                st.warning("Partner list file missing required columns. Required columns are: Affiliate ID, Affiliate Name, Account Manager Name")
+            else:
+                # Convert Affiliate ID to string in both dataframes
+                partner_list['Affiliate ID'] = partner_list['Affiliate ID'].astype(str)
+                merged_df['Affiliate ID'] = merged_df['Affiliate ID'].astype(str)
+                
+                # Merge with partner list to get affiliate name and account manager
+                merged_df = pd.merge(
+                    merged_df,
+                    partner_list[['Affiliate ID', 'Affiliate Name', 'Account Manager Name']],
+                    on='Affiliate ID',
+                    how='left'
+                )
+                
+                # Fill NaN values with empty strings
+                merged_df['Affiliate Name'] = merged_df['Affiliate Name'].fillna("")
+                merged_df['Account Manager Name'] = merged_df['Account Manager Name'].fillna("")
+                
+                # Reorder columns to put VLOOKUP data first
+                cols = ['partnerID', 'Affiliate Name', 'Account Manager Name'] + \
+                    [col for col in merged_df.columns if col not in 
+                        ['partnerID', 'Affiliate Name', 'Account Manager Name', 'Affiliate ID']]
+                merged_df = merged_df[cols]
+                
+                # Drop the temporary Affiliate ID column
+                merged_df = merged_df.drop('Affiliate ID', axis=1)
+                
+        except Exception as e:
+            st.warning(f"Error in VLOOKUP processing: {str(e)}. Continuing without VLOOKUP data.")
+    
+    return merged_df
+
+def to_excel_download(df_affiliate, df_advanced, df_optimization):
+    """Convert dataframes to Excel file for download."""
+    output = BytesIO()
+    
+    # Use xlsxwriter engine instead of openpyxl for formatting support
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        # Write each dataframe to a different sheet
+        df_affiliate.to_excel(writer, sheet_name='Cleaned Affiliate Data', index=False)
+        df_advanced.to_excel(writer, sheet_name='Cleaned Advanced Action Data', index=False)
+        df_optimization.to_excel(writer, sheet_name='Optimization Report', index=False)
+        
+        # Get the xlsxwriter workbook and worksheet objects
+        workbook = writer.book
+        worksheet = writer.sheets['Optimization Report']
+        
+        # Define formats
+        money_format = workbook.add_format({'num_format': '$#,##0.00'})
+        integer_format = workbook.add_format({'num_format': '0'})
+        percent_format = workbook.add_format({'num_format': '0.0%'})
+        
+        # Apply formats to specific columns
+        for col_idx, col_name in enumerate(df_optimization.columns):
+            if col_name in ['Spend', 'Revenue', 'ROAS', 'eCPL at $1.50']:
+                worksheet.set_column(col_idx, col_idx, 15, money_format)
+            elif col_name in ['Leads', 'Bookings', 'Sales']:
+                worksheet.set_column(col_idx, col_idx, 15, integer_format)
+            elif col_name in ['Lead to Sale']:
+                worksheet.set_column(col_idx, col_idx, 15, percent_format)
+            else:
+                worksheet.set_column(col_idx, col_idx, 15)  # Default width
+    
+    return output.getvalue()
+
+def clean_data(df):
+    """
+    Clean and filter the data according to requirements:
+    1. Filter out any "Health" rows in the Ln_of_Busn column
+    2. Filter out any US: Health rows in the DNIS_BUSN_SEG_CD column
+    3. Filter for yesterday's date based on the report filename date
+    4. Filter for WEB0021011 in Lead_DNIS
+    5. Filter for order types containing 'New' or 'Resale'
+    """
+    try:
+        # Get the report filename from sys.argv[1]
+        import sys
+        report_filename = sys.argv[1]
+        
+        # Extract date from filename (assuming format: *_YYYYMMDD.csv)
+        import re
+        date_match = re.search(r'(\d{8})', report_filename)
+        if not date_match:
+            raise ValueError("Could not extract date from filename. Expected format: *_YYYYMMDD.csv")
+        
+        report_date = datetime.strptime(date_match.group(1), '%Y%m%d').date()
+        yesterday = report_date - timedelta(days=1)
+        logging.info(f"Report date: {report_date}, Using yesterday's date: {yesterday}")
+        
+        # Convert Sale_Date to datetime if it's not already and remove any null values
+        df['Sale_Date'] = pd.to_datetime(df['Sale_Date'], errors='coerce')
+        df = df.dropna(subset=['Sale_Date'])
+        
+        # Print initial count
+        total_records = len(df)
+        print(f"\nStarting with {total_records} total records")
+        
+        # Apply filters one by one and show counts
+        # Remove health leads from Ln_of_Busn
+        health_business_filter = ~df['Ln_of_Busn'].str.contains('Health', case=False, na=False)
+        df_after_health_business = df[health_business_filter]
+        print(f"After excluding Health from Ln_of_Busn: {len(df_after_health_business)} records")
+        
+        # Remove US: Health from DNIS_BUSN_SEG_CD
+        health_dnis_filter = ~df_after_health_business['DNIS_BUSN_SEG_CD'].str.contains('US: Health', case=False, na=False)
+        df_after_health_dnis = df_after_health_business[health_dnis_filter]
+        print(f"After excluding US: Health from DNIS_BUSN_SEG_CD: {len(df_after_health_dnis)} records")
+        
+        # Filter for yesterday's date based on Sale_Date
+        date_filter = (df_after_health_dnis['Sale_Date'].dt.date == yesterday)
+        df_after_date = df_after_health_dnis[date_filter]
+        print(f"After filtering for yesterday ({yesterday.strftime('%Y-%m-%d')}): {len(df_after_date)} records")
+        
+        dnis_filter = (df_after_date['Lead_DNIS'] == 'WEB0021011')
+        df_after_lead_dnis = df_after_date[dnis_filter]
+        print(f"After filtering for Lead_DNIS 'WEB0021011': {len(df_after_lead_dnis)} records")
+        
+        # Log details about records before order type filtering
+        print("\nChecking order types before filtering:")
+        for idx, row in df_after_lead_dnis.iterrows():
+            print(f"Record {idx}: Order Type = '{row['Ordr_Type']}'")
+        
+        order_type_filter = (
+            df_after_lead_dnis['Ordr_Type'].str.contains('New', case=False, na=False) |
+            df_after_lead_dnis['Ordr_Type'].str.contains('Resale', case=False, na=False)
+        )
+        filtered_df = df_after_lead_dnis[order_type_filter]
+        print(f"\nAfter filtering for New/Resale order types: {len(filtered_df)} records")
+        
+        # Log details about which records were kept vs filtered
+        print("\nOrder types that were filtered out:")
+        filtered_out = df_after_lead_dnis[~order_type_filter]
+        for idx, row in filtered_out.iterrows():
+            print(f"Filtered out - Record {idx}: Order Type = '{row['Ordr_Type']}'")
+        
+        if len(filtered_df) == 0:
+            print(f"\nNo records matched all criteria. Showing sample of Lead_DNIS 'WEB0021011' records from {yesterday.strftime('%Y-%m-%d')}:")
+            web_records = df[
+                (df['Lead_DNIS'] == 'WEB0021011') & 
+                (df['Sale_Date'].dt.date == yesterday)
+            ]
+            if len(web_records) > 0:
+                print("\nSample record:")
+                sample = web_records.iloc[0]
+                print(f"Sale_Date: {sample['Sale_Date']}")
+                print(f"Ln_of_Busn: {sample['Ln_of_Busn']}")
+                print(f"DNIS_BUSN_SEG_CD: {sample['DNIS_BUSN_SEG_CD']}")
+                print(f"Ordr_Type: {sample['Ordr_Type']}")
+                print(f"INSTALL_METHOD: {sample['INSTALL_METHOD']}")
+            else:
+                print(f"No records found with Lead_DNIS 'WEB0021011' for {yesterday.strftime('%Y-%m-%d')}")
+        
+        # Debug: Print all install methods to verify counting
+        print("\nDebug: All install methods in filtered data:")
+        for idx, row in filtered_df.iterrows():
+            print(f"Record {idx}: Install Method = '{row['INSTALL_METHOD']}'")
+        
+        # Separate DIFM and DIY records
+        difm_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIFM', case=False, na=False)]
+        diy_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIY', case=False, na=False)]
+        
+        # Count DIFM and DIY records
+        difm_count = len(difm_records)
+        diy_count = len(diy_records)
+        
+        print(f"\nFinal counts:")
+        print(f"DIFM Sales: {difm_count}")
+        print(f"DIY Sales: {diy_count}")
+        
+        logging.info(f"Data cleaned successfully. Found {len(filtered_df)} qualifying sales for {yesterday.strftime('%Y-%m-%d')}.")
+        return filtered_df
+        
+    except Exception as e:
+        logging.error(f"Error cleaning data: {str(e)}")
+        raise
+
+def show_adt_pixel():
+    """Display the ADT Pixel Firing interface"""
+    st.title("ADT Pixel Firing")
+    
+    st.write("""
+    This tool processes ADT Athena reports and fires pixels for qualifying sales.
+    Upload your ADT Athena report (CSV format) to begin.
+    """)
+    
+    uploaded_file = st.file_uploader("Upload ADT Athena Report (CSV)", type=['csv'])
+    
+    if uploaded_file is not None:
+        if st.button("Process and Fire Pixels"):
+            process_adt_report(uploaded_file)
+
+def setup_logging():
+    """Set up logging to capture output"""
+    log_stream = io.StringIO()
+    logging.basicConfig(
+        stream=log_stream,
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s'
+    )
+    return log_stream
+
+def process_adt_report(uploaded_file):
+    """Process the ADT report and fire pixels"""
+    try:
+        # Set up logging
+        log_stream = setup_logging()
+        
+        st.write("=== ADT Pixel Firing Process Started ===")
+        
+        # Try different encodings
+        encodings = ['utf-8', 'latin1', 'cp1252', 'iso-8859-1']
+        df = None
+        
+        for encoding in encodings:
+            try:
+                st.write(f"Trying to read file with {encoding} encoding...")
+                df = pd.read_csv(uploaded_file, encoding=encoding)
+                st.write(f"Successfully read file with {encoding} encoding!")
+                break
+            except UnicodeDecodeError:
+                st.write(f"Failed to read with {encoding} encoding, trying next...")
+                continue
+        
+        if df is None:
+            raise Exception("Could not read the file with any of the supported encodings")
+        
+        # Clean and filter the data
+        filtered_df = clean_data_streamlit(df, uploaded_file.name)
+        
+        # Count of sales to process
+        total_sales = len(filtered_df)
+        if total_sales == 0:
+            st.warning("No qualifying sales found to process.")
+            return
+        
+        # Create progress bar
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        # Fire pixel for each sale
+        st.write("Firing pixels...")
+        successful_fires = {'DIFM': 0, 'DIY': 0}
+        
+        for idx, row in enumerate(filtered_df.iterrows()):
+            # Update progress - ensure it's between 0 and 1
+            progress = min(float(idx + 1) / max(total_sales, 1), 1.0)
+            progress_bar.progress(progress)
+            
+            # Get the actual row data (iterrows returns index, row)
+            _, actual_row = row
+            
+            # Generate transaction ID
+            sale_date_str = actual_row['Sale_Date'].strftime('%Y%m%d')
+            transaction_id = f"ADT_{sale_date_str}_{str(uuid.uuid4())[:8]}"
+            install_method = actual_row['INSTALL_METHOD']
+            
+            # Determine category and fire pixel
+            category = 'DIFM' if 'DIFM' in str(install_method).upper() else 'DIY'
+            status_text.write(f"Processing {category} sale {idx + 1} of {total_sales}...")
+            
+            if fire_pixel(transaction_id, install_method, actual_row['Sale_Date']):
+                successful_fires[category] += 1
+        
+        # Ensure progress bar is completed
+        progress_bar.progress(1.0)
+        
+        # Show summary
+        st.success("Processing complete!")
+        st.write(f"Successfully fired DIFM pixels: {successful_fires['DIFM']}")
+        st.write(f"Successfully fired DIY pixels: {successful_fires['DIY']}")
+        st.write(f"Total pixels fired: {sum(successful_fires.values())} out of {total_sales}")
+        
+        # Show logs
+        with st.expander("View Processing Logs"):
+            st.text(log_stream.getvalue())
+        
+    except Exception as e:
+        st.error(f"Error processing ADT report: {str(e)}")
+        st.error("Check the logs below for more details")
+        with st.expander("View Error Logs"):
+            st.text(log_stream.getvalue())
+
+def clean_data_streamlit(df, report_filename):
+    """
+    Clean and filter the data according to requirements - Streamlit version
+    """
+    try:
+        # Extract date from filename (assuming format: *_YYYYMMDD.csv)
+        date_match = re.search(r'(\d{8})', report_filename)
+        if not date_match:
+            raise ValueError("Could not extract date from filename. Expected format: *_YYYYMMDD.csv")
+        
+        report_date = datetime.strptime(date_match.group(1), '%Y%m%d').date()
+        yesterday = report_date - timedelta(days=1)
+        logging.info(f"Report date: {report_date}, Using yesterday's date: {yesterday}")
+        
+        # Convert Sale_Date to datetime if it's not already and remove any null values
+        df['Sale_Date'] = pd.to_datetime(df['Sale_Date'], errors='coerce')
+        df = df.dropna(subset=['Sale_Date'])
+        
+        # Print initial count
+        total_records = len(df)
+        st.write(f"Starting with {total_records} total records")
+        
+        # Apply filters one by one and show counts
+        # Remove health leads from Ln_of_Busn
+        health_business_filter = ~df['Ln_of_Busn'].str.contains('Health', case=False, na=False)
+        df_after_health_business = df[health_business_filter]
+        st.write(f"After excluding Health from Ln_of_Busn: {len(df_after_health_business)} records")
+        
+        # Remove US: Health from DNIS_BUSN_SEG_CD
+        health_dnis_filter = ~df_after_health_business['DNIS_BUSN_SEG_CD'].str.contains('US: Health', case=False, na=False)
+        df_after_health_dnis = df_after_health_business[health_dnis_filter]
+        st.write(f"After excluding US: Health from DNIS_BUSN_SEG_CD: {len(df_after_health_dnis)} records")
+        
+        # Filter for yesterday's date based on Sale_Date
+        date_filter = (df_after_health_dnis['Sale_Date'].dt.date == yesterday)
+        df_after_date = df_after_health_dnis[date_filter]
+        st.write(f"After filtering for yesterday ({yesterday.strftime('%Y-%m-%d')}): {len(df_after_date)} records")
+        
+        dnis_filter = (df_after_date['Lead_DNIS'] == 'WEB0021011')
+        df_after_lead_dnis = df_after_date[dnis_filter]
+        st.write(f"After filtering for Lead_DNIS 'WEB0021011': {len(df_after_lead_dnis)} records")
+        
+        # Filter for New/Resale order types
+        order_type_filter = (
+            df_after_lead_dnis['Ordr_Type'].str.contains('New', case=False, na=False) |
+            df_after_lead_dnis['Ordr_Type'].str.contains('Resale', case=False, na=False)
+        )
+        filtered_df = df_after_lead_dnis[order_type_filter]
+        st.write(f"After filtering for New/Resale order types: {len(filtered_df)} records")
+        
+        # Separate DIFM and DIY records
+        difm_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIFM', case=False, na=False)]
+        diy_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIY', case=False, na=False)]
+        
+        # Count DIFM and DIY records
+        difm_count = len(difm_records)
+        diy_count = len(diy_records)
+        
+        # Combine all records
+        filtered_df = pd.concat([difm_records, diy_records])
+        
+        st.write("Final counts:")
+        st.write(f"DIFM Sales: {difm_count}")
+        st.write(f"DIY Sales: {diy_count}")
+        
+        logging.info(f"Data cleaned successfully. Found {len(filtered_df)} qualifying sales for {yesterday.strftime('%Y-%m-%d')}.")
+        return filtered_df
+        
+    except Exception as e:
+        logging.error(f"Error cleaning data: {str(e)}")
+        raise
+
+def fire_pixel(transaction_id, install_method, sale_date):
+    """
+    Fire the pixel for a given transaction ID, install method, and sale date
+    """
+    pixel_url = "https://speedtrkzone.com/m.ashx"
+    campaign_id = "91149" if "DIFM" in str(install_method).upper() else "91162"
+    
+    # Set the time to noon on the sale date
+    pixel_datetime = sale_date.replace(hour=12, minute=0, second=0)
+    iso_datetime = pixel_datetime.strftime('%Y-%m-%dT%H:%M:%S+00:00')
+    
+    params = {
+        'o': '32022',
+        'e': '565',
+        'f': 'pb',
+        't': transaction_id,
+        'pubid': '42865',
+        'campid': campaign_id,
+        'dt': iso_datetime
+    }
+    
+    try:
+        response = requests.get(pixel_url, params=params)
+        response.raise_for_status()
+        logging.info(f"Pixel fired successfully for {transaction_id}")
+        return True
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error firing pixel for {transaction_id}: {str(e)}")
+        return False
+
+def main():
+    """Main application entry point"""
+    # Create the navigation
+    st.sidebar.title("Navigation")
+    page = st.sidebar.radio("Go to", ["Frank (LaserAway)", "Bob (ADT)", "ADT Pixel Firing", "Brinks"])
+    
+    if page == "Frank (LaserAway)":
+        show_main_page()
+    elif page == "Bob (ADT)":
+        # Import and show Bob's analysis page
+        from pages.bob_analysis import show_bob_analysis
+        show_bob_analysis()
+    elif page == "ADT Pixel Firing":
+        # Use the directly defined function instead of importing
+        show_adt_pixel()
+    elif page == "Brinks":
+        # Import and show Brinks page
+        from pages.brinks_optimization import show_brinks_optimization
+        show_brinks_optimization()
+
+if __name__ == "__main__":
+    main() 
