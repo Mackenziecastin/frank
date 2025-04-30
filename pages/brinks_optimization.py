@@ -18,7 +18,7 @@ def show_brinks_optimization():
     Please upload the required files below to get started.
     """)
     
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
     
     with col1:
         lead_source_file = st.file_uploader("Upload Lead Source Sales Report (CSV)", type=["csv", "xlsx"])
@@ -26,18 +26,44 @@ def show_brinks_optimization():
     with col2:
         conversion_file = st.file_uploader("Upload Conversion Report (CSV)", type=["csv", "xlsx"])
     
-    with col3:
-        partner_list_file = st.file_uploader("Upload Internal Brinks Performance + TFNS (CSV)", type=["csv", "xlsx"])
+    # TFN file is now loaded automatically
+    partner_list_loaded = False
+    partner_list_df = None
+    
+    try:
+        # Try to locate the file at a known path
+        brinks_tfn_path = "/Users/mackenziecastin/Downloads/Brinks TFN Report.xlsx"
+        if os.path.exists(brinks_tfn_path):
+            partner_list_df = pd.read_excel(brinks_tfn_path, engine='openpyxl')
+            partner_list_loaded = True
+            st.success("✅ Brinks TFN Report loaded automatically!")
+        else:
+            # Try alternate locations if the file might be in Streamlit's deployment
+            alt_paths = [
+                "./Brinks TFN Report.xlsx",
+                "/mount/src/frank/Brinks TFN Report.xlsx"
+            ]
+            
+            for path in alt_paths:
+                if os.path.exists(path):
+                    partner_list_df = pd.read_excel(path, engine='openpyxl')
+                    partner_list_loaded = True
+                    st.success(f"✅ Brinks TFN Report loaded from: {path}")
+                    break
+            
+            if not partner_list_loaded:
+                st.error("❌ Could not locate Brinks TFN Report. Please ensure it's available at one of the expected locations.")
+    except Exception as e:
+        st.error(f"❌ Error loading Brinks TFN Report: {str(e)}")
     
     # Check if we have all required files
-    if lead_source_file and conversion_file and partner_list_file:
+    if lead_source_file and conversion_file and partner_list_loaded:
         if st.button("Generate Optimization Report"):
             with st.spinner("Processing data and generating report..."):
                 try:
                     # Load the data
                     lead_source_df = load_file(lead_source_file)
                     conversion_df = load_file(conversion_file)
-                    partner_list_df = load_file(partner_list_file)
                     
                     # Process lead source sales data
                     st.subheader("Processing Lead Source Sales Data")
@@ -75,7 +101,11 @@ def show_brinks_optimization():
                     st.error(f"An error occurred: {str(e)}")
                     st.exception(e)
     else:
-        st.info("Please upload all three required files to generate the report.")
+        if not partner_list_loaded:
+            st.warning("🔴 The Brinks TFN Report could not be loaded automatically. Please check with the application administrator.")
+        
+        if not (lead_source_file and conversion_file):
+            st.info("Please upload both required files to generate the report.")
     
     # Add a section to explain the process
     with st.expander("How to use this tool"):
@@ -83,11 +113,11 @@ def show_brinks_optimization():
         ### Instructions
         1. Upload the **Lead Source Sales Report** (CSV/Excel format)
         2. Upload the **Conversion Report** (CSV/Excel format)
-        3. Upload the **Internal Brinks Performance + TFNS** file (CSV/Excel format)
-        4. Click the **Generate Optimization Report** button
-        5. Review the generated report and download it
+        3. Click the **Generate Optimization Report** button
+        4. Review the generated report and download it
         
         ### What this tool does
+        - Automatically loads the Brinks TFN Report in the background
         - Processes the Lead Source Sales data and cleans the Pardot Partner IDs
         - Processes the Conversion Report data and creates the pid_subid column
         - Merges the data and calculates all required metrics
