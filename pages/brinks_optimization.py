@@ -31,23 +31,49 @@ def show_brinks_optimization():
     partner_list_df = None
     
     try:
-        # Define the filename with proper space handling
-        filename = "Internal _ Brinks Performance + TFNS.xlsx"
-        # Try multiple possible locations
-        possible_paths = [
-            os.path.join(os.path.expanduser("~"), "Downloads", filename),  # User's Downloads folder
-            os.path.join("/Users/mackenziecastin/Downloads", filename),    # Direct path to Downloads
-            os.path.join(".", filename),                                   # Current directory
-            os.path.join("/mount/src/frank", filename)                     # Mount directory
+        # Define possible filenames (in case of variations)
+        filenames = [
+            "Internal _ Brinks Performance + TFNS.xlsx",
+            "Internal_Brinks_Performance_TFNS.xlsx",  # Alternative without spaces
+            "Brinks Performance + TFNS.xlsx"         # Another possible variation
         ]
+        
+        # Base paths to check
+        base_paths = [
+            os.path.expanduser("~"),                # Home directory
+            "/Users/mackenziecastin",               # Direct user path
+            ".",                                    # Current directory
+            "/mount/src/frank",                     # Mount directory
+            os.path.dirname(os.path.abspath(__file__))  # Directory where this script is located
+        ]
+        
+        # Generate all possible paths
+        possible_paths = []
+        for base in base_paths:
+            for filename in filenames:
+                # Try in base directory
+                possible_paths.append(os.path.join(base, filename))
+                # Try in Downloads subdirectory
+                possible_paths.append(os.path.join(base, "Downloads", filename))
+                # Try in Documents subdirectory
+                possible_paths.append(os.path.join(base, "Documents", filename))
+        
+        # Debug information
+        st.write("### Debugging Information")
+        st.write("Current working directory:", os.getcwd())
+        st.write("Script location:", os.path.dirname(os.path.abspath(__file__)))
         
         # Try each path until we find the file
         for path in possible_paths:
+            st.write(f"Checking path: {path}")
             if os.path.exists(path):
+                st.write(f"Found file at: {path}")
                 try:
                     partner_list_df = pd.read_excel(path, engine='openpyxl')
                     partner_list_loaded = True
-                    st.success(f"✅ Brinks Performance + TFNs Report loaded successfully!")
+                    st.success(f"✅ Brinks Performance + TFNs Report loaded successfully from {path}!")
+                    # Hide debug info once file is found
+                    st.write("File loaded successfully. Refresh page to hide debug info.")
                     break
                 except Exception as e:
                     st.error(f"Found file at {path} but couldn't read it: {str(e)}")
@@ -55,9 +81,10 @@ def show_brinks_optimization():
         
         if not partner_list_loaded:
             st.error("❌ Could not locate the Brinks Performance + TFNs Report in any of the expected locations.")
-            st.write("Looked in the following locations:")
+            st.write("Tried the following paths:")
             for path in possible_paths:
                 st.write(f"- {path}")
+            st.write("\nPlease ensure the file exists in one of these locations.")
     
     except Exception as e:
         st.error(f"❌ Error while trying to load the Brinks Performance + TFNs Report: {str(e)}")
