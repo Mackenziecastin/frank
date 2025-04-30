@@ -4,6 +4,7 @@ import numpy as np
 from io import BytesIO
 from datetime import datetime, timedelta
 import re
+import os
 
 def show_brinks_optimization():
     """
@@ -16,7 +17,7 @@ def show_brinks_optimization():
     Please upload the required files below to get started.
     """)
     
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
     
     with col1:
         lead_source_file = st.file_uploader("Upload Lead Source Sales Report (CSV)", type=["csv", "xlsx"])
@@ -24,17 +25,47 @@ def show_brinks_optimization():
     with col2:
         conversion_file = st.file_uploader("Upload Conversion Report (CSV)", type=["csv", "xlsx"])
     
-    with col3:
-        partner_list_file = st.file_uploader("Upload Internal Brinks Performance + TFNS (CSV)", type=["csv", "xlsx"])
+    # Attempt to automatically load the partner list
+    partner_list_success = False
+    partner_list_df = None
+    partner_list_path = "/Users/mackenziecastin/Downloads/Brinks TFN Report.xlsx"
     
-    if lead_source_file and conversion_file and partner_list_file:
+    try:
+        if os.path.exists(partner_list_path):
+            partner_list_df = pd.read_excel(partner_list_path)
+            partner_list_success = True
+            st.success(f"✅ Successfully loaded partner list from: {partner_list_path}")
+        else:
+            # Try alternate location
+            alternate_path = "./Brinks TFN Report.xlsx"
+            if os.path.exists(alternate_path):
+                partner_list_df = pd.read_excel(alternate_path)
+                partner_list_success = True
+                st.success(f"✅ Successfully loaded partner list from: {alternate_path}")
+            else:
+                st.error("Could not automatically load the Brinks TFN Report.xlsx. Please upload it manually.")
+                # Add a manual upload option as fallback
+                partner_list_file = st.file_uploader("Upload Internal Brinks Performance + TFNS (CSV)", type=["csv", "xlsx"])
+                if partner_list_file:
+                    partner_list_df = load_file(partner_list_file)
+                    partner_list_success = True
+                    st.success("✅ Successfully loaded partner list from uploaded file")
+    except Exception as e:
+        st.error(f"Error loading partner list: {str(e)}")
+        # Add a manual upload option as fallback
+        partner_list_file = st.file_uploader("Upload Internal Brinks Performance + TFNS (CSV)", type=["csv", "xlsx"])
+        if partner_list_file:
+            partner_list_df = load_file(partner_list_file)
+            partner_list_success = True
+            st.success("✅ Successfully loaded partner list from uploaded file")
+    
+    if lead_source_file and conversion_file and partner_list_success:
         if st.button("Generate Optimization Report"):
             with st.spinner("Processing data and generating report..."):
                 try:
                     # Load the data
                     lead_source_df = load_file(lead_source_file)
                     conversion_df = load_file(conversion_file)
-                    partner_list_df = load_file(partner_list_file)
                     
                     # Process lead source sales data
                     st.subheader("Processing Lead Source Sales Data")
@@ -72,7 +103,10 @@ def show_brinks_optimization():
                     st.error(f"An error occurred: {str(e)}")
                     st.exception(e)
     else:
-        st.info("Please upload all three required files to generate the report.")
+        if not partner_list_success:
+            st.warning("Please ensure the Brinks TFN Report.xlsx file is available or upload it manually.")
+        else:
+            st.info("Please upload the required files to generate the report.")
 
 def load_file(file):
     """Load a file into a pandas dataframe, handling CSV or Excel formats"""
