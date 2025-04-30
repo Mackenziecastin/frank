@@ -1,446 +1,310 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import re
 from io import BytesIO
 from datetime import datetime, timedelta
+import re
 
 def show_brinks_optimization():
-    st.title("Brinks Optimization Report Generator")
-
-    st.write("""
-    This tool processes Brinks marketing data files and generates a comprehensive optimization report.
+    """
+    Main function to display the Brinks Optimization Report interface
+    """
+    st.title("Brinks Optimization Report")
     
-    ## Instructions
-    1. Upload the Brinks Affiliate Leads QA file (CSV format)
-    2. Upload the Brinks Advanced Action Sheet file (CSV format)
-    3. Click the 'Generate Report' button
-    4. Review the generated report and download it
+    st.write("""
+    This tool generates the Brinks Optimization Report by processing the Lead Source Sales and Conversion Report data.
+    Please upload the required files below to get started.
     """)
-
-    col1, col2 = st.columns(2)
-
+    
+    col1, col2, col3 = st.columns(3)
+    
     with col1:
-        affiliate_file = st.file_uploader("Upload Brinks Affiliate Leads QA File (CSV)", type=['csv'])
+        lead_source_file = st.file_uploader("Upload Lead Source Sales Report (CSV)", type=["csv", "xlsx"])
     
     with col2:
-        advanced_file = st.file_uploader("Upload Brinks Advanced Action Sheet (CSV)", type=['csv'])
-
-    if affiliate_file and advanced_file:
-        if st.button("Generate Report"):
-            try:
-                # Read files
-                with st.spinner("Reading files..."):
-                    affiliate_df = pd.read_csv(affiliate_file)
-                    advanced_df = pd.read_csv(advanced_file)
-                
-                # Read partner list automatically if available
+        conversion_file = st.file_uploader("Upload Conversion Report (CSV)", type=["csv", "xlsx"])
+    
+    with col3:
+        partner_list_file = st.file_uploader("Upload Internal Brinks Performance + TFNS (CSV)", type=["csv", "xlsx"])
+    
+    if lead_source_file and conversion_file and partner_list_file:
+        if st.button("Generate Optimization Report"):
+            with st.spinner("Processing data and generating report..."):
                 try:
-                    partner_list_df = pd.read_csv('Brinks Performance Marketing Team Partner List.csv')
-                    st.success("Partner list file found and loaded successfully.")
+                    # Load the data
+                    lead_source_df = load_file(lead_source_file)
+                    conversion_df = load_file(conversion_file)
+                    partner_list_df = load_file(partner_list_file)
+                    
+                    # Process lead source sales data
+                    st.subheader("Processing Lead Source Sales Data")
+                    processed_sales_df = process_lead_source_sales(lead_source_df, partner_list_df)
+                    
+                    # Create sales pivot table
+                    sales_pivot = create_sales_pivot(processed_sales_df)
+                    
+                    # Process conversion report data
+                    st.subheader("Processing Conversion Report Data")
+                    processed_conversion_df = process_conversion_report(conversion_df)
+                    
+                    # Create conversion pivot table
+                    conversion_pivot = create_conversion_pivot(processed_conversion_df)
+                    
+                    # Merge the pivot tables and create final report
+                    st.subheader("Creating Final Optimization Report")
+                    final_report = create_final_report(sales_pivot, conversion_pivot, partner_list_df)
+                    
+                    # Display the final report
+                    st.subheader("Brinks Optimization Report")
+                    st.dataframe(final_report)
+                    
+                    # Download button for the final report
+                    today = datetime.now().strftime("%m.%d")
+                    excel_data = to_excel(processed_sales_df, processed_conversion_df, final_report)
+                    st.download_button(
+                        label="Download Optimization Report",
+                        data=excel_data,
+                        file_name=f"Brinks Optimization Report {today}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+                
                 except Exception as e:
-                    st.warning(f"Could not read Brinks partner list file: {str(e)}. VLOOKUP functionality will be disabled.")
-                    partner_list_df = None
-                
-                # Process both dataframes
-                with st.spinner("Processing data..."):
-                    affiliate_df_processed = process_brinks_dataframe(affiliate_df, 'Click URL')
-                    if affiliate_df_processed is None:
-                        st.error("Failed to process Affiliate file. Please check if it contains a 'Click URL' column.")
-                        st.stop()
-                        
-                    advanced_df_processed = process_brinks_dataframe(advanced_df, 'Landing Page URL')
-                    if advanced_df_processed is None:
-                        st.error("Failed to process Advanced Action file. Please check if it contains a 'Landing Page URL' column.")
-                        st.stop()
-                
-                # Show preview of processed data
-                st.subheader("Preview of Processed Affiliate Data")
-                st.dataframe(affiliate_df_processed[['Click URL', 'PID', 'SUBID', 'partnerID']].head())
-                
-                st.subheader("Preview of Processed Advanced Action Data")
-                st.dataframe(advanced_df_processed[['Landing Page URL', 'PID', 'SUBID', 'partnerID']].head())
-                
-                # Create date-filtered dataframes
-                with st.spinner("Creating optimization report..."):
-                    if 'Created Date' in affiliate_df_processed.columns and 'Action Date' in advanced_df_processed.columns:
-                        # Convert dates to datetime
-                        affiliate_df_processed['Created Date'] = pd.to_datetime(affiliate_df_processed['Created Date'])
-                        advanced_df_processed['Action Date'] = pd.to_datetime(advanced_df_processed['Action Date'])
-                        
-                        # Get the date range from Advanced Action report
-                        full_end_date = advanced_df_processed['Action Date'].max()
-                        full_start_date = advanced_df_processed['Action Date'].min()
-                        
-                        # For matured report: exclude the last 7 days but keep same start date
-                        matured_end_date = full_end_date - pd.Timedelta(days=7)
-                        matured_start_date = full_start_date  # Same as full report start date
-                        
-                        # Show date ranges for both reports
-                        st.subheader("Date Ranges")
-                        st.write("Full Report Dates:")
-                        st.write(f"- Start Date: {full_start_date.strftime('%Y-%m-%d')} (Based on Advanced Action report)")
-                        st.write(f"- End Date: {full_end_date.strftime('%Y-%m-%d')} (Based on Advanced Action report)")
-                        
-                        st.write("\nMatured Report Dates (excluding last 7 days):")
-                        st.write(f"- Start Date: {matured_start_date.strftime('%Y-%m-%d')}")
-                        st.write(f"- End Date: {matured_end_date.strftime('%Y-%m-%d')}")
-                        
-                        # Create full report dataframes with date filtering
-                        affiliate_df_full = affiliate_df_processed[
-                            (affiliate_df_processed['Created Date'].dt.date >= full_start_date.date()) &
-                            (affiliate_df_processed['Created Date'].dt.date <= full_end_date.date())
-                        ]
-                        advanced_df_full = advanced_df_processed[
-                            (advanced_df_processed['Action Date'].dt.date >= full_start_date.date()) &
-                            (advanced_df_processed['Action Date'].dt.date <= full_end_date.date())
-                        ]
-                        
-                        # Create matured report dataframes with date filtering
-                        affiliate_df_matured = affiliate_df_processed[
-                            (affiliate_df_processed['Created Date'].dt.date >= matured_start_date.date()) &
-                            (affiliate_df_processed['Created Date'].dt.date <= matured_end_date.date())
-                        ]
-                        advanced_df_matured = advanced_df_processed[
-                            (advanced_df_processed['Action Date'].dt.date >= matured_start_date.date()) &
-                            (advanced_df_processed['Action Date'].dt.date <= matured_end_date.date())
-                        ]
-                        
-                        # Create pivot tables and reports
-                        # Full report
-                        affiliate_pivot_full = create_brinks_affiliate_pivot(affiliate_df_full)
-                        advanced_pivot_full = create_brinks_advanced_pivot(advanced_df_full)
-                        optimization_report_full = create_brinks_optimization_report(
-                            affiliate_pivot_full, advanced_pivot_full, partner_list_df
-                        )
-                        
-                        # Matured report
-                        affiliate_pivot_matured = create_brinks_affiliate_pivot(affiliate_df_matured)
-                        advanced_pivot_matured = create_brinks_advanced_pivot(advanced_df_matured)
-                        optimization_report_matured = create_brinks_optimization_report(
-                            affiliate_pivot_matured, advanced_pivot_matured, partner_list_df
-                        )
-                        
-                        # Show preview of both reports
-                        st.subheader("Preview of Full Optimization Report")
-                        st.dataframe(optimization_report_full)
-                        
-                        st.subheader("Preview of Matured Optimization Report (Excluding Last 7 Days)")
-                        st.dataframe(optimization_report_matured)
-                        
-                        # Create download buttons for both reports
-                        col1, col2 = st.columns(2)
-                        
-                        with col1:
-                            excel_data = to_brinks_excel_download(
-                                affiliate_df_full, advanced_df_full, optimization_report_full
-                            )
-                            st.download_button(
-                                label="Download Full Report",
-                                data=excel_data,
-                                file_name=f"brinks_optimization_report_full_{full_end_date.strftime('%Y%m%d')}.xlsx",
-                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                            )
-                        
-                        with col2:
-                            excel_data_matured = to_brinks_excel_download(
-                                affiliate_df_matured, advanced_df_matured, optimization_report_matured
-                            )
-                            st.download_button(
-                                label="Download Matured Report",
-                                data=excel_data_matured,
-                                file_name=f"brinks_optimization_report_matured_{matured_end_date.strftime('%Y%m%d')}.xlsx",
-                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                            )
-                    else:
-                        missing_columns = []
-                        if 'Created Date' not in affiliate_df_processed.columns:
-                            missing_columns.append("'Created Date' in Affiliate Leads file")
-                        if 'Action Date' not in advanced_df_processed.columns:
-                            missing_columns.append("'Action Date' in Advanced Action file")
-                            
-                        st.error(f"Required date columns not found: {', '.join(missing_columns)}. Available columns are:")
-                        st.write("Affiliate Leads columns:", ", ".join(affiliate_df_processed.columns))
-                        st.write("Advanced Action columns:", ", ".join(advanced_df_processed.columns))
-                        
-                        # Show only the full report if date columns are missing
-                        st.subheader("Preview of Full Optimization Report (without date filtering)")
-                        st.dataframe(optimization_report_full)
-                        
-                        excel_data = to_brinks_excel_download(
-                            affiliate_df_processed, advanced_df_processed, optimization_report_full
-                        )
-                        st.download_button(
-                            label="Download Full Report",
-                            data=excel_data,
-                            file_name="brinks_optimization_report.xlsx",
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                        )
-                
-            except Exception as e:
-                st.error(f"An error occurred while processing the files: {str(e)}")
-                st.error("Please ensure your files contain all required columns and are in the correct format.")
-                # Add more detailed error information
-                import traceback
-                st.code(traceback.format_exc())
+                    st.error(f"An error occurred: {str(e)}")
+                    st.exception(e)
     else:
-        st.info("Please upload both required files to generate the report.")
+        st.info("Please upload all three required files to generate the report.")
 
-def extract_brinks_values_after_3d(url):
-    """Extract all values after %3D in the URL for Brinks data."""
-    try:
-        if pd.isna(url):
-            return ""
-        
-        # Find the part after %3D
-        match = re.search(r'%3D(.*?)(?:$|&)', url)
-        if match:
-            return match.group(1)
-        return ""
-    except:
-        return ""
+def load_file(file):
+    """Load a file into a pandas dataframe, handling CSV or Excel formats"""
+    if file.name.endswith('.csv'):
+        return pd.read_csv(file)
+    elif file.name.endswith(('.xlsx', '.xls')):
+        return pd.read_excel(file)
+    else:
+        raise ValueError(f"Unsupported file format: {file.name}")
 
-def extract_brinks_pid_subid(after_3d_value):
-    """Extract PID and SUBID from the string after %3D for Brinks data."""
-    try:
-        if not after_3d_value:
-            return "", ""
-        
-        # Split by underscore
-        parts = after_3d_value.split('_')
-        
-        # First part is PID
-        pid = parts[0] if parts and parts[0].isdigit() else ""
-        
-        # Second part is SUBID (if it exists and contains only digits)
-        subid = parts[1] if len(parts) > 1 and parts[1].isdigit() else ""
-        
-        return pid, subid
-    except:
-        return "", ""
+def clean_pardot_partner_id(pid):
+    """Clean up the Pardot Partner ID according to the rules"""
+    if pd.isna(pid) or pid == "":
+        return pid
+    
+    pid_str = str(pid)
+    
+    # Special case for 41382
+    if pid_str.startswith('41382'):
+        return '41382_2'
+    
+    # Extract the first part (before underscore if present)
+    if '_' in pid_str:
+        base_pid = pid_str.split('_')[0]
+        return f"{base_pid}_"
+    
+    # If no underscore, just add one
+    return f"{pid_str}_"
 
-def process_brinks_dataframe(df, url_column):
-    """Process dataframe to add PID, SUBID, and partnerID columns for Brinks data."""
-    # Make a copy to avoid modifying the original
-    df = df.copy()
+def process_lead_source_sales(df, partner_list_df):
+    """Process the Lead Source Sales report according to instructions"""
+    st.write("Original Lead Source Sales data shape:", df.shape)
     
-    # Convert date column to datetime if it exists
-    if 'Date' in df.columns:
-        df['Date'] = pd.to_datetime(df['Date'])
+    # Sort by Pardot_Partner_ID
+    df = df.sort_values(by="Pardot_Partner_ID")
     
-    # Check for variations of URL column names
-    url_column_variations = {
-        'Click URL': ['Click URL', 'ClickURL', 'Click_URL', 'click url', 'click_url'],
-        'Landing Page URL': ['Landing Page URL', 'LandingPageURL', 'Landing_Page_URL', 'landing page url', 'landing_page_url', 'URL']
-    }
+    # Create a mapping from First ACD Call Keyword to Affiliate ID
+    keyword_to_id_map = {}
+    for _, row in partner_list_df.iterrows():
+        if pd.notna(row['Name']) and pd.notna(row['Affiliate ID']):
+            keyword_to_id_map[row['Name']] = row['Affiliate ID']
     
-    # Find the actual column name in the dataframe
-    actual_column = None
-    expected_type = 'Click URL' if url_column == 'Click URL' else 'Landing Page URL'
+    # Fill empty Pardot_Partner_ID cells with matched Affiliate IDs from First ACD Call Keyword
+    for i, row in df.iterrows():
+        if pd.isna(row['Pardot_Partner_ID']) or row['Pardot_Partner_ID'] == "":
+            keyword = row['First ACD Call Keyword']
+            if pd.notna(keyword) and keyword in keyword_to_id_map:
+                affiliate_id = keyword_to_id_map[keyword]
+                df.at[i, 'Pardot_Partner_ID'] = affiliate_id
     
-    for col in df.columns:
-        if col in url_column_variations[expected_type]:
-            actual_column = col
-            break
+    # Clean up all Pardot_Partner_ID values
+    df['Pardot_Partner_ID'] = df['Pardot_Partner_ID'].apply(clean_pardot_partner_id)
     
-    if actual_column is None:
-        available_columns = ", ".join(df.columns)
-        st.error(f"Could not find {expected_type} column. Available columns are: {available_columns}")
-        return None
-    
-    # Create new columns
-    df['After_3D'] = df[actual_column].apply(extract_brinks_values_after_3d)
-    df['PID'] = ""
-    df['SUBID'] = ""
-    df['partnerID'] = ""
-    
-    # Process each row
-    for idx, row in df.iterrows():
-        pid, subid = extract_brinks_pid_subid(row['After_3D'])
-        df.at[idx, 'PID'] = pid
-        df.at[idx, 'SUBID'] = subid
-        
-        # Create partnerID
-        if pid:
-            if subid:
-                df.at[idx, 'partnerID'] = f"{pid}_{subid}"
-            else:
-                df.at[idx, 'partnerID'] = f"{pid}_"
-        else:
-            df.at[idx, 'partnerID'] = "Unattributed"
-    
-    # Replace any partnerID that is just "_" with "Unattributed"
-    df.loc[df['partnerID'] == "_", 'partnerID'] = "Unattributed"
-    
-    # Drop the temporary column
-    df = df.drop('After_3D', axis=1)
+    st.write("Processed Lead Source Sales data shape:", df.shape)
+    st.write("Sample of processed data:")
+    st.dataframe(df[['Pardot_Partner_ID', 'First ACD Call Keyword']].head(10))
     
     return df
 
-def create_brinks_affiliate_pivot(df):
-    """Create pivot table for Brinks Affiliate Leads QA data."""
-    # First verify Transaction Count column exists
-    if 'Transaction Count' not in df.columns:
-        st.error("Transaction Count column not found in affiliate data")
-        return None
-        
-    # Convert Transaction Count to numeric, treating any non-numeric values as 0
-    df['Transaction Count'] = pd.to_numeric(df['Transaction Count'], errors='coerce').fillna(0)
+def create_sales_pivot(df):
+    """Create a pivot table for sales data"""
+    # Group by Pardot_Partner_ID and count the sales
+    sales_pivot = df.groupby('Pardot_Partner_ID').size().reset_index(name='Sales')
     
-    # Ensure other numeric columns are properly converted if they exist
-    numeric_cols = ['Booked Count', 'Net Sales Amount']
-    for col in numeric_cols:
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+    st.write("Sales pivot table created with shape:", sales_pivot.shape)
+    st.write("Sample of sales pivot:")
+    st.dataframe(sales_pivot.head(10))
     
-    # Create pivot table with specific aggregation methods
-    pivot = df.groupby('partnerID').agg({
-        'Transaction Count': 'sum',
-        'Booked Count': 'sum',
-        'Net Sales Amount': 'sum'
+    return sales_pivot
+
+def process_conversion_report(df):
+    """Process the Conversion Report according to instructions"""
+    st.write("Original Conversion Report data shape:", df.shape)
+    
+    # Create pid_subid column by concatenating Advertiser ID and Sub ID
+    df['pid_subid'] = df.apply(lambda row: f"{row['Advertiser ID']}_{row['Sub ID']}" if pd.notna(row['Sub ID']) else f"{row['Advertiser ID']}_", axis=1)
+    
+    # Clean up the pid_subid column using the same rules
+    df['pid_subid'] = df['pid_subid'].apply(clean_pardot_partner_id)
+    
+    st.write("Processed Conversion Report data shape:", df.shape)
+    st.write("Sample of processed data:")
+    st.dataframe(df[['Advertiser ID', 'Sub ID', 'pid_subid']].head(10))
+    
+    return df
+
+def create_conversion_pivot(df):
+    """Create a pivot table for conversion data"""
+    # Group by pid_subid and calculate metrics
+    conversion_pivot = df.groupby('pid_subid').agg({
+        'Lead ID': 'count',  # Count of leads
+        'Paid': ['sum', 'mean'],  # Sum and average of Paid
+        'Received': ['sum', 'mean']  # Sum and average of Received
     }).reset_index()
     
-    return pivot
+    # Flatten the column names
+    conversion_pivot.columns = [
+        'pid_subid',
+        'Leads',
+        'Cost',  # Sum of Paid
+        'Pub CPL',  # Average of Paid
+        'Revenue',  # Sum of Received
+        'Client CPL'  # Average of Received
+    ]
+    
+    st.write("Conversion pivot table created with shape:", conversion_pivot.shape)
+    st.write("Sample of conversion pivot:")
+    st.dataframe(conversion_pivot.head(10))
+    
+    return conversion_pivot
 
-def create_brinks_advanced_pivot(df):
-    """Create pivot table for Brinks Advanced Action data."""
-    # Ensure numeric columns are properly converted
-    df['Action Id'] = pd.to_numeric(df['Action Id'], errors='coerce').fillna(0)
-    df['Action Earnings'] = pd.to_numeric(df['Action Earnings'], errors='coerce').fillna(0)
-    
-    # Filter for Lead Submissions
-    lead_submissions = df[df['Event Type'] == 'Lead Submission']
-    
-    # Count the number of rows with Lead Submission per partnerID
-    lead_counts = lead_submissions.groupby('partnerID').size().reset_index(name='Leads')
-    
-    # Sum the Action Earnings per partnerID
-    earnings_sums = lead_submissions.groupby('partnerID')['Action Earnings'].sum().reset_index()
-    
-    # Merge the two dataframes
-    pivot = pd.merge(lead_counts, earnings_sums, on='partnerID')
-    
-    # Rename columns for clarity
-    pivot.columns = ['partnerID', 'Leads', 'Spend']
-    
-    return pivot
-
-def create_brinks_optimization_report(affiliate_pivot, advanced_pivot, partner_list=None):
-    """Create the final optimization report for Brinks."""
-    # First, rename the affiliate pivot columns for clarity
-    renamed_affiliate = affiliate_pivot.copy()
-    if 'Transaction Count' in renamed_affiliate.columns:
-        renamed_affiliate = renamed_affiliate.rename(columns={
-            'Booked Count': 'Bookings',
-            'Transaction Count': 'Sales',
-            'Net Sales Amount': 'Revenue'
-        })
-    else:
-        st.warning("Expected columns not found in affiliate data. Using default column names.")
-        renamed_affiliate = renamed_affiliate.rename(columns={
-            renamed_affiliate.columns[1]: 'Bookings',
-            renamed_affiliate.columns[2]: 'Sales',
-            renamed_affiliate.columns[3]: 'Revenue'
-        })
-    
-    # Merge the pivot tables
-    merged_df = pd.merge(
-        advanced_pivot,
-        renamed_affiliate,
-        on='partnerID',
+def create_final_report(sales_pivot, conversion_pivot, partner_list_df):
+    """Create the final optimization report by merging the pivot tables"""
+    # Merge the pivot tables on pid_subid = Pardot_Partner_ID
+    final_report = pd.merge(
+        conversion_pivot,
+        sales_pivot,
+        left_on='pid_subid',
+        right_on='Pardot_Partner_ID',
         how='outer'
     ).fillna(0)
     
-    # Ensure all numeric columns are properly converted
-    for col in ['Leads', 'Spend', 'Bookings', 'Sales', 'Revenue']:
-        merged_df[col] = pd.to_numeric(merged_df[col], errors='coerce').fillna(0)
+    # If pid_subid is missing, use Pardot_Partner_ID
+    final_report['pid_subid'] = final_report.apply(
+        lambda row: row['Pardot_Partner_ID'] if pd.isna(row['pid_subid']) or row['pid_subid'] == 0 else row['pid_subid'],
+        axis=1
+    )
     
-    # Remove rows with all zeros
-    merged_df = merged_df[~((merged_df['Leads'] == 0) & 
-                           (merged_df['Spend'] == 0) & 
-                           (merged_df['Bookings'] == 0) & 
-                           (merged_df['Sales'] == 0) & 
-                           (merged_df['Revenue'] == 0))]
+    # Drop the Pardot_Partner_ID column if it exists (now redundant)
+    if 'Pardot_Partner_ID' in final_report.columns:
+        final_report = final_report.drop(columns=['Pardot_Partner_ID'])
     
     # Calculate additional metrics
-    merged_df['Lead to Sale'] = merged_df['Sales'] / merged_df['Leads'].replace(0, np.inf)
-    merged_df['ROAS'] = merged_df['Revenue'] / merged_df['Spend'].replace(0, np.inf)
-    merged_df['eCPL at $1.50'] = (merged_df['Revenue'] / merged_df['Leads'].replace(0, np.inf)) / 1.5
+    final_report['CPS'] = final_report.apply(
+        lambda row: row['Revenue'] / row['Sales'] if row['Sales'] > 0 else 0,
+        axis=1
+    )
     
-    # Clean up infinity values
-    merged_df = merged_df.replace([np.inf, -np.inf], 0)
+    final_report['Lead to Sale'] = final_report.apply(
+        lambda row: row['Sales'] / row['Leads'] if row['Leads'] > 0 else 0,
+        axis=1
+    )
     
-    # Add VLOOKUP data if partner list is provided
-    if partner_list is not None:
-        try:
-            # Extract affiliate ID from partnerID (part before underscore)
-            merged_df['Affiliate ID'] = merged_df['partnerID'].apply(
-                lambda x: x.split('_')[0] if x != "Unattributed" and '_' in x else x)
+    final_report['Rate at $700'] = final_report.apply(
+        lambda row: (row['Sales'] * 700) / row['Leads'] if row['Leads'] > 0 else 0,
+        axis=1
+    )
+    
+    final_report['Rate at 20%'] = final_report['Rate at $700'] * 0.8
+    
+    # Add Partner Name and Media Buyer columns
+    partner_name_map = {}
+    media_buyer_map = {}
+    
+    for _, row in partner_list_df.iterrows():
+        if pd.notna(row['Affiliate ID']):
+            affiliate_id = str(row['Affiliate ID'])
+            # Add underscore to match pid_subid format
+            if not affiliate_id.endswith('_'):
+                affiliate_id = f"{affiliate_id}_"
             
-            # Ensure required columns exist in partner list
-            required_cols = ['Affiliate ID', 'Affiliate Name', 'Account Manager Name']
-            if not all(col in partner_list.columns for col in required_cols):
-                st.warning("Partner list file missing required columns. Required columns are: Affiliate ID, Affiliate Name, Account Manager Name")
-            else:
-                # Convert Affiliate ID to string in both dataframes
-                partner_list['Affiliate ID'] = partner_list['Affiliate ID'].astype(str)
-                merged_df['Affiliate ID'] = merged_df['Affiliate ID'].astype(str)
-                
-                # Merge with partner list to get affiliate name and account manager
-                merged_df = pd.merge(
-                    merged_df,
-                    partner_list[['Affiliate ID', 'Affiliate Name', 'Account Manager Name']],
-                    on='Affiliate ID',
-                    how='left'
-                )
-                
-                # Fill NaN values with empty strings
-                merged_df['Affiliate Name'] = merged_df['Affiliate Name'].fillna("")
-                merged_df['Account Manager Name'] = merged_df['Account Manager Name'].fillna("")
-                
-                # Reorder columns to put VLOOKUP data first
-                cols = ['partnerID', 'Affiliate Name', 'Account Manager Name'] + \
-                    [col for col in merged_df.columns if col not in 
-                        ['partnerID', 'Affiliate Name', 'Account Manager Name', 'Affiliate ID']]
-                merged_df = merged_df[cols]
-                
-                # Drop the temporary Affiliate ID column
-                merged_df = merged_df.drop('Affiliate ID', axis=1)
-                
-        except Exception as e:
-            st.warning(f"Error in VLOOKUP processing: {str(e)}. Continuing without VLOOKUP data.")
+            # Special case for 41382
+            if affiliate_id.startswith('41382'):
+                affiliate_id = '41382_2'
+            
+            partner_name_map[affiliate_id] = row['Affiliate Name'] if pd.notna(row['Affiliate Name']) else ""
+            media_buyer_map[affiliate_id] = row['Account Manager Name'] if pd.notna(row['Account Manager Name']) else ""
     
-    return merged_df
+    final_report['Partner Name'] = final_report['pid_subid'].map(partner_name_map).fillna("")
+    final_report['Media Buyer'] = final_report['pid_subid'].map(media_buyer_map).fillna("")
+    
+    # Reorder columns to put Partner Name and Media Buyer first, followed by pid_subid
+    column_order = [
+        'Partner Name', 'Media Buyer', 'pid_subid',
+        'Leads', 'Cost', 'Pub CPL', 'Revenue', 'Client CPL', 
+        'Sales', 'CPS', 'Lead to Sale', 'Rate at $700', 'Rate at 20%'
+    ]
+    
+    final_report = final_report[column_order]
+    
+    # Rename pid_subid to Partner ID for clarity
+    final_report = final_report.rename(columns={'pid_subid': 'Partner ID'})
+    
+    st.write("Final report created with shape:", final_report.shape)
+    
+    return final_report
 
-def to_brinks_excel_download(df_affiliate, df_advanced, df_optimization):
-    """Convert dataframes to Excel file for download for Brinks report."""
+def to_excel(sales_df, conversion_df, final_report):
+    """Convert the dataframes to an Excel file for download"""
     output = BytesIO()
     
-    # Use xlsxwriter engine instead of openpyxl for formatting support
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         # Write each dataframe to a different sheet
-        df_affiliate.to_excel(writer, sheet_name='Cleaned Affiliate Data', index=False)
-        df_advanced.to_excel(writer, sheet_name='Cleaned Advanced Action Data', index=False)
-        df_optimization.to_excel(writer, sheet_name='Optimization Report', index=False)
+        final_report.to_excel(writer, sheet_name='Optimization Report', index=False)
+        sales_df.to_excel(writer, sheet_name='Processed Sales Data', index=False)
+        conversion_df.to_excel(writer, sheet_name='Processed Conversion Data', index=False)
         
-        # Get the xlsxwriter workbook and worksheet objects
+        # Get the workbook and worksheet objects
         workbook = writer.book
         worksheet = writer.sheets['Optimization Report']
         
         # Define formats
+        header_format = workbook.add_format({
+            'bold': True,
+            'text_wrap': True,
+            'valign': 'top',
+            'fg_color': '#D7E4BC',
+            'border': 1
+        })
+        
         money_format = workbook.add_format({'num_format': '$#,##0.00'})
         integer_format = workbook.add_format({'num_format': '0'})
         percent_format = workbook.add_format({'num_format': '0.0%'})
         
-        # Apply formats to specific columns
-        for col_idx, col_name in enumerate(df_optimization.columns):
-            if col_name in ['Spend', 'Revenue', 'ROAS', 'eCPL at $1.50']:
-                worksheet.set_column(col_idx, col_idx, 15, money_format)
-            elif col_name in ['Leads', 'Bookings', 'Sales']:
-                worksheet.set_column(col_idx, col_idx, 15, integer_format)
-            elif col_name in ['Lead to Sale']:
-                worksheet.set_column(col_idx, col_idx, 15, percent_format)
-            else:
-                worksheet.set_column(col_idx, col_idx, 15)  # Default width
+        # Apply header format
+        for col_num, value in enumerate(final_report.columns.values):
+            worksheet.write(0, col_num, value, header_format)
+        
+        # Set column widths and formats
+        worksheet.set_column('A:B', 20)  # Partner Name, Media Buyer
+        worksheet.set_column('C:C', 15)  # Partner ID
+        worksheet.set_column('D:D', 10, integer_format)  # Leads
+        worksheet.set_column('E:E', 12, money_format)  # Cost
+        worksheet.set_column('F:F', 12, money_format)  # Pub CPL
+        worksheet.set_column('G:G', 12, money_format)  # Revenue
+        worksheet.set_column('H:H', 12, money_format)  # Client CPL
+        worksheet.set_column('I:I', 10, integer_format)  # Sales
+        worksheet.set_column('J:J', 12, money_format)  # CPS
+        worksheet.set_column('K:K', 12, percent_format)  # Lead to Sale
+        worksheet.set_column('L:L', 12, money_format)  # Rate at $700
+        worksheet.set_column('M:M', 12, money_format)  # Rate at 20%
     
-    return output.getvalue() 
+    return output.getvalue()
+
+# Helper functions will be added here based on your specific requirements 
