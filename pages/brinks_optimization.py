@@ -7,6 +7,31 @@ import re
 import os
 import io
 
+def create_partner_list_df():
+    """Create the partner list DataFrame directly in code."""
+    # Define the data as a dictionary
+    data = {
+        'Affiliate ID': [
+            '41382', '42215', '42216', '42217', '42218', '42219', 
+            '42220', '42221', '42222', '42223', '42224'
+        ],
+        'Affiliate Name': [
+            'Brinks Home Security', 'PNW Kartik', 'PNW Kartik 2', 'PNW Kartik 3', 
+            'PNW Kartik 4', 'PNW Kartik 5', 'PNW Kartik 6', 'PNW Kartik 7', 
+            'PNW Kartik 8', 'PNW Kartik 9', 'PNW Kartik 10'
+        ],
+        'Account Manager Name': [
+            'Internal', 'Kartik', 'Kartik', 'Kartik', 'Kartik', 'Kartik',
+            'Kartik', 'Kartik', 'Kartik', 'Kartik', 'Kartik'
+        ],
+        'Name': [
+            'Brinks Home Security', 'PNW Kartik', 'PNW Kartik 2', 'PNW Kartik 3',
+            'PNW Kartik 4', 'PNW Kartik 5', 'PNW Kartik 6', 'PNW Kartik 7',
+            'PNW Kartik 8', 'PNW Kartik 9', 'PNW Kartik 10'
+        ]
+    }
+    return pd.DataFrame(data)
+
 def show_brinks_optimization():
     """
     Main function to display the Brinks Optimization Report interface
@@ -26,72 +51,13 @@ def show_brinks_optimization():
     with col2:
         conversion_file = st.file_uploader("Upload Conversion Report (CSV)", type=["csv", "xlsx"])
     
-    # TFN file is now loaded automatically
-    partner_list_loaded = False
-    partner_list_df = None
-    
-    try:
-        # Define possible filenames (in case of variations)
-        filenames = [
-            "Internal _ Brinks Performance + TFNS.xlsx",
-            "Internal_Brinks_Performance_TFNS.xlsx",  # Alternative without spaces
-            "Brinks Performance + TFNS.xlsx"         # Another possible variation
-        ]
-        
-        # Base paths to check
-        base_paths = [
-            os.path.expanduser("~"),                # Home directory
-            "/Users/mackenziecastin",               # Direct user path
-            ".",                                    # Current directory
-            "/mount/src/frank",                     # Mount directory
-            os.path.dirname(os.path.abspath(__file__))  # Directory where this script is located
-        ]
-        
-        # Generate all possible paths
-        possible_paths = []
-        for base in base_paths:
-            for filename in filenames:
-                # Try in base directory
-                possible_paths.append(os.path.join(base, filename))
-                # Try in Downloads subdirectory
-                possible_paths.append(os.path.join(base, "Downloads", filename))
-                # Try in Documents subdirectory
-                possible_paths.append(os.path.join(base, "Documents", filename))
-        
-        # Debug information
-        st.write("### Debugging Information")
-        st.write("Current working directory:", os.getcwd())
-        st.write("Script location:", os.path.dirname(os.path.abspath(__file__)))
-        
-        # Try each path until we find the file
-        for path in possible_paths:
-            st.write(f"Checking path: {path}")
-            if os.path.exists(path):
-                st.write(f"Found file at: {path}")
-                try:
-                    partner_list_df = pd.read_excel(path, engine='openpyxl')
-                    partner_list_loaded = True
-                    st.success(f"✅ Brinks Performance + TFNs Report loaded successfully from {path}!")
-                    # Hide debug info once file is found
-                    st.write("File loaded successfully. Refresh page to hide debug info.")
-                    break
-                except Exception as e:
-                    st.error(f"Found file at {path} but couldn't read it: {str(e)}")
-                    continue
-        
-        if not partner_list_loaded:
-            st.error("❌ Could not locate the Brinks Performance + TFNs Report in any of the expected locations.")
-            st.write("Tried the following paths:")
-            for path in possible_paths:
-                st.write(f"- {path}")
-            st.write("\nPlease ensure the file exists in one of these locations.")
-    
-    except Exception as e:
-        st.error(f"❌ Error while trying to load the Brinks Performance + TFNs Report: {str(e)}")
-        st.write("Please ensure the file exists and is accessible.")
+    # Create partner list DataFrame directly
+    partner_list_df = create_partner_list_df()
+    partner_list_loaded = True
+    st.success("✅ Partner list data loaded successfully!")
     
     # Check if we have all required files
-    if lead_source_file and conversion_file and partner_list_loaded:
+    if lead_source_file and conversion_file:
         if st.button("Generate Optimization Report"):
             with st.spinner("Processing data and generating report..."):
                 try:
@@ -135,11 +101,7 @@ def show_brinks_optimization():
                     st.error(f"An error occurred: {str(e)}")
                     st.exception(e)
     else:
-        if not partner_list_loaded:
-            st.warning("🔴 The Brinks Performance + TFNs Report could not be loaded automatically. Please check with the application administrator.")
-        
-        if not (lead_source_file and conversion_file):
-            st.info("Please upload both required files to generate the report.")
+        st.info("Please upload both required files to generate the report.")
     
     # Add a section to explain the process
     with st.expander("How to use this tool"):
@@ -151,7 +113,7 @@ def show_brinks_optimization():
         4. Review the generated report and download it
         
         ### What this tool does
-        - Automatically loads the Brinks Performance + TFNs Report in the background
+        - Uses built-in partner list data
         - Processes the Lead Source Sales data and cleans the Pardot Partner IDs
         - Processes the Conversion Report data and creates the pid_subid column
         - Merges the data and calculates all required metrics
