@@ -311,6 +311,7 @@ def create_affiliate_pivot(df):
     As per instructions:
     1. Pull in the ClickURL_partnerID into the rows (index='partnerID')
     2. In the values, pull in Sum of Booked Count, Sum of Transaction Count & Sum of Net Sales Amount
+    3. Also include sum of Unique Lead if available
     """
     # First verify Transaction Count column exists
     if 'Transaction Count' not in df.columns:
@@ -326,19 +327,34 @@ def create_affiliate_pivot(df):
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
     
+    # Also convert Unique Lead column if it exists
+    if 'Unique Lead' in df.columns:
+        df['Unique Lead'] = pd.to_numeric(df['Unique Lead'], errors='coerce').fillna(0)
+        st.write(f"Found 'Unique Lead' column - will use for lead calculation")
+    
     # Log data for debugging
     st.write(f"Debug - Total Transaction Count before pivot: {df['Transaction Count'].sum()}")
+    if 'Unique Lead' in df.columns:
+        st.write(f"Debug - Total Unique Leads before pivot: {df['Unique Lead'].sum()}")
     st.write(f"Debug - Date range in data: {df['Created Date'].min()} to {df['Created Date'].max()}")
     
     # Create pivot table with specific aggregation methods
-    pivot = df.groupby('partnerID').agg({
+    agg_dict = {
         'Transaction Count': 'sum',
         'Booked Count': 'sum',
         'Net Sales Amount': 'sum'
-    }).reset_index()
+    }
+    
+    # Add Unique Lead to aggregation if it exists
+    if 'Unique Lead' in df.columns:
+        agg_dict['Unique Lead'] = 'sum'
+    
+    pivot = df.groupby('partnerID').agg(agg_dict).reset_index()
     
     # Log pivot results for debugging
     st.write(f"Debug - Total Transaction Count after pivot: {pivot['Transaction Count'].sum()}")
+    if 'Unique Lead' in pivot.columns:
+        st.write(f"Debug - Total Unique Leads after pivot: {pivot['Unique Lead'].sum()}")
     
     return pivot
 
@@ -376,7 +392,7 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
     
     As per instructions, columns should be:
     1. PartnerID = landing page URL_partnerID and clickURL_partnerID values
-    2. Leads = count of event type from Cleaned_Advance_Action pivot table
+    2. Leads = Unique Lead from Affiliate_Leads_QA if available, otherwise from Advanced_Action
     3. Spend = sum of action earnings from Cleaned_Advance_Action pivot table 
     4. Bookings = sum of booked count from Cleaned_Affliate_Leads_QA pivot table
     5. Sales = sum of transaction count from Cleaned_Affliate_Leads_QA pivot table
@@ -384,12 +400,22 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
     """
     # First, rename the affiliate pivot columns for clarity
     renamed_affiliate = affiliate_pivot.copy()
+    has_unique_lead = 'Unique Lead' in renamed_affiliate.columns
+    
     if 'Transaction Count' in renamed_affiliate.columns:
-        renamed_affiliate = renamed_affiliate.rename(columns={
+        # Standard column renaming
+        renamed_cols = {
             'Booked Count': 'Bookings',
             'Transaction Count': 'Sales',
             'Net Sales Amount': 'Revenue'
-        })
+        }
+        
+        # If Unique Lead exists, include it in renaming
+        if has_unique_lead:
+            st.write("Found 'Unique Lead' column - will use for lead count instead of Advanced Action leads")
+            renamed_cols['Unique Lead'] = 'Leads_From_Affiliate'
+        
+        renamed_affiliate = renamed_affiliate.rename(columns=renamed_cols)
     else:
         st.warning("Expected columns not found in affiliate data. Using default column names.")
         renamed_affiliate = renamed_affiliate.rename(columns={
@@ -398,17 +424,31 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
             renamed_affiliate.columns[3]: 'Revenue'
         })
     
-    # Merge the pivot tables
-    merged_df = pd.merge(
-        advanced_pivot,
-        renamed_affiliate,
-        on='partnerID',
-        how='outer'
-    ).fillna(0)
+    # If we have Unique Lead data, use that for Leads directly
+    if has_unique_lead:
+        # First merge the affiliate data (including Leads_From_Affiliate)
+        merged_df = pd.merge(
+            renamed_affiliate,
+            advanced_pivot[['partnerID', 'Spend']],  # Only take Spend from advanced_pivot
+            on='partnerID',
+            how='outer'
+        ).fillna(0)
+        
+        # Then rename the Leads_From_Affiliate column to Leads
+        merged_df = merged_df.rename(columns={'Leads_From_Affiliate': 'Leads'})
+    else:
+        # Otherwise use the standard merge approach
+        merged_df = pd.merge(
+            advanced_pivot,
+            renamed_affiliate,
+            on='partnerID',
+            how='outer'
+        ).fillna(0)
     
     # Ensure all numeric columns are properly converted
     for col in ['Leads', 'Spend', 'Bookings', 'Sales', 'Revenue']:
-        merged_df[col] = pd.to_numeric(merged_df[col], errors='coerce').fillna(0)
+        if col in merged_df.columns:
+            merged_df[col] = pd.to_numeric(merged_df[col], errors='coerce').fillna(0)
     
     # Remove rows with all zeros
     merged_df = merged_df[~((merged_df['Leads'] == 0) & 
