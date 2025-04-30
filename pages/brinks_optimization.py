@@ -31,30 +31,30 @@ def show_brinks_optimization():
     partner_list_df = None
     
     try:
-        # Try to locate the file at a known path
-        brinks_tfn_path = "/Users/mackenziecastin/Downloads/Brinks TFN Report.xlsx"
+        # Try to locate the file at a known path with new filename
+        brinks_tfn_path = "/Users/mackenziecastin/Downloads/Internal _ Brinks Performance + TFNS.xlsx"
         if os.path.exists(brinks_tfn_path):
             partner_list_df = pd.read_excel(brinks_tfn_path, engine='openpyxl')
             partner_list_loaded = True
-            st.success("✅ Brinks TFN Report loaded automatically!")
+            st.success("✅ Brinks Performance + TFNs Report loaded automatically!")
         else:
             # Try alternate locations if the file might be in Streamlit's deployment
             alt_paths = [
-                "./Brinks TFN Report.xlsx",
-                "/mount/src/frank/Brinks TFN Report.xlsx"
+                "./Internal _ Brinks Performance + TFNS.xlsx",
+                "/mount/src/frank/Internal _ Brinks Performance + TFNS.xlsx"
             ]
             
             for path in alt_paths:
                 if os.path.exists(path):
                     partner_list_df = pd.read_excel(path, engine='openpyxl')
                     partner_list_loaded = True
-                    st.success(f"✅ Brinks TFN Report loaded from: {path}")
+                    st.success(f"✅ Brinks Performance + TFNs Report loaded from: {path}")
                     break
             
             if not partner_list_loaded:
-                st.error("❌ Could not locate Brinks TFN Report. Please ensure it's available at one of the expected locations.")
+                st.error("❌ Could not locate Brinks Performance + TFNs Report. Please ensure it's available at one of the expected locations.")
     except Exception as e:
-        st.error(f"❌ Error loading Brinks TFN Report: {str(e)}")
+        st.error(f"❌ Error loading Brinks Performance + TFNs Report: {str(e)}")
     
     # Check if we have all required files
     if lead_source_file and conversion_file and partner_list_loaded:
@@ -102,7 +102,7 @@ def show_brinks_optimization():
                     st.exception(e)
     else:
         if not partner_list_loaded:
-            st.warning("🔴 The Brinks TFN Report could not be loaded automatically. Please check with the application administrator.")
+            st.warning("🔴 The Brinks Performance + TFNs Report could not be loaded automatically. Please check with the application administrator.")
         
         if not (lead_source_file and conversion_file):
             st.info("Please upload both required files to generate the report.")
@@ -117,7 +117,7 @@ def show_brinks_optimization():
         4. Review the generated report and download it
         
         ### What this tool does
-        - Automatically loads the Brinks TFN Report in the background
+        - Automatically loads the Brinks Performance + TFNs Report in the background
         - Processes the Lead Source Sales data and cleans the Pardot Partner IDs
         - Processes the Conversion Report data and creates the pid_subid column
         - Merges the data and calculates all required metrics
