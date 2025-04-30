@@ -9,7 +9,7 @@ import io
 
 def create_partner_list_df():
     """Create the partner list DataFrame directly in code."""
-    # Define the data as a dictionary
+    # Define the data as a dictionary with all required columns
     data = {
         'Affiliate ID': [
             '41382', '42215', '42216', '42217', '42218', '42219', 
@@ -28,9 +28,26 @@ def create_partner_list_df():
             'Brinks Home Security', 'PNW Kartik', 'PNW Kartik 2', 'PNW Kartik 3',
             'PNW Kartik 4', 'PNW Kartik 5', 'PNW Kartik 6', 'PNW Kartik 7',
             'PNW Kartik 8', 'PNW Kartik 9', 'PNW Kartik 10'
-        ]
+        ],
+        'TFN': [
+            '800-447-9239', '844-677-8720', '844-677-8720', '844-677-8720',
+            '844-677-8720', '844-677-8720', '844-677-8720', '844-677-8720',
+            '844-677-8720', '844-677-8720', '844-677-8720'
+        ],
+        'Status': ['Active'] * 11,  # All partners are active
+        'Vertical': ['Security'] * 11,  # All are in Security vertical
+        'Sub-Vertical': ['Residential'] * 11  # All are Residential
     }
-    return pd.DataFrame(data)
+    
+    # Create DataFrame
+    df = pd.DataFrame(data)
+    
+    # Ensure all string columns are string type
+    string_columns = ['Affiliate ID', 'Affiliate Name', 'Account Manager Name', 'Name', 'TFN', 'Status', 'Vertical', 'Sub-Vertical']
+    for col in string_columns:
+        df[col] = df[col].astype(str)
+    
+    return df
 
 def show_brinks_optimization():
     """
