@@ -312,16 +312,6 @@ def create_affiliate_pivot(df):
     st.write("Initial Data Statistics:")
     st.write(f"Total rows in affiliate data: {len(df)}")
     
-    if 'Unique Lead' in df.columns:
-        st.write("\nUnique Lead Column Statistics:")
-        st.write(f"Total Unique Leads (raw sum): {df['Unique Lead'].sum()}")
-        # Show distribution of Unique Lead values
-        st.write("Unique Lead value counts:")
-        st.write(df['Unique Lead'].value_counts().head())
-    else:
-        st.write("\nWARNING: 'Unique Lead' column not found in data!")
-        st.write("Available columns:", df.columns.tolist())
-    
     # First verify Transaction Count column exists
     if 'Transaction Count' not in df.columns:
         st.error("Transaction Count column not found in affiliate data")
@@ -331,20 +321,11 @@ def create_affiliate_pivot(df):
     df['Transaction Count'] = pd.to_numeric(df['Transaction Count'], errors='coerce').fillna(0)
     
     # Ensure other numeric columns are properly converted if they exist
-    numeric_cols = ['Booked Count', 'Net Sales Amount']
+    numeric_cols = ['Booked Count', 'Net Sales Amount', 'Unique Lead']
     for col in numeric_cols:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
-    
-    # Also convert Unique Lead column if it exists
-    if 'Unique Lead' in df.columns:
-        st.write("\nProcessing Unique Lead column:")
-        before_sum = df['Unique Lead'].sum()
-        df['Unique Lead'] = pd.to_numeric(df['Unique Lead'], errors='coerce').fillna(0)
-        after_sum = df['Unique Lead'].sum()
-        st.write(f"Unique Lead sum before conversion: {before_sum}")
-        st.write(f"Unique Lead sum after conversion: {after_sum}")
-        st.write(f"Found 'Unique Lead' column - will use for lead calculation")
+            st.write(f"\nConverted {col} to numeric. Sum: {df[col].sum()}")
     
     # Create pivot table with specific aggregation methods
     agg_dict = {
@@ -353,13 +334,18 @@ def create_affiliate_pivot(df):
         'Net Sales Amount': 'sum'
     }
     
-    # Add Unique Lead to aggregation if it exists
+    # Always try to include Unique Lead in aggregation if it exists
     if 'Unique Lead' in df.columns:
+        st.write(f"\nFound 'Unique Lead' column with sum: {df['Unique Lead'].sum()}")
         agg_dict['Unique Lead'] = 'sum'
-        st.write("\nAdded Unique Lead to aggregation dictionary")
+        st.write("Added Unique Lead to aggregation dictionary")
+    else:
+        st.write("\nWARNING: 'Unique Lead' column not found in data!")
+        st.write("Available columns:", df.columns.tolist())
     
     st.write("\nBefore pivot operation:")
     st.write(f"Number of unique partnerIDs: {df['partnerID'].nunique()}")
+    st.write("Aggregation dictionary:", agg_dict)
     
     pivot = df.groupby('partnerID').agg(agg_dict).reset_index()
     
@@ -676,8 +662,8 @@ def clean_data(df):
 # Modified version for ADT Pixel Firing
 def show_adt_pixel():
     st.title("ADT Pixel Firing")
-    
-    st.write("""
+
+st.write("""
     This tool processes ADT Athena reports and fires pixels for qualifying sales.
     Upload your ADT Athena report (CSV format) to begin.
     """)
