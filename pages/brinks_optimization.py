@@ -94,11 +94,32 @@ def show_brinks_optimization():
         """)
 
 def load_file(file):
-    """Load a file into a pandas dataframe, handling CSV or Excel formats"""
+    """Load a file into a pandas dataframe, handling CSV or Excel formats and different encodings"""
     if file.name.endswith('.csv'):
-        return pd.read_csv(file)
+        # Try multiple encodings
+        encodings = ['utf-8', 'latin-1', 'cp1252', 'ISO-8859-1']
+        
+        for encoding in encodings:
+            try:
+                return pd.read_csv(file, encoding=encoding)
+            except UnicodeDecodeError:
+                # Reset file pointer for next attempt
+                file.seek(0)
+                continue
+            except Exception as e:
+                st.error(f"Error reading file with {encoding} encoding: {str(e)}")
+                raise
+        
+        # If all encodings fail
+        st.error(f"Failed to read CSV file with any encoding. Please check the file format.")
+        raise ValueError(f"Could not decode file {file.name} with any supported encoding")
+    
     elif file.name.endswith(('.xlsx', '.xls')):
-        return pd.read_excel(file)
+        try:
+            return pd.read_excel(file)
+        except Exception as e:
+            st.error(f"Error reading Excel file: {str(e)}")
+            raise
     else:
         raise ValueError(f"Unsupported file format: {file.name}")
 
