@@ -528,8 +528,8 @@ def show_adt_pixel():
                 
                 st.success("Processing complete! Check the log file for detailed results.")
                 
-                # Refresh the page to show the updated log
-                st.experimental_rerun()
+                # Use st.rerun() instead of st.experimental_rerun()
+                # st.experimental_rerun()  # This is deprecated
                 
             except Exception as e:
                 st.error(f"An error occurred: {str(e)}")
