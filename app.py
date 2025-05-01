@@ -450,9 +450,67 @@ def show_adt_pixel():
     
     uploaded_file = st.file_uploader("Upload ADT Athena Report (CSV)", type=['csv'])
     
+    # Check for existing log file and display if found
+    from datetime import datetime
+    import os
+    
+    today_log = f'adt_pixel_firing_{datetime.now().strftime("%Y%m%d")}.log'
+    if os.path.exists(today_log):
+        st.subheader("Recent Processing Log")
+        with open(today_log, 'r') as f:
+            log_content = f.read()
+        
+        # Create an expander with the log content
+        with st.expander("View Log File", expanded=False):
+            st.text_area("Log Content", log_content, height=400)
+        
+        # Add button to download log file
+        st.download_button(
+            label="Download Log File",
+            data=log_content,
+            file_name=today_log,
+            mime="text/plain"
+        )
+        
+        # Show timestamp of the log file
+        log_mtime = os.path.getmtime(today_log)
+        log_timestamp = datetime.fromtimestamp(log_mtime).strftime('%Y-%m-%d %H:%M:%S')
+        st.info(f"Last log file updated: {log_timestamp}")
+    
     if uploaded_file is not None:
         if st.button("Process and Fire Pixels"):
-            process_adt_report(uploaded_file)
+            try:
+                # Import necessary modules
+                import tempfile
+                import os
+                from adt_pixel_firing import process_adt_report
+                
+                # Create a temporary file to save the uploaded content
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as tmp:
+                    # Reset the file pointer to the beginning
+                    uploaded_file.seek(0)
+                    # Write the content to the temporary file
+                    tmp.write(uploaded_file.read())
+                    tmp_path = tmp.name
+                
+                st.info(f"Processing file: {uploaded_file.name}")
+                
+                # Process the file using the temporary file path
+                with st.spinner("Processing and firing pixels... This may take a few minutes."):
+                    process_adt_report(tmp_path)
+                
+                # Clean up the temporary file
+                os.remove(tmp_path)
+                
+                st.success("Processing complete! Check the log file for detailed results.")
+                
+                # Refresh the page to show the updated log
+                st.experimental_rerun()
+                
+            except Exception as e:
+                st.error(f"An error occurred: {str(e)}")
+                import traceback
+                st.error(traceback.format_exc())
 
 def main():
     """Main application entry point"""
