@@ -478,6 +478,30 @@ def show_adt_pixel():
         st.info(f"Last log file updated: {log_timestamp}")
     
     if uploaded_file is not None:
+        # Preview the first few rows of the uploaded file
+        try:
+            # Reset file pointer to beginning
+            uploaded_file.seek(0)
+            preview_df = pd.read_csv(uploaded_file, nrows=5, encoding='latin1')
+            
+            st.subheader("File Preview")
+            st.dataframe(preview_df)
+            
+            # Check for required columns
+            required_columns = ['Sale_Date', 'INSTALL_METHOD', 'Ln_of_Busn', 'DNIS_BUSN_SEG_CD', 'Lead_DNIS', 'Ordr_Type']
+            missing_columns = [col for col in required_columns if col not in preview_df.columns]
+            
+            if missing_columns:
+                st.warning(f"Warning: The following required columns are missing: {', '.join(missing_columns)}")
+                st.write("Available columns:", ", ".join(preview_df.columns))
+            else:
+                st.success("File contains all required columns!")
+                
+            # Reset file pointer for later use
+            uploaded_file.seek(0)
+        except Exception as e:
+            st.warning(f"Could not preview file: {str(e)}")
+        
         if st.button("Process and Fire Pixels"):
             try:
                 # Import necessary modules
@@ -511,6 +535,34 @@ def show_adt_pixel():
                 st.error(f"An error occurred: {str(e)}")
                 import traceback
                 st.error(traceback.format_exc())
+                
+                # Provide more helpful error messages for common issues
+                error_text = str(e).lower()
+                if "time data" in error_text and "does not match format" in error_text:
+                    st.warning("""
+                    ℹ️ The error appears to be related to date parsing. The script has been updated to handle this better.
+                    Please try again, the system will now fall back to using the current date if it can't extract a date from the filename.
+                    """)
+                elif "utf-8" in error_text:
+                    st.warning("""
+                    ℹ️ The file encoding may be causing problems. The system will attempt to use different encodings.
+                    If problems persist, try saving your CSV file with UTF-8 or Latin-1 encoding.
+                    """)
+                elif "no such file" in error_text:
+                    st.warning("""
+                    ℹ️ There was an issue accessing the temporary file. This might be due to permission issues.
+                    Try refreshing the page and uploading the file again.
+                    """)
+                elif "expected" in error_text and "columns" in error_text:
+                    st.warning("""
+                    ℹ️ The file format doesn't match what's expected. Please ensure you're uploading the correct ADT Athena report.
+                    The report should have columns such as 'Sale_Date', 'INSTALL_METHOD', 'Ln_of_Busn', 'DNIS_BUSN_SEG_CD', 'Lead_DNIS', and 'Ordr_Type'.
+                    """)
+                else:
+                    st.warning("""
+                    ℹ️ An unexpected error occurred. Please check that your file is in the correct format
+                    and contains all the required information.
+                    """)
 
 def main():
     """Main application entry point"""

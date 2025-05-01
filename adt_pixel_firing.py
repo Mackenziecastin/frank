@@ -59,8 +59,28 @@ def clean_data(df, file_path):
     try:
         # Extract date from filename (format: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_YYYYMMDD.csv)
         filename = os.path.basename(file_path)
-        report_date_str = filename.split('_')[-1].replace('.csv', '')
-        report_date = datetime.strptime(report_date_str, '%Y%m%d').date()
+        logging.info(f"Processing file: {filename}")
+        
+        # Try to extract date from filename using regular expression
+        date_match = re.search(r'(\d{8})', filename)
+        
+        if date_match:
+            report_date_str = date_match.group(1)
+            logging.info(f"Found date in filename: {report_date_str}")
+        else:
+            # If date not found in filename, use current date
+            logging.warning(f"Could not extract date from filename: {filename}")
+            logging.warning("Using current date instead.")
+            report_date_str = datetime.now().strftime('%Y%m%d')
+            logging.info(f"Using current date: {report_date_str}")
+        
+        try:
+            report_date = datetime.strptime(report_date_str, '%Y%m%d').date()
+        except ValueError as e:
+            logging.error(f"Error parsing date {report_date_str}: {str(e)}")
+            logging.warning("Using current date instead.")
+            report_date = datetime.now().date()
+            
         yesterday = report_date - timedelta(days=1)
         logging.info(f"Report date: {report_date.strftime('%Y-%m-%d')}, Using yesterday: {yesterday.strftime('%Y-%m-%d')}")
         
