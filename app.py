@@ -444,64 +444,13 @@ def show_adt_pixel():
     st.title("ADT Pixel Firing")
     
     st.write("""
-    This tool processes ADT Athena reports and fires pixels for qualifying sales.
+    This tool processes ADT Athena reports and fires pixels for qualifying sales. 
     Upload your ADT Athena report (CSV format) to begin.
     """)
     
     uploaded_file = st.file_uploader("Upload ADT Athena Report (CSV)", type=['csv'])
     
-    # Check for existing log file and display if found
-    from datetime import datetime
-    import os
-    
-    today_log = f'adt_pixel_firing_{datetime.now().strftime("%Y%m%d")}.log'
-    if os.path.exists(today_log):
-        st.subheader("Recent Processing Log")
-        with open(today_log, 'r') as f:
-            log_content = f.read()
-        
-        # Create an expander with the log content
-        with st.expander("View Log File", expanded=False):
-            st.text_area("Log Content", log_content, height=400)
-        
-        # Add button to download log file
-        st.download_button(
-            label="Download Log File",
-            data=log_content,
-            file_name=today_log,
-            mime="text/plain"
-        )
-        
-        # Show timestamp of the log file
-        log_mtime = os.path.getmtime(today_log)
-        log_timestamp = datetime.fromtimestamp(log_mtime).strftime('%Y-%m-%d %H:%M:%S')
-        st.info(f"Last log file updated: {log_timestamp}")
-    
     if uploaded_file is not None:
-        # Preview the first few rows of the uploaded file
-        try:
-            # Reset file pointer to beginning
-            uploaded_file.seek(0)
-            preview_df = pd.read_csv(uploaded_file, nrows=5, encoding='latin1')
-            
-            st.subheader("File Preview")
-            st.dataframe(preview_df)
-            
-            # Check for required columns
-            required_columns = ['Sale_Date', 'INSTALL_METHOD', 'Ln_of_Busn', 'DNIS_BUSN_SEG_CD', 'Lead_DNIS', 'Ordr_Type']
-            missing_columns = [col for col in required_columns if col not in preview_df.columns]
-            
-            if missing_columns:
-                st.warning(f"Warning: The following required columns are missing: {', '.join(missing_columns)}")
-                st.write("Available columns:", ", ".join(preview_df.columns))
-            else:
-                st.success("File contains all required columns!")
-                
-            # Reset file pointer for later use
-            uploaded_file.seek(0)
-        except Exception as e:
-            st.warning(f"Could not preview file: {str(e)}")
-        
         if st.button("Process and Fire Pixels"):
             try:
                 # Import necessary modules
@@ -520,49 +469,17 @@ def show_adt_pixel():
                 st.info(f"Processing file: {uploaded_file.name}")
                 
                 # Process the file using the temporary file path
-                with st.spinner("Processing and firing pixels... This may take a few minutes."):
-                    process_adt_report(tmp_path)
+                process_adt_report(tmp_path)
                 
                 # Clean up the temporary file
                 os.remove(tmp_path)
                 
                 st.success("Processing complete! Check the log file for detailed results.")
                 
-                # Use st.rerun() instead of st.experimental_rerun()
-                # st.experimental_rerun()  # This is deprecated
-                
             except Exception as e:
                 st.error(f"An error occurred: {str(e)}")
                 import traceback
                 st.error(traceback.format_exc())
-                
-                # Provide more helpful error messages for common issues
-                error_text = str(e).lower()
-                if "time data" in error_text and "does not match format" in error_text:
-                    st.warning("""
-                    ℹ️ The error appears to be related to date parsing. The script has been updated to handle this better.
-                    Please try again, the system will now fall back to using the current date if it can't extract a date from the filename.
-                    """)
-                elif "utf-8" in error_text:
-                    st.warning("""
-                    ℹ️ The file encoding may be causing problems. The system will attempt to use different encodings.
-                    If problems persist, try saving your CSV file with UTF-8 or Latin-1 encoding.
-                    """)
-                elif "no such file" in error_text:
-                    st.warning("""
-                    ℹ️ There was an issue accessing the temporary file. This might be due to permission issues.
-                    Try refreshing the page and uploading the file again.
-                    """)
-                elif "expected" in error_text and "columns" in error_text:
-                    st.warning("""
-                    ℹ️ The file format doesn't match what's expected. Please ensure you're uploading the correct ADT Athena report.
-                    The report should have columns such as 'Sale_Date', 'INSTALL_METHOD', 'Ln_of_Busn', 'DNIS_BUSN_SEG_CD', 'Lead_DNIS', and 'Ordr_Type'.
-                    """)
-                else:
-                    st.warning("""
-                    ℹ️ An unexpected error occurred. Please check that your file is in the correct format
-                    and contains all the required information.
-                    """)
 
 def main():
     """Main application entry point"""
