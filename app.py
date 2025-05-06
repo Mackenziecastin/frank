@@ -501,6 +501,7 @@ def to_excel_download(df_affiliate, df_advanced, df_optimization):
     return output.getvalue()
 
 def show_adt_pixel():
+    """Display the ADT Pixel Firing interface"""
     st.title("ADT Pixel Firing")
     
     st.write("""
@@ -512,55 +513,85 @@ def show_adt_pixel():
     
     if uploaded_file is not None:
         if st.button("Process and Fire Pixels"):
-            # Save uploaded file to a temporary file
-            import tempfile
-            import os
-            
-            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.csv')
-            temp_file_path = temp_file.name
-            
-            try:
-                # Save the uploaded file to the temporary file
-                uploaded_file.seek(0)
-                temp_file.write(uploaded_file.read())
-                temp_file.close()
-                
-                # Process the file using the function from the module
-                from adt_pixel_firing import process_adt_report
-                
-                # Display log file contents in the Streamlit app
-                process_adt_report(temp_file_path)
-                
-                # Show the log file after processing
-                log_filename = f'adt_pixel_firing_{datetime.now().strftime("%Y%m%d")}.log'
-                if os.path.exists(log_filename):
-                    with open(log_filename, 'r') as log_file:
-                        log_content = log_file.read()
-                        st.text(log_content)
-                else:
-                    st.error("Log file not found after processing.")
-                
-            finally:
-                # Clean up the temporary file
-                if os.path.exists(temp_file_path):
-                    os.unlink(temp_file_path)
+            with st.spinner("Processing file..."):
+                try:
+                    # Save uploaded file to temp
+                    import tempfile
+                    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.csv')
+                    temp_file.write(uploaded_file.getvalue())
+                    temp_file.close()
+                    
+                    # Import the module and process
+                    from adt_pixel_firing import process_adt_report
+                    process_adt_report(temp_file.name)
+                    
+                    # Clean up
+                    os.unlink(temp_file.name)
+                    
+                    # Show the log file
+                    log_filename = f'adt_pixel_firing_{datetime.now().strftime("%Y%m%d")}.log'
+                    if os.path.exists(log_filename):
+                        with open(log_filename, 'r') as f:
+                            log_content = f.read()
+                            
+                            # Extract DIFM and DIY counts
+                            difm_match = re.search(r'DIFM Sales: (\d+)', log_content)
+                            diy_match = re.search(r'DIY Sales: (\d+)', log_content)
+                            
+                            difm_count = int(difm_match.group(1)) if difm_match else 0
+                            diy_count = int(diy_match.group(1)) if diy_match else 0
+                            
+                            # Display success message
+                            if difm_count > 0 or diy_count > 0:
+                                st.success("✅ Process completed successfully!")
+                                
+                                # Display counts in columns
+                                col1, col2, col3 = st.columns(3)
+                                with col1:
+                                    st.metric("DIFM Pixels", difm_count)
+                                with col2:
+                                    st.metric("DIY Pixels", diy_count)
+                                with col3:
+                                    st.metric("Total Pixels", difm_count + diy_count)
+                            else:
+                                st.warning("Process completed, but no qualifying sales were found.")
+                            
+                            # Show log
+                            with st.expander("View Processing Log"):
+                                st.code(log_content)
+                    else:
+                        st.error("Log file not found. Process may have failed.")
+                        
+                except Exception as e:
+                    st.error(f"Error processing file: {str(e)}")
+                    import traceback
+                    st.code(traceback.format_exc())
 
+def setup_logging():
+    """Set up logging to capture output"""
+    log_stream = io.StringIO()
+    logging.basicConfig(
+        stream=log_stream,
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s'
+    )
+    return log_stream
+
+# At the bottom of the file, modify the main execution logic
 def main():
     # Create the navigation
     st.sidebar.title("Navigation")
+    page = st.sidebar.radio("Go to", ["Frank (LaserAway)", "Bob (ADT)", "ADT Pixel Firing"])
     
-    pages = {
-        "Partner Optimization Report": show_main_page,
-        "LaserAway Optimization Report": show_laseraway_page,
-        "Brand Optimization": show_brand_optimization,
-        "Brinks Optimization": show_brinks_optimization,
-        "ADT Pixel Firing": show_adt_pixel,
-        "LaserAway Intake": show_laseraway_intake,
-        "Ping Tree Upload": show_pingree_upload
-    }
-    
-    selection = st.sidebar.radio("Go to", list(pages.keys()))
-    pages[selection]()
-    
+    if page == "Frank (LaserAway)":
+        show_main_page()
+    elif page == "Bob (ADT)":
+        # Import and show Bob's analysis page
+        from pages.bob_analysis import show_bob_analysis
+        show_bob_analysis()
+    elif page == "ADT Pixel Firing":
+        # Use the directly defined function instead of importing
+        show_adt_pixel()
+
 if __name__ == "__main__":
     main() 
