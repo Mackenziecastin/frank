@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 import logging
 import uuid
 import re
-import requests
 
 # Set up logging first
 log_filename = f'adt_pixel_firing_{datetime.now().strftime("%Y%m%d")}.log'
@@ -58,38 +57,13 @@ def clean_data(df, file_path):
     Clean and filter the data according to requirements.
     """
     try:
-        # Extract date from filename - simple and direct approach
+        # Extract date from filename (format: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_YYYYMMDD.csv)
         filename = os.path.basename(file_path)
-        logging.info(f"Processing file: {filename}")
+        report_date_str = filename.split('_')[-1].replace('.csv', '')
+        report_date = datetime.strptime(report_date_str, '%Y%m%d').date()
+        yesterday = report_date - timedelta(days=1)
+        logging.info(f"Report date: {report_date.strftime('%Y-%m-%d')}, Using yesterday: {yesterday.strftime('%Y-%m-%d')}")
         
-        # Expected format: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20250502.csv
-        # Simply take the part before .csv and after the last underscore
-        if '_20' in filename and '.csv' in filename:
-            # Get the part between the last underscore and .csv
-            date_part = filename.split('_')[-1].split('.')[0]
-            logging.info(f"Extracted date part: {date_part}")
-            
-            if len(date_part) == 8 and date_part.isdigit():
-                report_date_str = date_part
-                logging.info(f"Using report date: {report_date_str}")
-                
-                # Parse date and get previous day
-                report_date = datetime.strptime(report_date_str, '%Y%m%d').date()
-                process_date = report_date - timedelta(days=1)
-                logging.info(f"Report date: {report_date}, Processing sales from: {process_date}")
-            else:
-                # Fallback to current date - 1
-                logging.warning(f"Date part doesn't look like a valid date: {date_part}")
-                report_date = datetime.now().date()
-                process_date = report_date - timedelta(days=1)
-                logging.info(f"Using today's date minus 1: {process_date}")
-        else:
-            # Fallback to current date - 1
-            logging.warning(f"Filename doesn't match expected pattern: {filename}")
-            report_date = datetime.now().date()
-            process_date = report_date - timedelta(days=1)
-            logging.info(f"Using today's date minus 1: {process_date}")
-            
         # Convert Sale_Date to datetime if it's not already and remove any null values
         df['Sale_Date'] = pd.to_datetime(df['Sale_Date'], errors='coerce')
         df = df.dropna(subset=['Sale_Date'])
@@ -109,10 +83,10 @@ def clean_data(df, file_path):
         df_after_health_dnis = df_after_health_business[health_dnis_filter]
         logging.info(f"After excluding US: Health from DNIS_BUSN_SEG_CD: {len(df_after_health_dnis)} records")
         
-        # Filter for the process date (day before report date) based on Sale_Date
-        date_filter = (df_after_health_dnis['Sale_Date'].dt.date == process_date)
+        # Filter for yesterday's date based on Sale_Date
+        date_filter = (df_after_health_dnis['Sale_Date'].dt.date == yesterday)
         df_after_date = df_after_health_dnis[date_filter]
-        logging.info(f"After filtering for {process_date}: {len(df_after_date)} records")
+        logging.info(f"After filtering for yesterday ({yesterday.strftime('%Y-%m-%d')}): {len(df_after_date)} records")
         
         dnis_filter = (df_after_date['Lead_DNIS'] == 'WEB0021011')
         df_after_lead_dnis = df_after_date[dnis_filter]
@@ -120,11 +94,8 @@ def clean_data(df, file_path):
         
         # Log details about records before order type filtering
         logging.info("\nChecking order types before filtering:")
-        if len(df_after_lead_dnis) > 0:
-            for idx, row in df_after_lead_dnis.iterrows():
-                logging.info(f"Record {idx}: Order Type = '{row['Ordr_Type']}'")
-        else:
-            logging.info("No records found matching criteria")
+        for idx, row in df_after_lead_dnis.iterrows():
+            logging.info(f"Record {idx}: Order Type = '{row['Ordr_Type']}'")
         
         order_type_filter = (
             df_after_lead_dnis['Ordr_Type'].str.contains('New', case=False, na=False) |
@@ -139,14 +110,11 @@ def clean_data(df, file_path):
         
         # Add detailed logging for each record
         logging.info("\nDetailed record analysis:")
-        if len(filtered_df) > 0:
-            for idx, row in filtered_df.iterrows():
-                logging.info(f"Record {idx}:")
-                logging.info(f"  Install Method: {row['INSTALL_METHOD']}")
-                logging.info(f"  Order Type: {row['Ordr_Type']}")
-                logging.info(f"  Sale Date: {row['Sale_Date']}")
-        else:
-            logging.info("No qualifying records found")
+        for idx, row in filtered_df.iterrows():
+            logging.info(f"Record {idx}:")
+            logging.info(f"  Install Method: {row['INSTALL_METHOD']}")
+            logging.info(f"  Order Type: {row['Ordr_Type']}")
+            logging.info(f"  Sale Date: {row['Sale_Date']}")
         
         # Count DIFM and DIY records
         difm_count = len(difm_records)
@@ -166,78 +134,61 @@ def fire_pixel(transaction_id, install_method, sale_date):
     """
     Fire the pixel for a given transaction ID, install method, and sale date
     """
+    pixel_url = "https://speedtrkzone.com/m.ashx"
+    # Set campaign ID based on install method
+    campaign_id = "91149" if "DIFM" in str(install_method).upper() else "91162"
+    
+    # Convert sale_date to ISO 8601 format with timezone
+    # Set the time to noon on the sale date
+    pixel_datetime = sale_date.replace(hour=12, minute=0, second=0)
+    # Format as ISO 8601 with UTC timezone
+    iso_datetime = pixel_datetime.strftime('%Y-%m-%dT%H:%M:%S+00:00')
+    
+    # Debug: Print detailed timestamp information
+    logging.info(f"\nDebug Timestamp Info:")
+    logging.info(f"  Sale Date: {sale_date}")
+    logging.info(f"  Using DateTime: {pixel_datetime}")
+    logging.info(f"  ISO 8601 Format: {iso_datetime}")
+    
+    params = {
+        'o': '32022',
+        'e': '565',
+        'f': 'pb',
+        't': transaction_id,
+        'pubid': '42865',
+        'campid': campaign_id,
+        'dt': iso_datetime
+    }
+    
+    # Construct and print the complete URL
+    url_with_params = requests.Request('GET', pixel_url, params=params).prepare().url
+    logging.info(f"  Complete URL: {url_with_params}")
+    
     try:
-        # Use the correct Cake pixel URL
-        pixel_url = "https://speedtrkzone.com/m.ashx"
+        response = requests.get(pixel_url, params=params)
+        response.raise_for_status()  # Raise an exception for bad status codes
         
-        # Set campaign ID based on install method
-        if 'DIFM' in str(install_method).upper():
-            campaign_id = "91149"
-        else:
-            campaign_id = "91162"  # DIY
+        # Log the exact request details
+        logging.info(f"Pixel fired successfully:")
+        logging.info(f"  Transaction ID: {transaction_id}")
+        logging.info(f"  Install Method: {install_method}")
+        logging.info(f"  Campaign ID: {campaign_id}")
+        logging.info(f"  Sale Date: {sale_date}")
+        logging.info(f"  ISO DateTime: {iso_datetime}")
+        logging.info(f"  URL: {url_with_params}")
+        logging.info(f"  Response Status: {response.status_code}")
+        logging.info(f"  Response Headers: {dict(response.headers)}")
+        logging.info(f"  Response Content: {response.text[:200]}...")  # Log first 200 chars of response
         
-        # Convert sale_date to ISO 8601 format with timezone
-        # Set the time to noon on the sale date
-        try:
-            # First ensure sale_date is a datetime object
-            if isinstance(sale_date, pd.Timestamp):
-                pixel_datetime = sale_date.to_pydatetime()
-            else:
-                pixel_datetime = pd.to_datetime(sale_date)
-            
-            # Set time to noon
-            pixel_datetime = pixel_datetime.replace(hour=12, minute=0, second=0)
-            
-            # Format as ISO 8601 with UTC timezone
-            iso_datetime = pixel_datetime.strftime('%Y-%m-%dT%H:%M:%S+00:00')
-        except Exception as e:
-            logging.error(f"Error formatting date: {str(e)}. Using current datetime.")
-            # Use current time as fallback
-            pixel_datetime = datetime.now().replace(hour=12, minute=0, second=0)
-            iso_datetime = pixel_datetime.strftime('%Y-%m-%dT%H:%M:%S+00:00')
-        
-        # The exact parameters that worked before
-        params = {
-            'o': '32022',
-            'e': '565',
-            'f': 'pb',
-            't': transaction_id,
-            'pubid': '42865',
-            'campid': campaign_id,
-            'dt': iso_datetime
-        }
-        
-        # Construct and log the complete URL
-        url_with_params = requests.Request('GET', pixel_url, params=params).prepare().url
-        logging.info(f"  Firing pixel: {url_with_params}")
-        
-        # Send the request to Cake
-        try:
-            response = requests.get(url_with_params, timeout=30)  # Use the full URL with params
-            
-            # Check if successful (HTTP 200-299)
-            if 200 <= response.status_code < 300:
-                logging.info(f"✓ Pixel fired successfully:")
-                logging.info(f"  Transaction ID: {transaction_id}")
-                logging.info(f"  Install Method: {install_method}")
-                logging.info(f"  Campaign ID: {campaign_id}")
-                logging.info(f"  Sale Date: {sale_date}")
-                logging.info(f"  Response: {response.status_code}, {response.text[:100]}")
-                return True
-            else:
-                logging.error(f"✗ Pixel firing failed with status {response.status_code}:")
-                logging.error(f"  URL: {url_with_params}")
-                logging.error(f"  Response: {response.text[:100]}")
-                return False
-                
-        except requests.exceptions.RequestException as e:
-            logging.error(f"✗ Request error firing pixel:")
-            logging.error(f"  URL: {url_with_params}")
-            logging.error(f"  Error: {str(e)}")
-            return False
-            
-    except Exception as e:
-        logging.error(f"Unexpected error in fire_pixel: {str(e)}")
+        return True
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error firing pixel:")
+        logging.error(f"  Transaction ID: {transaction_id}")
+        logging.error(f"  Install Method: {install_method}")
+        logging.error(f"  Sale Date: {sale_date}")
+        logging.error(f"  ISO DateTime: {iso_datetime}")
+        logging.error(f"  URL: {url_with_params}")
+        logging.error(f"  Error: {str(e)}")
         return False
 
 def process_adt_report(file_path):
@@ -270,61 +221,37 @@ def process_adt_report(file_path):
         
         # Count of sales to process
         total_sales = len(filtered_df)
-        
-        # If we don't have any filtered records, return early
-        if total_sales == 0:
-            logging.info("\n=== No qualifying sales found for pixel firing ===")
-            return
-            
-        # Get the first date to use in the log
-        first_sale_date = filtered_df['Sale_Date'].iloc[0].date() if len(filtered_df) > 0 else "unknown date"
-        logging.info(f"\n=== Found {total_sales} qualifying sales for date: {first_sale_date} ===")
+        logging.info(f"\nFound {total_sales} qualifying sales for date: {filtered_df['Sale_Date'].dt.date.iloc[0].strftime('%Y-%m-%d')}")
         
         # Count DIFM and DIY sales
-        difm_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIFM', case=False, na=False)]
-        diy_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIY', case=False, na=False)]
-        difm_sales = len(difm_records)
-        diy_sales = len(diy_records)
-        
-        logging.info(f"\n=== Firing {difm_sales} DIFM pixels and {diy_sales} DIY pixels ===")
+        difm_sales = len(filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIFM', case=False, na=False)])
+        diy_sales = len(filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIY', case=False, na=False)])
+        logging.info(f"DIFM Sales: {difm_sales}")
+        logging.info(f"DIY Sales: {diy_sales}")
         
         # Fire pixels for each sale
         logging.info("\nFiring pixels...")
-        successful_difm = 0
-        successful_diy = 0
-        
-        # Fire DIFM pixels
-        if difm_sales > 0:
-            logging.info(f"\n=== Firing DIFM Pixels (Campaign ID: 91149) ===")
-            for idx, row in difm_records.iterrows():
-                # Generate a unique transaction ID
-                transaction_id = f"ADT_{row['Sale_Date'].strftime('%Y%m%d')}_{uuid.uuid4().hex[:8]}"
-                
-                # Fire the pixel
-                logging.info(f"  Firing DIFM pixel {successful_difm + 1} of {difm_sales}...")
-                if fire_pixel(transaction_id, row['INSTALL_METHOD'], row['Sale_Date']):
-                    successful_difm += 1
-        
-        # Fire DIY pixels
-        if diy_sales > 0:
-            logging.info(f"\n=== Firing DIY Pixels (Campaign ID: 91162) ===")
-            for idx, row in diy_records.iterrows():
-                # Generate a unique transaction ID
-                transaction_id = f"ADT_{row['Sale_Date'].strftime('%Y%m%d')}_{uuid.uuid4().hex[:8]}"
-                
-                # Fire the pixel
-                logging.info(f"  Firing DIY pixel {successful_diy + 1} of {diy_sales}...")
-                if fire_pixel(transaction_id, row['INSTALL_METHOD'], row['Sale_Date']):
-                    successful_diy += 1
+        successful_pixels = 0
+        for idx, row in filtered_df.iterrows():
+            # Generate a unique transaction ID
+            transaction_id = f"ADT_{row['Sale_Date'].strftime('%Y%m%d')}_{uuid.uuid4().hex[:8]}"
+            
+            # Fire the pixel
+            logging.info(f"  Firing pixel {idx + 1} of {total_sales} ({row['INSTALL_METHOD']})...")
+            if fire_pixel(transaction_id, row['INSTALL_METHOD'], row['Sale_Date']):
+                successful_pixels += 1
+                logging.info(" ✓")
+            else:
+                logging.info(" ✗")
         
         # Print summary
-        logging.info("\n=== Pixel Firing Summary ===")
-        logging.info(f"Date processed: {first_sale_date}")
-        logging.info(f"DIFM Pixels: {successful_difm} of {difm_sales} fired successfully")
-        logging.info(f"DIY Pixels: {successful_diy} of {diy_sales} fired successfully")
-        logging.info(f"Total Pixels: {successful_difm + successful_diy} of {total_sales} fired successfully")
+        logging.info("\n=== Summary ===")
+        logging.info(f"Processing complete!")
+        logging.info(f"Date processed: {filtered_df['Sale_Date'].dt.date.iloc[0].strftime('%Y%m%d')}")
+        logging.info(f"Successfully fired DIFM pixels: {difm_sales} out of {difm_sales}")
+        logging.info(f"Successfully fired DIY pixels: {diy_sales} out of {diy_sales}")
+        logging.info(f"Total pixels fired: {successful_pixels} out of {total_sales}")
         logging.info(f"Check the log file for detailed information: {log_filename}")
-        logging.info("\n=== Pixel Firing Complete ===")
         
     except Exception as e:
         logging.error(f"Error processing ADT report: {str(e)}")

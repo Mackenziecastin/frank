@@ -11,7 +11,6 @@ import uuid
 import requests
 import io
 
-# Set page config at the start
 st.set_page_config(page_title="Partner Optimization Report Generator", layout="wide")
 
 def show_main_page():
@@ -75,6 +74,11 @@ def show_main_page():
                 matured_end_date = full_end_date - pd.Timedelta(days=7)
                 matured_start_date = full_start_date  # Same as full report start date
                 
+                # Debug information before filtering
+                st.write("Debug - Before filtering:")
+                st.write(f"Total records in affiliate data: {len(affiliate_df_processed)}")
+                st.write(f"Total Transaction Count: {affiliate_df_processed['Transaction Count'].sum()}")
+                
                 # Create full report dataframes with date filtering
                 # Filter both datasets to match exactly
                 affiliate_df_full = affiliate_df_processed[
@@ -86,6 +90,12 @@ def show_main_page():
                     (advanced_df_processed['Action Date'].dt.date <= full_end_date.date())
                 ]
                 
+                # Debug information after full report filtering
+                st.write("\nDebug - After full report filtering:")
+                st.write(f"Records in affiliate data: {len(affiliate_df_full)}")
+                st.write(f"Transaction Count: {affiliate_df_full['Transaction Count'].sum()}")
+                st.write(f"Date range: {affiliate_df_full['Created Date'].min()} to {affiliate_df_full['Created Date'].max()}")
+                
                 # Create matured report dataframes with date filtering
                 affiliate_df_matured = affiliate_df_processed[
                     (affiliate_df_processed['Created Date'].dt.date >= matured_start_date.date()) &
@@ -96,6 +106,12 @@ def show_main_page():
                     (advanced_df_processed['Action Date'].dt.date <= matured_end_date.date())
                 ]
                 
+                # Debug information after matured report filtering
+                st.write("\nDebug - After matured report filtering:")
+                st.write(f"Records in affiliate data: {len(affiliate_df_matured)}")
+                st.write(f"Transaction Count: {affiliate_df_matured['Transaction Count'].sum()}")
+                st.write(f"Date range: {affiliate_df_matured['Created Date'].min()} to {affiliate_df_matured['Created Date'].max()}")
+                
                 # Show date ranges for both reports
                 st.subheader("Date Ranges")
                 st.write("Full Report Dates:")
@@ -105,6 +121,11 @@ def show_main_page():
                 st.write("\nMatured Report Dates (excluding last 7 days):")
                 st.write(f"- Start Date: {matured_start_date.strftime('%Y-%m-%d')}")
                 st.write(f"- End Date: {matured_end_date.strftime('%Y-%m-%d')}")
+                
+                # Add date range validation and warning
+                if affiliate_df_processed['Created Date'].max() > full_end_date:
+                    extra_days = (affiliate_df_processed['Created Date'].max() - full_end_date).days
+                    st.warning(f"Note: Affiliate data contains {extra_days} additional day(s) beyond {full_end_date.strftime('%Y-%m-%d')}. These dates have been excluded for consistency with Advanced Action data.")
                 
                 # Create pivot tables and reports
                 # Full report
@@ -163,6 +184,20 @@ def show_main_page():
                 st.write("Affiliate Leads columns:", ", ".join(affiliate_df_processed.columns))
                 st.write("Advanced Action columns:", ", ".join(advanced_df_processed.columns))
                 
+                # Show only the full report if date columns are missing
+                st.subheader("Preview of Full Optimization Report (without date filtering)")
+                st.dataframe(optimization_report_full)
+                
+                excel_data = to_excel_download(
+                    affiliate_df_full, advanced_df_full, optimization_report_full
+                )
+                st.download_button(
+                    label="Download Full Report",
+                    data=excel_data,
+                    file_name="partner_optimization_report.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+            
         except Exception as e:
             st.error(f"An error occurred while processing the files: {str(e)}")
             st.error("Please ensure your files contain all required columns and are in the correct format.")
@@ -271,7 +306,12 @@ def process_dataframe(df, url_column):
     return df
 
 def create_affiliate_pivot(df):
-    """Create pivot table for Affiliate Leads QA data."""
+    """Create pivot table for Affiliate Leads QA data.
+    
+    As per instructions:
+    1. Pull in the ClickURL_partnerID into the rows (index='partnerID')
+    2. In the values, pull in Sum of Booked Count, Sum of Transaction Count & Sum of Net Sales Amount
+    """
     # First verify Transaction Count column exists
     if 'Transaction Count' not in df.columns:
         st.error("Transaction Count column not found in affiliate data")
@@ -280,26 +320,36 @@ def create_affiliate_pivot(df):
     # Convert Transaction Count to numeric, treating any non-numeric values as 0
     df['Transaction Count'] = pd.to_numeric(df['Transaction Count'], errors='coerce').fillna(0)
     
-    # Ensure other numeric columns are properly converted
-    numeric_cols = ['Booked Count', 'Net Sales Amount', 'Unique Leads']
+    # Ensure other numeric columns are properly converted if they exist
+    numeric_cols = ['Booked Count', 'Net Sales Amount']
     for col in numeric_cols:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
     
+    # Log data for debugging
+    st.write(f"Debug - Total Transaction Count before pivot: {df['Transaction Count'].sum()}")
+    st.write(f"Debug - Date range in data: {df['Created Date'].min()} to {df['Created Date'].max()}")
+    
     # Create pivot table with specific aggregation methods
-    agg_dict = {
+    pivot = df.groupby('partnerID').agg({
         'Transaction Count': 'sum',
         'Booked Count': 'sum',
-        'Net Sales Amount': 'sum',
-        'Unique Leads': 'sum'  # Changed from 'Unique Lead' to 'Unique Leads'
-    }
+        'Net Sales Amount': 'sum'
+    }).reset_index()
     
-    pivot = df.groupby('partnerID').agg(agg_dict).reset_index()
+    # Log pivot results for debugging
+    st.write(f"Debug - Total Transaction Count after pivot: {pivot['Transaction Count'].sum()}")
     
     return pivot
 
 def create_advanced_pivot(df):
-    """Create pivot table for Advanced Action data."""
+    """Create pivot table for Advanced Action data.
+    
+    As per instructions:
+    1. Pull in the Landing Page URL_PartnerID into the rows (index='partnerID')
+    2. In the values, pull in Count of Event Type but filter for ONLY the Lead Submissions
+    3. Also pull in the Sum of Action Earnings
+    """
     # Ensure numeric columns are properly converted
     df['Action Id'] = pd.to_numeric(df['Action Id'], errors='coerce').fillna(0)
     df['Action Earnings'] = pd.to_numeric(df['Action Earnings'], errors='coerce').fillna(0)
@@ -322,32 +372,43 @@ def create_advanced_pivot(df):
     return pivot
 
 def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=None):
-    """Create the final optimization report by combining pivot tables."""
+    """Create the final optimization report by combining pivot tables.
+    
+    As per instructions, columns should be:
+    1. PartnerID = landing page URL_partnerID and clickURL_partnerID values
+    2. Leads = count of event type from Cleaned_Advance_Action pivot table
+    3. Spend = sum of action earnings from Cleaned_Advance_Action pivot table 
+    4. Bookings = sum of booked count from Cleaned_Affliate_Leads_QA pivot table
+    5. Sales = sum of transaction count from Cleaned_Affliate_Leads_QA pivot table
+    6. Revenue = sum of net sales amount from Cleaned_Affliate_Leads_QA pivot table
+    """
     # First, rename the affiliate pivot columns for clarity
     renamed_affiliate = affiliate_pivot.copy()
+    if 'Transaction Count' in renamed_affiliate.columns:
+        renamed_affiliate = renamed_affiliate.rename(columns={
+            'Booked Count': 'Bookings',
+            'Transaction Count': 'Sales',
+            'Net Sales Amount': 'Revenue'
+        })
+    else:
+        st.warning("Expected columns not found in affiliate data. Using default column names.")
+        renamed_affiliate = renamed_affiliate.rename(columns={
+            renamed_affiliate.columns[1]: 'Bookings',
+            renamed_affiliate.columns[2]: 'Sales',
+            renamed_affiliate.columns[3]: 'Revenue'
+        })
     
-    # Standard column renaming
-    renamed_cols = {
-        'Booked Count': 'Bookings',
-        'Transaction Count': 'Sales',
-        'Net Sales Amount': 'Revenue',
-        'Unique Leads': 'Leads'  # Changed from 'Unique Lead' to 'Unique Leads'
-    }
-    
-    renamed_affiliate = renamed_affiliate.rename(columns=renamed_cols)
-    
-    # Merge with advanced_pivot to get Spend
+    # Merge the pivot tables
     merged_df = pd.merge(
+        advanced_pivot,
         renamed_affiliate,
-        advanced_pivot[['partnerID', 'Spend']],
         on='partnerID',
         how='outer'
     ).fillna(0)
     
     # Ensure all numeric columns are properly converted
     for col in ['Leads', 'Spend', 'Bookings', 'Sales', 'Revenue']:
-        if col in merged_df.columns:
-            merged_df[col] = pd.to_numeric(merged_df[col], errors='coerce').fillna(0)
+        merged_df[col] = pd.to_numeric(merged_df[col], errors='coerce').fillna(0)
     
     # Remove rows with all zeros
     merged_df = merged_df[~((merged_df['Leads'] == 0) & 
@@ -439,140 +500,326 @@ def to_excel_download(df_affiliate, df_advanced, df_optimization):
     
     return output.getvalue()
 
+def clean_data(df):
+    """
+    Clean and filter the data according to requirements:
+    1. Filter out any "Health" rows in the Ln_of_Busn column
+    2. Filter out any US: Health rows in the DNIS_BUSN_SEG_CD column
+    3. Filter for yesterday's date based on the report filename date
+    4. Filter for WEB0021011 in Lead_DNIS
+    5. Filter for order types containing 'New' or 'Resale'
+    """
+    try:
+        # Get the report filename from sys.argv[1]
+        import sys
+        report_filename = sys.argv[1]
+        
+        # Extract date from filename (assuming format: *_YYYYMMDD.csv)
+        import re
+        date_match = re.search(r'(\d{8})', report_filename)
+        if not date_match:
+            raise ValueError("Could not extract date from filename. Expected format: *_YYYYMMDD.csv")
+        
+        report_date = datetime.strptime(date_match.group(1), '%Y%m%d').date()
+        yesterday = report_date - timedelta(days=1)
+        logging.info(f"Report date: {report_date}, Using yesterday's date: {yesterday}")
+        
+        # Convert Sale_Date to datetime if it's not already and remove any null values
+        df['Sale_Date'] = pd.to_datetime(df['Sale_Date'], errors='coerce')
+        df = df.dropna(subset=['Sale_Date'])
+        
+        # Print initial count
+        total_records = len(df)
+        print(f"\nStarting with {total_records} total records")
+        
+        # Apply filters one by one and show counts
+        # Remove health leads from Ln_of_Busn
+        health_business_filter = ~df['Ln_of_Busn'].str.contains('Health', case=False, na=False)
+        df_after_health_business = df[health_business_filter]
+        print(f"After excluding Health from Ln_of_Busn: {len(df_after_health_business)} records")
+        
+        # Remove US: Health from DNIS_BUSN_SEG_CD
+        health_dnis_filter = ~df_after_health_business['DNIS_BUSN_SEG_CD'].str.contains('US: Health', case=False, na=False)
+        df_after_health_dnis = df_after_health_business[health_dnis_filter]
+        print(f"After excluding US: Health from DNIS_BUSN_SEG_CD: {len(df_after_health_dnis)} records")
+        
+        # Filter for yesterday's date based on Sale_Date
+        date_filter = (df_after_health_dnis['Sale_Date'].dt.date == yesterday)
+        df_after_date = df_after_health_dnis[date_filter]
+        print(f"After filtering for yesterday ({yesterday.strftime('%Y-%m-%d')}): {len(df_after_date)} records")
+        
+        dnis_filter = (df_after_date['Lead_DNIS'] == 'WEB0021011')
+        df_after_lead_dnis = df_after_date[dnis_filter]
+        print(f"After filtering for Lead_DNIS 'WEB0021011': {len(df_after_lead_dnis)} records")
+        
+        # Log details about records before order type filtering
+        print("\nChecking order types before filtering:")
+        for idx, row in df_after_lead_dnis.iterrows():
+            print(f"Record {idx}: Order Type = '{row['Ordr_Type']}'")
+        
+        order_type_filter = (
+            df_after_lead_dnis['Ordr_Type'].str.contains('New', case=False, na=False) |
+            df_after_lead_dnis['Ordr_Type'].str.contains('Resale', case=False, na=False)
+        )
+        filtered_df = df_after_lead_dnis[order_type_filter]
+        print(f"\nAfter filtering for New/Resale order types: {len(filtered_df)} records")
+        
+        # Log details about which records were kept vs filtered
+        print("\nOrder types that were filtered out:")
+        filtered_out = df_after_lead_dnis[~order_type_filter]
+        for idx, row in filtered_out.iterrows():
+            print(f"Filtered out - Record {idx}: Order Type = '{row['Ordr_Type']}'")
+        
+        if len(filtered_df) == 0:
+            print(f"\nNo records matched all criteria. Showing sample of Lead_DNIS 'WEB0021011' records from {yesterday.strftime('%Y-%m-%d')}:")
+            web_records = df[
+                (df['Lead_DNIS'] == 'WEB0021011') & 
+                (df['Sale_Date'].dt.date == yesterday)
+            ]
+            if len(web_records) > 0:
+                print("\nSample record:")
+                sample = web_records.iloc[0]
+                print(f"Sale_Date: {sample['Sale_Date']}")
+                print(f"Ln_of_Busn: {sample['Ln_of_Busn']}")
+                print(f"DNIS_BUSN_SEG_CD: {sample['DNIS_BUSN_SEG_CD']}")
+                print(f"Ordr_Type: {sample['Ordr_Type']}")
+                print(f"INSTALL_METHOD: {sample['INSTALL_METHOD']}")
+            else:
+                print(f"No records found with Lead_DNIS 'WEB0021011' for {yesterday.strftime('%Y-%m-%d')}")
+        
+        # Debug: Print all install methods to verify counting
+        print("\nDebug: All install methods in filtered data:")
+        for idx, row in filtered_df.iterrows():
+            print(f"Record {idx}: Install Method = '{row['INSTALL_METHOD']}'")
+        
+        # Separate DIFM and DIY records
+        difm_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIFM', case=False, na=False)]
+        diy_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIY', case=False, na=False)]
+        
+        # Count DIFM and DIY records
+        difm_count = len(difm_records)
+        diy_count = len(diy_records)
+        
+        print(f"\nFinal counts:")
+        print(f"DIFM Sales: {difm_count}")
+        print(f"DIY Sales: {diy_count}")
+        
+        logging.info(f"Data cleaned successfully. Found {len(filtered_df)} qualifying sales for {yesterday.strftime('%Y-%m-%d')}.")
+        return filtered_df
+        
+    except Exception as e:
+        logging.error(f"Error cleaning data: {str(e)}")
+        raise
+
+# Modified version for ADT Pixel Firing
 def show_adt_pixel():
-    """Display the ADT Pixel Firing interface"""
     st.title("ADT Pixel Firing")
     
     st.write("""
-    ## Upload ADT Athena Report
-    
-    Upload your ADT Athena report (CSV format) that includes sales data.
-    
-    The tool will fire pixels for sales that occurred on the **day before** the date in the report filename.
-    """)
-    
-    st.warning("""
-    **Important**: Make sure your filename follows this pattern:
-    ADT_Athena_DLY_Lead_CallData_Direct_Agnts_YYYYMMDD.csv
-    
-    Example: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20250502.csv
+    This tool processes ADT Athena reports and fires pixels for qualifying sales.
+    Upload your ADT Athena report (CSV format) to begin.
     """)
     
     uploaded_file = st.file_uploader("Upload ADT Athena Report (CSV)", type=['csv'])
     
-    # Check if a log file exists and show a link to view it
-    from datetime import datetime
-    import os
-    
-    today_log = f'adt_pixel_firing_{datetime.now().strftime("%Y%m%d")}.log'
-    if os.path.exists(today_log):
-        with st.expander("View Previous Log"):
-            with open(today_log, 'r') as log_file:
-                st.code(log_file.read())
-    
     if uploaded_file is not None:
-        # Show filename and extract date
-        filename = uploaded_file.name
-        st.write(f"File selected: **{filename}**")
-        
-        # Extract date from the filename - simple approach
-        date_part = None
-        if '_20' in filename and '.csv' in filename:
-            # Get the part between the last underscore and .csv
-            date_part = filename.split('_')[-1].split('.')[0]
-            
-            if len(date_part) == 8 and date_part.isdigit():
-                try:
-                    from datetime import datetime, timedelta
-                    report_date = datetime.strptime(date_part, '%Y%m%d').date()
-                    process_date = report_date - timedelta(days=1)
-                    st.success(f"Based on the filename, pixels will be fired for sales on: **{process_date.strftime('%B %d, %Y')}**")
-                except ValueError:
-                    st.warning(f"Could not parse date from filename part: {date_part}")
-                    st.info("Will use yesterday's date as the default processing date")
-            else:
-                st.warning(f"Date part doesn't look right: {date_part}")
-                st.info("Will use yesterday's date as the default processing date")
-        else:
-            st.warning("Filename doesn't match expected pattern")
-            st.info("Will use yesterday's date as the default processing date")
-        
         if st.button("Process and Fire Pixels"):
-            try:
-                # Import modules
-                import tempfile
-                import os
-                import re
-                from adt_pixel_firing import process_adt_report
-                
-                # Create a placeholder for progress updates
-                progress_placeholder = st.empty()
-                progress_placeholder.info("⏳ Starting pixel firing process...")
-                
-                # Save the uploaded file to a temporary file
-                temp_file_path = None
-                with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as temp_file:
-                    uploaded_file.seek(0)
-                    temp_file.write(uploaded_file.read())
-                    temp_file_path = temp_file.name
-                
-                progress_placeholder.info(f"⚙️ Processing file: {uploaded_file.name}")
-                
-                # Process the file
-                process_adt_report(temp_file_path)
-                
-                # Clean up the temp file
-                if temp_file_path and os.path.exists(temp_file_path):
-                    os.remove(temp_file_path)
-                
-                # Display the results by reading from the log file
-                progress_placeholder.empty()
-                
-                if os.path.exists(today_log):
-                    with open(today_log, 'r') as log_file:
-                        log_content = log_file.read()
-                        
-                        # Extract key information from the log
-                        difm_match = re.search(r'DIFM Sales: (\d+)', log_content)
-                        diy_match = re.search(r'DIY Sales: (\d+)', log_content)
-                        date_processed_match = re.search(r'Processing sales from: (\d{4}-\d{2}-\d{2})', log_content)
-                        
-                        difm_count = int(difm_match.group(1)) if difm_match else 0
-                        diy_count = int(diy_match.group(1)) if diy_match else 0
-                        date_processed = date_processed_match.group(1) if date_processed_match else "unknown date"
-                        
-                        # Display a summary
-                        if difm_count > 0 or diy_count > 0:
-                            st.success(f"✅ Pixel firing completed for sales on {date_processed}!")
-                        else:
-                            st.warning(f"⚠️ No qualifying sales found for {date_processed}")
-                        
-                        # Display counts in columns
-                        col1, col2, col3 = st.columns(3)
-                        with col1:
-                            st.metric("DIFM Pixels", difm_count)
-                        with col2:
-                            st.metric("DIY Pixels", diy_count)
-                        with col3:
-                            st.metric("Total Pixels", difm_count + diy_count)
-                        
-                        # Display the detailed log
-                        with st.expander("View Detailed Log", expanded=True):
-                            st.code(log_content)
-                
-                else:
-                    st.error("Log file not found. Process may not have completed successfully.")
-                
-            except Exception as e:
-                st.error(f"Error: {str(e)}")
-                import traceback
-                st.code(traceback.format_exc())
+            process_adt_report(uploaded_file)
 
+def setup_logging():
+    """Set up logging to capture output"""
+    log_stream = io.StringIO()
+    logging.basicConfig(
+        stream=log_stream,
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s'
+    )
+    return log_stream
+
+def process_adt_report(uploaded_file):
+    """
+    Process the ADT report and fire pixels
+    """
+    try:
+        # Set up logging
+        log_stream = setup_logging()
+        
+        st.write("=== ADT Pixel Firing Process Started ===")
+        
+        # Try different encodings
+        encodings = ['utf-8', 'latin1', 'cp1252', 'iso-8859-1']
+        df = None
+        
+        for encoding in encodings:
+            try:
+                st.write(f"Trying to read file with {encoding} encoding...")
+                df = pd.read_csv(uploaded_file, encoding=encoding)
+                st.write(f"Successfully read file with {encoding} encoding!")
+                break
+            except UnicodeDecodeError:
+                st.write(f"Failed to read with {encoding} encoding, trying next...")
+                continue
+        
+        if df is None:
+            raise Exception("Could not read the file with any of the supported encodings")
+        
+        # Clean and filter the data
+        filtered_df = clean_data_streamlit(df, uploaded_file.name)
+        
+        # Count of sales to process
+        total_sales = len(filtered_df)
+        if total_sales == 0:
+            st.warning("No qualifying sales found to process.")
+            return
+        
+        # Create progress bar
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        # Fire pixel for each sale
+        st.write("Firing pixels...")
+        successful_fires = {'DIFM': 0, 'DIY': 0}
+        
+        for idx, row in filtered_df.iterrows():
+            # Update progress
+            progress = (idx + 1) / total_sales
+            progress_bar.progress(progress)
+            
+            # Generate transaction ID
+            sale_date_str = row['Sale_Date'].strftime('%Y%m%d')
+            transaction_id = f"ADT_{sale_date_str}_{str(uuid.uuid4())[:8]}"
+            install_method = row['INSTALL_METHOD']
+            
+            # Determine category and fire pixel
+            category = 'DIFM' if 'DIFM' in str(install_method).upper() else 'DIY'
+            status_text.write(f"Processing {category} sale {idx + 1} of {total_sales}...")
+            
+            if fire_pixel(transaction_id, install_method, row['Sale_Date']):
+                successful_fires[category] += 1
+        
+        # Show summary
+        st.success("Processing complete!")
+        st.write(f"Successfully fired DIFM pixels: {successful_fires['DIFM']}")
+        st.write(f"Successfully fired DIY pixels: {successful_fires['DIY']}")
+        st.write(f"Total pixels fired: {sum(successful_fires.values())} out of {total_sales}")
+        
+        # Show logs
+        with st.expander("View Processing Logs"):
+            st.text(log_stream.getvalue())
+        
+    except Exception as e:
+        st.error(f"Error processing ADT report: {str(e)}")
+        st.error("Check the logs below for more details")
+        with st.expander("View Error Logs"):
+            st.text(log_stream.getvalue())
+
+def clean_data_streamlit(df, report_filename):
+    """
+    Clean and filter the data according to requirements - Streamlit version
+    """
+    try:
+        # Extract date from filename (assuming format: *_YYYYMMDD.csv)
+        date_match = re.search(r'(\d{8})', report_filename)
+        if not date_match:
+            raise ValueError("Could not extract date from filename. Expected format: *_YYYYMMDD.csv")
+        
+        report_date = datetime.strptime(date_match.group(1), '%Y%m%d').date()
+        yesterday = report_date - timedelta(days=1)
+        logging.info(f"Report date: {report_date}, Using yesterday's date: {yesterday}")
+        
+        # Convert Sale_Date to datetime if it's not already and remove any null values
+        df['Sale_Date'] = pd.to_datetime(df['Sale_Date'], errors='coerce')
+        df = df.dropna(subset=['Sale_Date'])
+        
+        # Print initial count
+        total_records = len(df)
+        st.write(f"Starting with {total_records} total records")
+        
+        # Apply filters one by one and show counts
+        # Remove health leads from Ln_of_Busn
+        health_business_filter = ~df['Ln_of_Busn'].str.contains('Health', case=False, na=False)
+        df_after_health_business = df[health_business_filter]
+        st.write(f"After excluding Health from Ln_of_Busn: {len(df_after_health_business)} records")
+        
+        # Remove US: Health from DNIS_BUSN_SEG_CD
+        health_dnis_filter = ~df_after_health_business['DNIS_BUSN_SEG_CD'].str.contains('US: Health', case=False, na=False)
+        df_after_health_dnis = df_after_health_business[health_dnis_filter]
+        st.write(f"After excluding US: Health from DNIS_BUSN_SEG_CD: {len(df_after_health_dnis)} records")
+        
+        # Filter for yesterday's date based on Sale_Date
+        date_filter = (df_after_health_dnis['Sale_Date'].dt.date == yesterday)
+        df_after_date = df_after_health_dnis[date_filter]
+        st.write(f"After filtering for yesterday ({yesterday.strftime('%Y-%m-%d')}): {len(df_after_date)} records")
+        
+        dnis_filter = (df_after_date['Lead_DNIS'] == 'WEB0021011')
+        df_after_lead_dnis = df_after_date[dnis_filter]
+        st.write(f"After filtering for Lead_DNIS 'WEB0021011': {len(df_after_lead_dnis)} records")
+        
+        # Filter for New/Resale order types
+        order_type_filter = (
+            df_after_lead_dnis['Ordr_Type'].str.contains('New', case=False, na=False) |
+            df_after_lead_dnis['Ordr_Type'].str.contains('Resale', case=False, na=False)
+        )
+        filtered_df = df_after_lead_dnis[order_type_filter]
+        st.write(f"After filtering for New/Resale order types: {len(filtered_df)} records")
+        
+        # Separate DIFM and DIY records
+        difm_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIFM', case=False, na=False)]
+        diy_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIY', case=False, na=False)]
+        
+        # Count DIFM and DIY records
+        difm_count = len(difm_records)
+        diy_count = len(diy_records)
+        
+        # Combine all records
+        filtered_df = pd.concat([difm_records, diy_records])
+        
+        st.write("Final counts:")
+        st.write(f"DIFM Sales: {difm_count}")
+        st.write(f"DIY Sales: {diy_count}")
+        
+        logging.info(f"Data cleaned successfully. Found {len(filtered_df)} qualifying sales for {yesterday.strftime('%Y-%m-%d')}.")
+        return filtered_df
+        
+    except Exception as e:
+        logging.error(f"Error cleaning data: {str(e)}")
+        raise
+
+def fire_pixel(transaction_id, install_method, sale_date):
+    """
+    Fire the pixel for a given transaction ID, install method, and sale date
+    """
+    pixel_url = "https://speedtrkzone.com/m.ashx"
+    campaign_id = "91149" if "DIFM" in str(install_method).upper() else "91162"
+    
+    # Set the time to noon on the sale date
+    pixel_datetime = sale_date.replace(hour=12, minute=0, second=0)
+    iso_datetime = pixel_datetime.strftime('%Y-%m-%dT%H:%M:%S+00:00')
+    
+    params = {
+        'o': '32022',
+        'e': '565',
+        'f': 'pb',
+        't': transaction_id,
+        'pubid': '42865',
+        'campid': campaign_id,
+        'dt': iso_datetime
+    }
+    
+    try:
+        response = requests.get(pixel_url, params=params)
+        response.raise_for_status()
+        logging.info(f"Pixel fired successfully for {transaction_id}")
+        return True
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error firing pixel for {transaction_id}: {str(e)}")
+        return False
+
+# At the bottom of the file, modify the main execution logic
 def main():
-    """Main application entry point"""
     # Create the navigation
     st.sidebar.title("Navigation")
-    page = st.sidebar.radio("Go to", ["Frank (LaserAway)", "Bob (ADT)", "ADT Pixel Firing", "Brinks"])
+    page = st.sidebar.radio("Go to", ["Frank (LaserAway)", "Bob (ADT)", "ADT Pixel Firing"])
     
     if page == "Frank (LaserAway)":
         show_main_page()
@@ -583,10 +830,6 @@ def main():
     elif page == "ADT Pixel Firing":
         # Use the directly defined function instead of importing
         show_adt_pixel()
-    elif page == "Brinks":
-        # Import and show Brinks page
-        from pages.brinks_optimization import show_brinks_optimization
-        show_brinks_optimization()
 
 if __name__ == "__main__":
     main() 
