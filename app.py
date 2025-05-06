@@ -446,6 +446,10 @@ def show_adt_pixel():
     st.write("""
     This tool processes ADT Athena reports and fires pixels for qualifying sales. 
     Upload your ADT Athena report (CSV format) to begin.
+    
+    **Important**: The tool will process data for the day BEFORE the date in the filename.
+    Example: For file ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20250502.csv (dated May 2, 2025), 
+    the tool will fire pixels for sales on May 1, 2025.
     """)
     
     uploaded_file = st.file_uploader("Upload ADT Athena Report (CSV)", type=['csv'])
@@ -461,6 +465,21 @@ def show_adt_pixel():
                 st.code(log_file.read())
     
     if uploaded_file is not None:
+        # Show date that will be processed
+        import re
+        filename = uploaded_file.name
+        date_match = re.search(r'(\d{8})', filename)
+        
+        if date_match:
+            report_date_str = date_match.group(1)
+            try:
+                from datetime import datetime, timedelta
+                report_date = datetime.strptime(report_date_str, '%Y%m%d').date()
+                process_date = report_date - timedelta(days=1)
+                st.info(f"Based on the filename, pixels will be fired for sales on: {process_date.strftime('%B %d, %Y')}")
+            except ValueError:
+                st.warning(f"Could not parse date from filename. Please ensure your file contains a date in YYYYMMDD format.")
+        
         if st.button("Process and Fire Pixels"):
             try:
                 # Import modules
@@ -497,13 +516,14 @@ def show_adt_pixel():
                         # Extract key information from the log
                         difm_match = re.search(r'DIFM Sales: (\d+)', log_content)
                         diy_match = re.search(r'DIY Sales: (\d+)', log_content)
-                        total_fired_match = re.search(r'Total pixels fired: (\d+) out of (\d+)', log_content)
+                        date_processed_match = re.search(r'Processing sales from: (\d{4}-\d{2}-\d{2})', log_content)
                         
                         difm_count = int(difm_match.group(1)) if difm_match else 0
                         diy_count = int(diy_match.group(1)) if diy_match else 0
+                        date_processed = date_processed_match.group(1) if date_processed_match else "unknown date"
                         
                         # Display a summary
-                        st.success("✅ Pixel firing completed!")
+                        st.success(f"✅ Pixel firing completed for sales on {date_processed}!")
                         
                         # Display counts in columns
                         col1, col2, col3 = st.columns(3)

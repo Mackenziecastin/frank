@@ -58,32 +58,33 @@ def clean_data(df, file_path):
     Clean and filter the data according to requirements.
     """
     try:
-        # Extract date from filename or use current date
-        try:
-            # First try direct extraction from filename pattern
-            filename = os.path.basename(file_path)
-            if '_20' in filename:  # Look for pattern like _20230415 in filename
-                date_part = filename.split('_')[-1].split('.')[0]
-                if len(date_part) == 8 and date_part.isdigit():
-                    report_date_str = date_part
-                    logging.info(f"Extracted date from filename: {report_date_str}")
-                else:
-                    raise ValueError("Date part doesn't match expected format")
-            else:
-                # Use today's date as fallback
-                report_date_str = datetime.now().strftime('%Y%m%d')
-                logging.info(f"Using current date: {report_date_str}")
-        except Exception as e:
-            # Fall back to current date on any error
-            logging.warning(f"Error extracting date from filename: {str(e)}")
-            report_date_str = datetime.now().strftime('%Y%m%d')
-            logging.info(f"Using current date as fallback: {report_date_str}")
-            
-        # Parse the report date
-        report_date = datetime.strptime(report_date_str, '%Y%m%d').date()
-        yesterday = report_date - timedelta(days=1)
-        logging.info(f"Report date: {report_date}, Processing data for: {yesterday}")
+        # Extract date from filename (format: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_YYYYMMDD.csv)
+        # This is critical - we must use the date in the filename, NOT today's date
+        filename = os.path.basename(file_path)
         
+        # Look for a date pattern in the filename (8 consecutive digits)
+        date_match = re.search(r'(\d{8})', filename)
+        
+        if date_match:
+            # If found, use that as the report date
+            report_date_str = date_match.group(1)
+            logging.info(f"Extracted report date from filename: {report_date_str}")
+            
+            # Parse the report date
+            try:
+                report_date = datetime.strptime(report_date_str, '%Y%m%d').date()
+                # The date we want to filter for is the day BEFORE the report date
+                process_date = report_date - timedelta(days=1)
+                logging.info(f"Report date: {report_date}, Processing sales from: {process_date}")
+            except ValueError:
+                logging.error(f"Could not parse date '{report_date_str}' from filename. Format should be YYYYMMDD.")
+                raise ValueError(f"Invalid date format in filename: {report_date_str}")
+        else:
+            # If no date pattern found, notify user of the error
+            logging.error(f"No date pattern found in filename: {filename}")
+            logging.error("Filename should contain a date in format YYYYMMDD (e.g. 20250502)")
+            raise ValueError("No date pattern found in filename. Expected format: YYYYMMDD")
+            
         # Convert Sale_Date to datetime if it's not already and remove any null values
         df['Sale_Date'] = pd.to_datetime(df['Sale_Date'], errors='coerce')
         df = df.dropna(subset=['Sale_Date'])
@@ -103,10 +104,10 @@ def clean_data(df, file_path):
         df_after_health_dnis = df_after_health_business[health_dnis_filter]
         logging.info(f"After excluding US: Health from DNIS_BUSN_SEG_CD: {len(df_after_health_dnis)} records")
         
-        # Filter for yesterday's date based on Sale_Date
-        date_filter = (df_after_health_dnis['Sale_Date'].dt.date == yesterday)
+        # Filter for the process date (day before report date) based on Sale_Date
+        date_filter = (df_after_health_dnis['Sale_Date'].dt.date == process_date)
         df_after_date = df_after_health_dnis[date_filter]
-        logging.info(f"After filtering for yesterday ({yesterday}): {len(df_after_date)} records")
+        logging.info(f"After filtering for {process_date}: {len(df_after_date)} records")
         
         dnis_filter = (df_after_date['Lead_DNIS'] == 'WEB0021011')
         df_after_lead_dnis = df_after_date[dnis_filter]
