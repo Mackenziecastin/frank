@@ -210,19 +210,11 @@ def process_adt_report(uploaded_file):
             st.warning("No qualifying sales found to process.")
             return
         
-        # Create progress bar
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-        
         # Fire pixel for each sale
         st.write("Firing pixels...")
         successful_fires = {'DIFM': 0, 'DIY': 0}
         
         for idx, row in filtered_df.iterrows():
-            # Update progress
-            progress = (idx + 1) / total_sales
-            progress_bar.progress(progress)
-            
             # Generate transaction ID
             sale_date_str = row['Sale_Date'].strftime('%Y%m%d')
             transaction_id = f"ADT_{sale_date_str}_{str(uuid.uuid4())[:8]}"
@@ -230,7 +222,6 @@ def process_adt_report(uploaded_file):
             
             # Determine category and fire pixel
             category = 'DIFM' if 'DIFM' in str(install_method).upper() else 'DIY'
-            status_text.write(f"Processing {category} sale {idx + 1} of {total_sales}...")
             
             if fire_pixel(transaction_id, install_method, row['Sale_Date']):
                 successful_fires[category] += 1
