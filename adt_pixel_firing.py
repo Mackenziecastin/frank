@@ -65,20 +65,28 @@ def clean_data(df, file_path):
         logging.info(f"Report date: {report_date.strftime('%Y-%m-%d')}, Using yesterday: {yesterday.strftime('%Y-%m-%d')}")
         
         # Convert Sale_Date to datetime if it's not already and remove any null values
-        df['Sale_Date'] = pd.to_datetime(df['Sale_Date'], errors='coerce')
+        df['Sale_Date'] = pd.to_datetime(df['Sale_Date'], format='%m/%d/%Y %H:%M:%S', errors='coerce')
         df = df.dropna(subset=['Sale_Date'])
         
         # Print initial count
         total_records = len(df)
         logging.info(f"\nStarting with {total_records} total records")
         
+        # Log some sample dates for debugging
+        sample_dates = df['Sale_Date'].head()
+        logging.info("\nSample Sale_Date values:")
+        for idx, date in enumerate(sample_dates):
+            logging.info(f"Record {idx}: {date}")
+        
         # Apply filters one by one and show counts
         # Remove health leads from Ln_of_Busn
+        df['Ln_of_Busn'] = df['Ln_of_Busn'].fillna('')
         health_business_filter = ~df['Ln_of_Busn'].str.contains('Health', case=False, na=False)
         df_after_health_business = df[health_business_filter]
         logging.info(f"After excluding Health from Ln_of_Busn: {len(df_after_health_business)} records")
         
         # Remove US: Health from DNIS_BUSN_SEG_CD
+        df_after_health_business['DNIS_BUSN_SEG_CD'] = df_after_health_business['DNIS_BUSN_SEG_CD'].fillna('')
         health_dnis_filter = ~df_after_health_business['DNIS_BUSN_SEG_CD'].str.contains('US: Health', case=False, na=False)
         df_after_health_dnis = df_after_health_business[health_dnis_filter]
         logging.info(f"After excluding US: Health from DNIS_BUSN_SEG_CD: {len(df_after_health_dnis)} records")
@@ -88,9 +96,20 @@ def clean_data(df, file_path):
         df_after_date = df_after_health_dnis[date_filter]
         logging.info(f"After filtering for yesterday ({yesterday.strftime('%Y-%m-%d')}): {len(df_after_date)} records")
         
+        # Log some filtered dates for debugging
+        filtered_dates = df_after_date['Sale_Date'].head()
+        logging.info("\nFiltered Sale_Date values:")
+        for idx, date in enumerate(filtered_dates):
+            logging.info(f"Record {idx}: {date}")
+        
+        df_after_date['Lead_DNIS'] = df_after_date['Lead_DNIS'].fillna('')
         dnis_filter = (df_after_date['Lead_DNIS'] == 'WEB0021011')
         df_after_lead_dnis = df_after_date[dnis_filter]
         logging.info(f"After filtering for Lead_DNIS 'WEB0021011': {len(df_after_lead_dnis)} records")
+        
+        # Fill NA values for remaining filters
+        df_after_lead_dnis['Ordr_Type'] = df_after_lead_dnis['Ordr_Type'].fillna('')
+        df_after_lead_dnis['INSTALL_METHOD'] = df_after_lead_dnis['INSTALL_METHOD'].fillna('')
         
         # Log details about records before order type filtering
         logging.info("\nChecking order types before filtering:")
