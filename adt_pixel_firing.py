@@ -185,16 +185,17 @@ def fire_pixel(transaction_id, install_method, sale_date):
     Fire the pixel for a given transaction ID, install method, and sale date
     """
     try:
+        # Base URL
         pixel_url = "https://speedtrkzone.com/m.ashx"
-        # Set campaign ID based on install method
+        
+        # Set campaign ID based on install method (DIFM: 91149, DIY: 91162)
         campaign_id = "91149" if "DIFM" in str(install_method).upper() else "91162"
         
-        # Convert sale_date to ISO 8601 format with timezone
         # Set the time to noon on the sale date
         pixel_datetime = sale_date.replace(hour=12, minute=0, second=0)
-        # Format as ISO 8601 with UTC timezone
         iso_datetime = pixel_datetime.strftime('%Y-%m-%dT%H:%M:%S+00:00')
         
+        # Set up parameters
         params = {
             'o': '32022',
             'e': '565',
@@ -205,28 +206,15 @@ def fire_pixel(transaction_id, install_method, sale_date):
             'dt': iso_datetime
         }
         
-        # Build complete URL with params
-        url_with_params = requests.Request('GET', pixel_url, params=params).prepare().url
-        
-        # Log the request details
-        logging.info(f"\nFiring pixel:")
-        logging.info(f"  Transaction ID: {transaction_id}")
-        logging.info(f"  Install Method: {install_method}")
-        logging.info(f"  Campaign ID: {campaign_id}")
-        logging.info(f"  Sale Date: {sale_date}")
-        logging.info(f"  URL: {url_with_params}")
-        
-        # Make the request with a timeout
-        response = requests.get(url_with_params, timeout=30)
+        # Make the request
+        response = requests.get(pixel_url, params=params)
         response.raise_for_status()
         
-        # Log success
-        logging.info("  Status: Success ✓")
-        logging.info(f"  Response: {response.status_code}")
+        logging.info(f"Fired {install_method} pixel successfully - Transaction ID: {transaction_id}")
         return True
         
     except Exception as e:
-        logging.error(f"  Error firing pixel: {str(e)}")
+        logging.error(f"Failed to fire {install_method} pixel - Transaction ID: {transaction_id} - Error: {str(e)}")
         return False
 
 def process_adt_report(file_path):
@@ -235,73 +223,47 @@ def process_adt_report(file_path):
     """
     try:
         logging.info("\n=== ADT Pixel Firing Process Started ===")
-        logging.info(f"Reading file: {file_path}")
         
-        # Try different encodings
-        encodings = ['utf-8', 'latin1', 'cp1252', 'iso-8859-1']
-        df = None
-        
-        for encoding in encodings:
-            try:
-                logging.info(f"\nTrying to read file with {encoding} encoding...")
-                df = pd.read_csv(file_path, encoding=encoding)
-                logging.info(f"Successfully read file with {encoding} encoding!")
-                break
-            except UnicodeDecodeError:
-                logging.info(f"Failed to read with {encoding} encoding")
-                continue
-        
-        if df is None:
-            raise ValueError("Could not read the file with any of the attempted encodings")
+        # Read the file
+        df = pd.read_csv(file_path)
         
         # Clean and filter the data
         filtered_df = clean_data(df, file_path)
         
-        # Count of sales to process
-        total_sales = len(filtered_df)
-        if total_sales == 0:
+        if len(filtered_df) == 0:
             logging.info("No qualifying sales found to process.")
             return
-            
-        logging.info(f"\nFound {total_sales} qualifying sales for date: {filtered_df['Sale_Date'].dt.date.iloc[0].strftime('%Y-%m-%d')}")
         
         # Count DIFM and DIY sales
         difm_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIFM', case=False, na=False)]
         diy_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIY', case=False, na=False)]
         
-        difm_sales = len(difm_records)
-        diy_sales = len(diy_records)
+        difm_count = len(difm_records)
+        diy_count = len(diy_records)
         
-        logging.info(f"\nSales breakdown:")
-        logging.info(f"DIFM Sales to process: {difm_sales}")
-        logging.info(f"DIY Sales to process: {diy_sales}")
+        logging.info(f"\nFound {difm_count} DIFM and {diy_count} DIY sales to process")
         
-        # Initialize counters for successful fires
+        # Fire pixels
         successful_difm = 0
         successful_diy = 0
         
-        # Process DIFM sales first
-        if difm_sales > 0:
-            logging.info("\nProcessing DIFM sales...")
-            for idx, row in difm_records.iterrows():
-                transaction_id = f"ADT_{row['Sale_Date'].strftime('%Y%m%d')}_{uuid.uuid4().hex[:8]}"
-                if fire_pixel(transaction_id, "DIFM", row['Sale_Date']):
-                    successful_difm += 1
+        # Process DIFM sales
+        for _, row in difm_records.iterrows():
+            transaction_id = f"ADT_{row['Sale_Date'].strftime('%Y%m%d')}_{uuid.uuid4().hex[:8]}"
+            if fire_pixel(transaction_id, "DIFM", row['Sale_Date']):
+                successful_difm += 1
         
-        # Process DIY sales next
-        if diy_sales > 0:
-            logging.info("\nProcessing DIY sales...")
-            for idx, row in diy_records.iterrows():
-                transaction_id = f"ADT_{row['Sale_Date'].strftime('%Y%m%d')}_{uuid.uuid4().hex[:8]}"
-                if fire_pixel(transaction_id, "DIY", row['Sale_Date']):
-                    successful_diy += 1
+        # Process DIY sales
+        for _, row in diy_records.iterrows():
+            transaction_id = f"ADT_{row['Sale_Date'].strftime('%Y%m%d')}_{uuid.uuid4().hex[:8]}"
+            if fire_pixel(transaction_id, "DIY", row['Sale_Date']):
+                successful_diy += 1
         
-        # Print final summary
-        logging.info("\n=== Final Summary ===")
-        logging.info(f"Date processed: {filtered_df['Sale_Date'].dt.date.iloc[0].strftime('%Y%m%d')}")
-        logging.info(f"DIFM pixels fired successfully: {successful_difm} out of {difm_sales}")
-        logging.info(f"DIY pixels fired successfully: {successful_diy} out of {diy_sales}")
-        logging.info(f"Total pixels fired: {successful_difm + successful_diy} out of {total_sales}")
+        # Log summary
+        logging.info("\n=== Summary ===")
+        logging.info(f"DIFM pixels fired successfully: {successful_difm} out of {difm_count}")
+        logging.info(f"DIY pixels fired successfully: {successful_diy} out of {diy_count}")
+        logging.info(f"Total pixels fired: {successful_difm + successful_diy} out of {difm_count + diy_count}")
         
     except Exception as e:
         logging.error(f"Error processing ADT report: {str(e)}")

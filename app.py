@@ -515,14 +515,11 @@ def show_adt_pixel():
     if uploaded_file is not None:
         if st.button("Process and Fire Pixels"):
             try:
-                # Create a placeholder for progress updates
-                progress_placeholder = st.empty()
-                progress_placeholder.info("Starting pixel firing process...")
-                
-                # Save uploaded file temporarily
-                with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as temp_file:
-                    temp_file.write(uploaded_file.getvalue())
-                    temp_path = temp_file.name
+                # Save uploaded file temporarily with original filename
+                temp_dir = tempfile.mkdtemp()
+                temp_path = os.path.join(temp_dir, uploaded_file.name)
+                with open(temp_path, 'wb') as f:
+                    f.write(uploaded_file.getvalue())
                 
                 # Set up logging
                 log_stream = setup_logging()
@@ -530,8 +527,9 @@ def show_adt_pixel():
                 # Process the report
                 process_adt_report(temp_path)
                 
-                # Clean up temporary file
+                # Clean up temporary file and directory
                 os.unlink(temp_path)
+                os.rmdir(temp_dir)
                 
                 # Show success message
                 st.success("Processing complete!")
@@ -569,7 +567,6 @@ def show_adt_pixel():
                     
             except Exception as e:
                 st.error(f"Error processing ADT report: {str(e)}")
-                st.error("Check the logs below for more details")
                 with st.expander("View Error Logs"):
                     st.text(log_stream.getvalue())
 
