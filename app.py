@@ -11,6 +11,7 @@ import uuid
 import requests
 import io
 import tempfile
+from adt_pixel_firing import process_adt_report
 
 st.set_page_config(page_title="Partner Optimization Report Generator", layout="wide")
 
