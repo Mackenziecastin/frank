@@ -58,24 +58,28 @@ def clean_data(df, file_path):
     Clean and filter the data according to requirements.
     """
     try:
-        # Extract date from filename (format: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_YYYYMMDD.csv)
-        filename = os.path.basename(file_path)
-        
-        # Try to extract date from filename using regular expression to find 8 digits
-        date_pattern = re.compile(r'(\d{8})')
-        match = date_pattern.search(filename)
-        
-        if match:
-            # If found, use that as the date
-            report_date_str = match.group(1)
-            logging.info(f"Found date in filename: {report_date_str}")
-        else:
-            # Fallback: use current date if no date found in filename
-            logging.warning(f"Could not find date pattern in filename: {filename}")
+        # Extract date from filename or use current date
+        try:
+            # First try direct extraction from filename pattern
+            filename = os.path.basename(file_path)
+            if '_20' in filename:  # Look for pattern like _20230415 in filename
+                date_part = filename.split('_')[-1].split('.')[0]
+                if len(date_part) == 8 and date_part.isdigit():
+                    report_date_str = date_part
+                    logging.info(f"Extracted date from filename: {report_date_str}")
+                else:
+                    raise ValueError("Date part doesn't match expected format")
+            else:
+                # Use today's date as fallback
+                report_date_str = datetime.now().strftime('%Y%m%d')
+                logging.info(f"Using current date: {report_date_str}")
+        except Exception as e:
+            # Fall back to current date on any error
+            logging.warning(f"Error extracting date from filename: {str(e)}")
             report_date_str = datetime.now().strftime('%Y%m%d')
-            logging.warning(f"Using current date as fallback: {report_date_str}")
-        
-        # Parse the date string
+            logging.info(f"Using current date as fallback: {report_date_str}")
+            
+        # Parse the report date
         report_date = datetime.strptime(report_date_str, '%Y%m%d').date()
         yesterday = report_date - timedelta(days=1)
         logging.info(f"Report date: {report_date}, Processing data for: {yesterday}")
@@ -150,61 +154,75 @@ def fire_pixel(transaction_id, install_method, sale_date):
     """
     Fire the pixel for a given transaction ID, install method, and sale date
     """
-    pixel_url = "https://speedtrkzone.com/m.ashx"
-    # Set campaign ID based on install method
-    campaign_id = "91149" if "DIFM" in str(install_method).upper() else "91162"
-    
-    # Convert sale_date to ISO 8601 format with timezone
-    # Set the time to noon on the sale date
-    pixel_datetime = sale_date.replace(hour=12, minute=0, second=0)
-    # Format as ISO 8601 with UTC timezone
-    iso_datetime = pixel_datetime.strftime('%Y-%m-%dT%H:%M:%S+00:00')
-    
-    # Debug: Print detailed timestamp information
-    logging.info(f"\nDebug Timestamp Info:")
-    logging.info(f"  Sale Date: {sale_date}")
-    logging.info(f"  Using DateTime: {pixel_datetime}")
-    logging.info(f"  ISO 8601 Format: {iso_datetime}")
-    
-    params = {
-        'o': '32022',
-        'e': '565',
-        'f': 'pb',
-        't': transaction_id,
-        'pubid': '42865',
-        'campid': campaign_id,
-        'dt': iso_datetime
-    }
-    
-    # Construct and print the complete URL
-    url_with_params = requests.Request('GET', pixel_url, params=params).prepare().url
-    logging.info(f"  Complete URL: {url_with_params}")
-    
     try:
-        response = requests.get(pixel_url, params=params)
-        response.raise_for_status()  # Raise an exception for bad status codes
+        pixel_url = "https://speedtrkzone.com/m.ashx"
+        # Set campaign ID based on install method
+        if 'DIFM' in str(install_method).upper():
+            campaign_id = "91149"
+        else:
+            campaign_id = "91162"  # DIY
         
-        # Log the exact request details
-        logging.info(f"Pixel fired successfully:")
-        logging.info(f"  Transaction ID: {transaction_id}")
-        logging.info(f"  Install Method: {install_method}")
-        logging.info(f"  Campaign ID: {campaign_id}")
-        logging.info(f"  Sale Date: {sale_date}")
-        logging.info(f"  ISO DateTime: {iso_datetime}")
-        logging.info(f"  URL: {url_with_params}")
-        logging.info(f"  Response Status: {response.status_code}")
-        logging.info(f"  Response Headers: {dict(response.headers)}")
-        logging.info(f"  Response Content: {response.text[:200]}...")  # Log first 200 chars of response
+        # Convert sale_date to ISO 8601 format with timezone
+        # Set the time to noon on the sale date
+        try:
+            # First ensure sale_date is a datetime object
+            if isinstance(sale_date, pd.Timestamp):
+                pixel_datetime = sale_date.to_pydatetime()
+            else:
+                pixel_datetime = pd.to_datetime(sale_date)
+            
+            # Set time to noon
+            pixel_datetime = pixel_datetime.replace(hour=12, minute=0, second=0)
+            
+            # Format as ISO 8601 with UTC timezone
+            iso_datetime = pixel_datetime.strftime('%Y-%m-%dT%H:%M:%S+00:00')
+        except Exception as e:
+            logging.error(f"Error formatting date: {str(e)}. Using current datetime.")
+            # Use current time as fallback
+            pixel_datetime = datetime.now().replace(hour=12, minute=0, second=0)
+            iso_datetime = pixel_datetime.strftime('%Y-%m-%dT%H:%M:%S+00:00')
         
-        return True
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Error firing pixel:")
-        logging.error(f"  Transaction ID: {transaction_id}")
-        logging.error(f"  Install Method: {install_method}")
-        logging.error(f"  Sale Date: {sale_date}")
-        logging.error(f"  ISO DateTime: {iso_datetime}")
-        logging.error(f"  URL: {url_with_params}")
-        logging.error(f"  Error: {str(e)}")
+        # Build the parameters
+        params = {
+            'o': '32022',
+            'e': '565',
+            'f': 'pb',
+            't': transaction_id,
+            'pubid': '42865',
+            'campid': campaign_id,
+            'dt': iso_datetime
+        }
+        
+        # Construct and print the complete URL
+        url_with_params = requests.Request('GET', pixel_url, params=params).prepare().url
+        logging.info(f"  Complete URL: {url_with_params}")
+        
+        try:
+            response = requests.get(pixel_url, params=params, timeout=10)  # Add timeout
+            response.raise_for_status()  # Raise an exception for bad status codes
+            
+            # Log the exact request details
+            logging.info(f"Pixel fired successfully:")
+            logging.info(f"  Transaction ID: {transaction_id}")
+            logging.info(f"  Install Method: {install_method}")
+            logging.info(f"  Campaign ID: {campaign_id}")
+            logging.info(f"  Sale Date: {sale_date}")
+            logging.info(f"  ISO DateTime: {iso_datetime}")
+            logging.info(f"  URL: {url_with_params}")
+            logging.info(f"  Response Status: {response.status_code}")
+            
+            return True
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Error firing pixel:")
+            logging.error(f"  Transaction ID: {transaction_id}")
+            logging.error(f"  Install Method: {install_method}")
+            logging.error(f"  Sale Date: {sale_date}")
+            logging.error(f"  ISO DateTime: {iso_datetime}")
+            logging.error(f"  URL: {url_with_params}")
+            logging.error(f"  Error: {str(e)}")
+            return False
+    except Exception as e:
+        logging.error(f"Unexpected error in fire_pixel: {str(e)}")
         return False
 
 def process_adt_report(file_path):
@@ -237,7 +255,15 @@ def process_adt_report(file_path):
         
         # Count of sales to process
         total_sales = len(filtered_df)
-        logging.info(f"\nFound {total_sales} qualifying sales for date: {filtered_df['Sale_Date'].dt.date.iloc[0].strftime('%Y-%m-%d')}")
+        
+        # If we don't have any filtered records, return early
+        if total_sales == 0:
+            logging.info("\n=== No qualifying sales found for pixel firing ===")
+            return
+            
+        # Get the first date to use in the log
+        first_sale_date = filtered_df['Sale_Date'].iloc[0].date() if len(filtered_df) > 0 else "unknown date"
+        logging.info(f"\nFound {total_sales} qualifying sales for date: {first_sale_date}")
         
         # Count DIFM and DIY sales
         difm_sales = len(filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIFM', case=False, na=False)])
@@ -263,7 +289,7 @@ def process_adt_report(file_path):
         # Print summary
         logging.info("\n=== Summary ===")
         logging.info(f"Processing complete!")
-        logging.info(f"Date processed: {filtered_df['Sale_Date'].dt.date.iloc[0].strftime('%Y%m%d')}")
+        logging.info(f"Date processed: {first_sale_date}")
         logging.info(f"Successfully fired DIFM pixels: {difm_sales} out of {difm_sales}")
         logging.info(f"Successfully fired DIY pixels: {diy_sales} out of {diy_sales}")
         logging.info(f"Total pixels fired: {successful_pixels} out of {total_sales}")
