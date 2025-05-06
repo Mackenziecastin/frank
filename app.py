@@ -540,16 +540,20 @@ def show_adt_pixel():
             log_stream = setup_logging()
             
             try:
-                # Save uploaded file temporarily
-                with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as temp_file:
-                    temp_file.write(uploaded_file.getvalue())
-                    temp_path = temp_file.name
+                # Create a temporary directory
+                temp_dir = tempfile.mkdtemp()
+                temp_path = os.path.join(temp_dir, uploaded_file.name)
+                
+                # Save uploaded file with original filename
+                with open(temp_path, 'wb') as f:
+                    f.write(uploaded_file.getvalue())
                 
                 # Process the report
                 process_adt_report(temp_path)
                 
-                # Clean up temporary file
+                # Clean up temporary files
                 os.unlink(temp_path)
+                os.rmdir(temp_dir)
                 
                 # Show success message
                 st.success("Processing complete!")
