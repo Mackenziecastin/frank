@@ -533,11 +533,19 @@ def show_adt_pixel():
             if df is None:
                 st.error("Could not read the file with any of the supported encodings")
                 return
+
+            # Validate required columns
+            required_columns = ['Sale_Date', 'Ln_of_Busn', 'DNIS_BUSN_SEG_CD', 'Lead_DNIS', 'Ordr_Type', 'INSTALL_METHOD']
+            missing_columns = [col for col in required_columns if col not in df.columns]
+            
+            if missing_columns:
+                st.error(f"Missing required columns: {', '.join(missing_columns)}")
+                st.write("Available columns:", ", ".join(df.columns))
+                return
             
             # Set up logging
             log_stream = setup_logging()
             
-            # Clean and filter the data
             try:
                 # Extract date from filename
                 filename = uploaded_file.name
@@ -549,20 +557,26 @@ def show_adt_pixel():
                 yesterday = report_date - timedelta(days=1)
                 logging.info(f"Report date: {report_date}, Using yesterday's date: {yesterday}")
                 
-                # Convert Sale_Date to datetime
+                # Convert Sale_Date to datetime with error handling
                 df['Sale_Date'] = pd.to_datetime(df['Sale_Date'], errors='coerce')
                 df = df.dropna(subset=['Sale_Date'])
                 
-                # Apply filters
+                if len(df) == 0:
+                    st.error("No valid dates found in Sale_Date column")
+                    return
+                
+                # Apply filters with proper null handling
                 total_records = len(df)
                 progress_placeholder.info(f"Starting with {total_records} total records")
                 
                 # Remove health leads from Ln_of_Busn
+                df['Ln_of_Busn'] = df['Ln_of_Busn'].fillna('')
                 health_business_filter = ~df['Ln_of_Busn'].str.contains('Health', case=False, na=False)
                 df_after_health_business = df[health_business_filter]
                 progress_placeholder.info(f"After excluding Health from Ln_of_Busn: {len(df_after_health_business)} records")
                 
                 # Remove US: Health from DNIS_BUSN_SEG_CD
+                df_after_health_business['DNIS_BUSN_SEG_CD'] = df_after_health_business['DNIS_BUSN_SEG_CD'].fillna('')
                 health_dnis_filter = ~df_after_health_business['DNIS_BUSN_SEG_CD'].str.contains('US: Health', case=False, na=False)
                 df_after_health_dnis = df_after_health_business[health_dnis_filter]
                 progress_placeholder.info(f"After excluding US: Health from DNIS_BUSN_SEG_CD: {len(df_after_health_dnis)} records")
@@ -571,6 +585,11 @@ def show_adt_pixel():
                 date_filter = (df_after_health_dnis['Sale_Date'].dt.date == yesterday)
                 df_after_date = df_after_health_dnis[date_filter]
                 progress_placeholder.info(f"After filtering for yesterday ({yesterday}): {len(df_after_date)} records")
+                
+                # Fill NA values for remaining filters
+                df_after_date['Lead_DNIS'] = df_after_date['Lead_DNIS'].fillna('')
+                df_after_date['Ordr_Type'] = df_after_date['Ordr_Type'].fillna('')
+                df_after_date['INSTALL_METHOD'] = df_after_date['INSTALL_METHOD'].fillna('')
                 
                 dnis_filter = (df_after_date['Lead_DNIS'] == 'WEB0021011')
                 df_after_lead_dnis = df_after_date[dnis_filter]
@@ -640,7 +659,7 @@ def show_adt_pixel():
                     try:
                         # Build complete URL with params to avoid encoding issues
                         url_with_params = requests.Request('GET', pixel_url, params=params).prepare().url
-                        response = requests.get(url_with_params)
+                        response = requests.get(url_with_params, timeout=10)  # Added timeout
                         response.raise_for_status()
                         logging.info(f"Pixel fired successfully for {transaction_id}")
                         successful_fires[category] += 1
@@ -670,6 +689,7 @@ def show_adt_pixel():
                 st.error("Check the logs below for more details")
                 with st.expander("View Error Logs"):
                     st.text(log_stream.getvalue())
+                logging.error(f"Detailed error: {str(e)}", exc_info=True)
 
 def setup_logging():
     """Set up logging to capture output"""
@@ -694,7 +714,6 @@ def main():
         from pages.bob_analysis import show_bob_analysis
         show_bob_analysis()
     elif page == "ADT Pixel Firing":
-        # Use the directly defined function instead of importing
         show_adt_pixel()
 
 if __name__ == "__main__":
