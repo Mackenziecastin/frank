@@ -448,38 +448,45 @@ def show_adt_pixel():
     Upload your ADT Athena report (CSV format) to begin.
     """)
     
+    # Add file uploader
     uploaded_file = st.file_uploader("Upload ADT Athena Report (CSV)", type=['csv'])
     
     if uploaded_file is not None:
+        # Display the "Process and Fire Pixels" button
         if st.button("Process and Fire Pixels"):
+            # Import modules for file handling
+            import tempfile
+            import os
+            
             try:
-                # Import necessary modules
-                import tempfile
-                import os
-                from adt_pixel_firing import process_adt_report
-                
-                # Create a temporary file to save the uploaded content
+                # Save uploaded file to a temporary file
                 with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as tmp:
-                    # Reset the file pointer to the beginning
+                    # Write file contents to temp file
                     uploaded_file.seek(0)
-                    # Write the content to the temporary file
                     tmp.write(uploaded_file.read())
-                    tmp_path = tmp.name
+                    temp_file_path = tmp.name
                 
+                # Display processing message
                 st.info(f"Processing file: {uploaded_file.name}")
                 
-                # Process the file using the temporary file path
-                process_adt_report(tmp_path)
+                # Import processing function from the dedicated module
+                from adt_pixel_firing import process_adt_report
                 
-                # Clean up the temporary file
-                os.remove(tmp_path)
+                # Process the file
+                process_adt_report(temp_file_path)
                 
-                st.success("Processing complete! Check the log file for detailed results.")
+                # Delete the temporary file
+                os.unlink(temp_file_path)
+                
+                # Display success message
+                st.success("Pixel firing completed successfully! Check the log file for details.")
                 
             except Exception as e:
-                st.error(f"An error occurred: {str(e)}")
+                # Display error message
+                st.error(f"Error processing file: {str(e)}")
+                # Display traceback for debugging
                 import traceback
-                st.error(traceback.format_exc())
+                st.code(traceback.format_exc(), language="python")
 
 def main():
     """Main application entry point"""

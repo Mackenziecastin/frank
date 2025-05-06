@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import logging
 import uuid
 import re
+import requests
 
 # Set up logging first
 log_filename = f'adt_pixel_firing_{datetime.now().strftime("%Y%m%d")}.log'
@@ -59,10 +60,25 @@ def clean_data(df, file_path):
     try:
         # Extract date from filename (format: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_YYYYMMDD.csv)
         filename = os.path.basename(file_path)
-        report_date_str = filename.split('_')[-1].replace('.csv', '')
+        
+        # Try to extract date from filename using regular expression to find 8 digits
+        date_pattern = re.compile(r'(\d{8})')
+        match = date_pattern.search(filename)
+        
+        if match:
+            # If found, use that as the date
+            report_date_str = match.group(1)
+            logging.info(f"Found date in filename: {report_date_str}")
+        else:
+            # Fallback: use current date if no date found in filename
+            logging.warning(f"Could not find date pattern in filename: {filename}")
+            report_date_str = datetime.now().strftime('%Y%m%d')
+            logging.warning(f"Using current date as fallback: {report_date_str}")
+        
+        # Parse the date string
         report_date = datetime.strptime(report_date_str, '%Y%m%d').date()
         yesterday = report_date - timedelta(days=1)
-        logging.info(f"Report date: {report_date.strftime('%Y-%m-%d')}, Using yesterday: {yesterday.strftime('%Y-%m-%d')}")
+        logging.info(f"Report date: {report_date}, Processing data for: {yesterday}")
         
         # Convert Sale_Date to datetime if it's not already and remove any null values
         df['Sale_Date'] = pd.to_datetime(df['Sale_Date'], errors='coerce')
@@ -86,7 +102,7 @@ def clean_data(df, file_path):
         # Filter for yesterday's date based on Sale_Date
         date_filter = (df_after_health_dnis['Sale_Date'].dt.date == yesterday)
         df_after_date = df_after_health_dnis[date_filter]
-        logging.info(f"After filtering for yesterday ({yesterday.strftime('%Y-%m-%d')}): {len(df_after_date)} records")
+        logging.info(f"After filtering for yesterday ({yesterday}): {len(df_after_date)} records")
         
         dnis_filter = (df_after_date['Lead_DNIS'] == 'WEB0021011')
         df_after_lead_dnis = df_after_date[dnis_filter]
