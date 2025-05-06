@@ -501,7 +501,6 @@ def to_excel_download(df_affiliate, df_advanced, df_optimization):
     return output.getvalue()
 
 def show_adt_pixel():
-    """Display the ADT Pixel Firing interface"""
     st.title("ADT Pixel Firing")
     
     st.write("""
@@ -513,59 +512,164 @@ def show_adt_pixel():
     
     if uploaded_file is not None:
         if st.button("Process and Fire Pixels"):
-            with st.spinner("Processing file..."):
+            # Create a placeholder for progress updates
+            progress_placeholder = st.empty()
+            progress_placeholder.info("Starting pixel firing process...")
+            
+            # Try different encodings
+            encodings = ['utf-8', 'latin1', 'cp1252', 'iso-8859-1']
+            df = None
+            
+            for encoding in encodings:
                 try:
-                    # Save uploaded file to temp
-                    import tempfile
-                    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.csv')
-                    temp_file.write(uploaded_file.getvalue())
-                    temp_file.close()
+                    progress_placeholder.info(f"Trying to read file with {encoding} encoding...")
+                    df = pd.read_csv(uploaded_file, encoding=encoding)
+                    progress_placeholder.info(f"Successfully read file with {encoding} encoding!")
+                    break
+                except UnicodeDecodeError:
+                    progress_placeholder.info(f"Failed to read with {encoding} encoding, trying next...")
+                    continue
+            
+            if df is None:
+                st.error("Could not read the file with any of the supported encodings")
+                return
+            
+            # Set up logging
+            log_stream = setup_logging()
+            
+            # Clean and filter the data
+            try:
+                # Extract date from filename
+                filename = uploaded_file.name
+                date_match = re.search(r'(\d{8})', filename)
+                if not date_match:
+                    raise ValueError("Could not extract date from filename. Expected format: *_YYYYMMDD.csv")
+                
+                report_date = datetime.strptime(date_match.group(1), '%Y%m%d').date()
+                yesterday = report_date - timedelta(days=1)
+                logging.info(f"Report date: {report_date}, Using yesterday's date: {yesterday}")
+                
+                # Convert Sale_Date to datetime
+                df['Sale_Date'] = pd.to_datetime(df['Sale_Date'], errors='coerce')
+                df = df.dropna(subset=['Sale_Date'])
+                
+                # Apply filters
+                total_records = len(df)
+                progress_placeholder.info(f"Starting with {total_records} total records")
+                
+                # Remove health leads from Ln_of_Busn
+                health_business_filter = ~df['Ln_of_Busn'].str.contains('Health', case=False, na=False)
+                df_after_health_business = df[health_business_filter]
+                progress_placeholder.info(f"After excluding Health from Ln_of_Busn: {len(df_after_health_business)} records")
+                
+                # Remove US: Health from DNIS_BUSN_SEG_CD
+                health_dnis_filter = ~df_after_health_business['DNIS_BUSN_SEG_CD'].str.contains('US: Health', case=False, na=False)
+                df_after_health_dnis = df_after_health_business[health_dnis_filter]
+                progress_placeholder.info(f"After excluding US: Health from DNIS_BUSN_SEG_CD: {len(df_after_health_dnis)} records")
+                
+                # Filter for yesterday based on Sale_Date
+                date_filter = (df_after_health_dnis['Sale_Date'].dt.date == yesterday)
+                df_after_date = df_after_health_dnis[date_filter]
+                progress_placeholder.info(f"After filtering for yesterday ({yesterday}): {len(df_after_date)} records")
+                
+                dnis_filter = (df_after_date['Lead_DNIS'] == 'WEB0021011')
+                df_after_lead_dnis = df_after_date[dnis_filter]
+                progress_placeholder.info(f"After filtering for Lead_DNIS 'WEB0021011': {len(df_after_lead_dnis)} records")
+                
+                # Filter for New/Resale order types
+                order_type_filter = (
+                    df_after_lead_dnis['Ordr_Type'].str.contains('New', case=False, na=False) |
+                    df_after_lead_dnis['Ordr_Type'].str.contains('Resale', case=False, na=False)
+                )
+                filtered_df = df_after_lead_dnis[order_type_filter]
+                progress_placeholder.info(f"After filtering for New/Resale order types: {len(filtered_df)} records")
+                
+                # Separate DIFM and DIY records
+                difm_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIFM', case=False, na=False)]
+                diy_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIY', case=False, na=False)]
+                
+                # Count DIFM and DIY records
+                difm_count = len(difm_records)
+                diy_count = len(diy_records)
+                
+                # Create progress bar
+                total_sales = len(filtered_df)
+                if total_sales == 0:
+                    progress_placeholder.warning("No qualifying sales found to process.")
+                    return
+                
+                progress_bar = st.progress(0)
+                status_text = st.empty()
+                
+                # Fire pixel for each sale
+                progress_placeholder.info("Firing pixels...")
+                successful_fires = {'DIFM': 0, 'DIY': 0}
+                
+                for idx, row in filtered_df.iterrows():
+                    # Update progress
+                    progress = (idx + 1) / total_sales
+                    progress_bar.progress(progress)
                     
-                    # Import the module and process
-                    from adt_pixel_firing import process_adt_report
-                    process_adt_report(temp_file.name)
+                    # Generate transaction ID
+                    sale_date_str = row['Sale_Date'].strftime('%Y%m%d')
+                    transaction_id = f"ADT_{sale_date_str}_{str(uuid.uuid4())[:8]}"
+                    install_method = row['INSTALL_METHOD']
                     
-                    # Clean up
-                    os.unlink(temp_file.name)
+                    # Determine category and fire pixel
+                    category = 'DIFM' if 'DIFM' in str(install_method).upper() else 'DIY'
+                    status_text.write(f"Processing {category} sale {idx + 1} of {total_sales}...")
                     
-                    # Show the log file
-                    log_filename = f'adt_pixel_firing_{datetime.now().strftime("%Y%m%d")}.log'
-                    if os.path.exists(log_filename):
-                        with open(log_filename, 'r') as f:
-                            log_content = f.read()
-                            
-                            # Extract DIFM and DIY counts
-                            difm_match = re.search(r'DIFM Sales: (\d+)', log_content)
-                            diy_match = re.search(r'DIY Sales: (\d+)', log_content)
-                            
-                            difm_count = int(difm_match.group(1)) if difm_match else 0
-                            diy_count = int(diy_match.group(1)) if diy_match else 0
-                            
-                            # Display success message
-                            if difm_count > 0 or diy_count > 0:
-                                st.success("✅ Process completed successfully!")
-                                
-                                # Display counts in columns
-                                col1, col2, col3 = st.columns(3)
-                                with col1:
-                                    st.metric("DIFM Pixels", difm_count)
-                                with col2:
-                                    st.metric("DIY Pixels", diy_count)
-                                with col3:
-                                    st.metric("Total Pixels", difm_count + diy_count)
-                            else:
-                                st.warning("Process completed, but no qualifying sales were found.")
-                            
-                            # Show log
-                            with st.expander("View Processing Log"):
-                                st.code(log_content)
-                    else:
-                        st.error("Log file not found. Process may have failed.")
-                        
-                except Exception as e:
-                    st.error(f"Error processing file: {str(e)}")
-                    import traceback
-                    st.code(traceback.format_exc())
+                    # Set up pixel parameters
+                    pixel_url = "https://speedtrkzone.com/m.ashx"
+                    campaign_id = "91149" if category == 'DIFM' else "91162"
+                    
+                    # Set the time to noon on the sale date
+                    pixel_datetime = row['Sale_Date'].replace(hour=12, minute=0, second=0)
+                    iso_datetime = pixel_datetime.strftime('%Y-%m-%dT%H:%M:%S+00:00')
+                    
+                    params = {
+                        'o': '32022',
+                        'e': '565',
+                        'f': 'pb',
+                        't': transaction_id,
+                        'pubid': '42865',
+                        'campid': campaign_id,
+                        'dt': iso_datetime
+                    }
+                    
+                    try:
+                        # Build complete URL with params to avoid encoding issues
+                        url_with_params = requests.Request('GET', pixel_url, params=params).prepare().url
+                        response = requests.get(url_with_params)
+                        response.raise_for_status()
+                        logging.info(f"Pixel fired successfully for {transaction_id}")
+                        successful_fires[category] += 1
+                    except requests.exceptions.RequestException as e:
+                        logging.error(f"Error firing pixel for {transaction_id}: {str(e)}")
+                
+                # Show summary
+                progress_placeholder.empty()
+                st.success("Processing complete!")
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("DIFM Pixels", successful_fires['DIFM'])
+                with col2:
+                    st.metric("DIY Pixels", successful_fires['DIY'])
+                with col3:
+                    st.metric("Total Pixels", sum(successful_fires.values()))
+                
+                st.write(f"Successfully fired {sum(successful_fires.values())} out of {total_sales} pixels")
+                
+                # Show logs
+                with st.expander("View Processing Logs"):
+                    st.text(log_stream.getvalue())
+                
+            except Exception as e:
+                st.error(f"Error processing ADT report: {str(e)}")
+                st.error("Check the logs below for more details")
+                with st.expander("View Error Logs"):
+                    st.text(log_stream.getvalue())
 
 def setup_logging():
     """Set up logging to capture output"""
