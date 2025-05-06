@@ -450,13 +450,28 @@ def show_adt_pixel():
     
     uploaded_file = st.file_uploader("Upload ADT Athena Report (CSV)", type=['csv'])
     
+    # Check if a log file exists and show a link to view it
+    from datetime import datetime
+    import os
+    
+    today_log = f'adt_pixel_firing_{datetime.now().strftime("%Y%m%d")}.log'
+    if os.path.exists(today_log):
+        with st.expander("View Previous Log"):
+            with open(today_log, 'r') as log_file:
+                st.code(log_file.read())
+    
     if uploaded_file is not None:
         if st.button("Process and Fire Pixels"):
             try:
                 # Import modules
                 import tempfile
                 import os
+                import re
                 from adt_pixel_firing import process_adt_report
+                
+                # Create a placeholder for progress updates
+                progress_placeholder = st.empty()
+                progress_placeholder.info("Starting pixel firing process...")
                 
                 # Save the uploaded file to a temporary file
                 temp_file_path = None
@@ -465,7 +480,7 @@ def show_adt_pixel():
                     temp_file.write(uploaded_file.read())
                     temp_file_path = temp_file.name
                 
-                st.info(f"Processing file: {uploaded_file.name}")
+                progress_placeholder.info(f"Processing file: {uploaded_file.name}")
                 
                 # Process the file
                 process_adt_report(temp_file_path)
@@ -474,7 +489,37 @@ def show_adt_pixel():
                 if temp_file_path and os.path.exists(temp_file_path):
                     os.remove(temp_file_path)
                 
-                st.success("Pixel firing completed! Check the log file for details.")
+                # Display the results by reading from the log file
+                if os.path.exists(today_log):
+                    with open(today_log, 'r') as log_file:
+                        log_content = log_file.read()
+                        
+                        # Extract key information from the log
+                        difm_match = re.search(r'DIFM Sales: (\d+)', log_content)
+                        diy_match = re.search(r'DIY Sales: (\d+)', log_content)
+                        total_fired_match = re.search(r'Total pixels fired: (\d+) out of (\d+)', log_content)
+                        
+                        difm_count = int(difm_match.group(1)) if difm_match else 0
+                        diy_count = int(diy_match.group(1)) if diy_match else 0
+                        
+                        # Display a summary
+                        st.success("✅ Pixel firing completed!")
+                        
+                        # Display counts in columns
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.metric("DIFM Pixels", difm_count)
+                        with col2:
+                            st.metric("DIY Pixels", diy_count)
+                        with col3:
+                            st.metric("Total Pixels", difm_count + diy_count)
+                        
+                        # Display the detailed log
+                        with st.expander("View Detailed Log", expanded=True):
+                            st.code(log_content)
+                
+                else:
+                    st.warning("Log file not found. Process may not have completed successfully.")
                 
             except Exception as e:
                 st.error(f"Error: {str(e)}")
