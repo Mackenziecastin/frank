@@ -65,7 +65,7 @@ def clean_data(df, file_path):
         logging.info(f"Report date: {report_date.strftime('%Y-%m-%d')}, Using yesterday: {yesterday.strftime('%Y-%m-%d')}")
         
         # Convert Sale_Date to datetime if it's not already and remove any null values
-        df['Sale_Date'] = pd.to_datetime(df['Sale_Date'], format='%m/%d/%Y %H:%M:%S', errors='coerce')
+        df['Sale_Date'] = pd.to_datetime(df['Sale_Date'], errors='coerce')
         df = df.dropna(subset=['Sale_Date'])
         
         # Print initial count
@@ -92,9 +92,21 @@ def clean_data(df, file_path):
         logging.info(f"After excluding US: Health from DNIS_BUSN_SEG_CD: {len(df_after_health_dnis)} records")
         
         # Filter for yesterday's date based on Sale_Date
-        date_filter = (df_after_health_dnis['Sale_Date'].dt.date == yesterday)
+        # Convert dates to string format for comparison to avoid timezone issues
+        yesterday_str = yesterday.strftime('%Y-%m-%d')
+        df_after_health_dnis['Sale_Date_Str'] = df_after_health_dnis['Sale_Date'].dt.strftime('%Y-%m-%d')
+        date_filter = (df_after_health_dnis['Sale_Date_Str'] == yesterday_str)
         df_after_date = df_after_health_dnis[date_filter]
-        logging.info(f"After filtering for yesterday ({yesterday.strftime('%Y-%m-%d')}): {len(df_after_date)} records")
+        
+        # Log all unique dates in the dataset
+        unique_dates = sorted(df_after_health_dnis['Sale_Date_Str'].unique())
+        logging.info("\nAll unique dates in dataset:")
+        for date in unique_dates:
+            count = len(df_after_health_dnis[df_after_health_dnis['Sale_Date_Str'] == date])
+            logging.info(f"Date {date}: {count} records")
+        
+        logging.info(f"\nLooking for records with date {yesterday_str}")
+        logging.info(f"After filtering for yesterday ({yesterday_str}): {len(df_after_date)} records")
         
         # Log some filtered dates for debugging
         filtered_dates = df_after_date['Sale_Date'].head()
@@ -102,19 +114,28 @@ def clean_data(df, file_path):
         for idx, date in enumerate(filtered_dates):
             logging.info(f"Record {idx}: {date}")
         
+        # Check Lead_DNIS values before filtering
+        unique_dnis = df_after_date['Lead_DNIS'].unique()
+        logging.info("\nUnique Lead_DNIS values before filtering:")
+        for dnis in unique_dnis:
+            count = len(df_after_date[df_after_date['Lead_DNIS'] == dnis])
+            logging.info(f"DNIS {dnis}: {count} records")
+        
         df_after_date['Lead_DNIS'] = df_after_date['Lead_DNIS'].fillna('')
         dnis_filter = (df_after_date['Lead_DNIS'] == 'WEB0021011')
         df_after_lead_dnis = df_after_date[dnis_filter]
         logging.info(f"After filtering for Lead_DNIS 'WEB0021011': {len(df_after_lead_dnis)} records")
         
+        # Check Order Types before filtering
+        unique_order_types = df_after_lead_dnis['Ordr_Type'].unique()
+        logging.info("\nUnique Order Types before filtering:")
+        for order_type in unique_order_types:
+            count = len(df_after_lead_dnis[df_after_lead_dnis['Ordr_Type'] == order_type])
+            logging.info(f"Order Type '{order_type}': {count} records")
+        
         # Fill NA values for remaining filters
         df_after_lead_dnis['Ordr_Type'] = df_after_lead_dnis['Ordr_Type'].fillna('')
         df_after_lead_dnis['INSTALL_METHOD'] = df_after_lead_dnis['INSTALL_METHOD'].fillna('')
-        
-        # Log details about records before order type filtering
-        logging.info("\nChecking order types before filtering:")
-        for idx, row in df_after_lead_dnis.iterrows():
-            logging.info(f"Record {idx}: Order Type = '{row['Ordr_Type']}'")
         
         order_type_filter = (
             df_after_lead_dnis['Ordr_Type'].str.contains('New', case=False, na=False) |
@@ -122,6 +143,13 @@ def clean_data(df, file_path):
         )
         filtered_df = df_after_lead_dnis[order_type_filter]
         logging.info(f"\nAfter filtering for New/Resale order types: {len(filtered_df)} records")
+        
+        # Check Install Methods before final split
+        unique_install_methods = filtered_df['INSTALL_METHOD'].unique()
+        logging.info("\nUnique Install Methods in final dataset:")
+        for method in unique_install_methods:
+            count = len(filtered_df[filtered_df['INSTALL_METHOD'] == method])
+            logging.info(f"Install Method '{method}': {count} records")
         
         # Separate DIFM and DIY records
         difm_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIFM', case=False, na=False)]
@@ -134,6 +162,7 @@ def clean_data(df, file_path):
             logging.info(f"  Install Method: {row['INSTALL_METHOD']}")
             logging.info(f"  Order Type: {row['Ordr_Type']}")
             logging.info(f"  Sale Date: {row['Sale_Date']}")
+            logging.info(f"  Lead DNIS: {row['Lead_DNIS']}")
         
         # Count DIFM and DIY records
         difm_count = len(difm_records)
@@ -143,6 +172,8 @@ def clean_data(df, file_path):
         logging.info(f"DIFM Sales: {difm_count}")
         logging.info(f"DIY Sales: {diy_count}")
         
+        # Drop the temporary date string column
+        filtered_df = filtered_df.drop('Sale_Date_Str', axis=1)
         return filtered_df
         
     except Exception as e:
