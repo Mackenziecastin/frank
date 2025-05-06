@@ -514,46 +514,24 @@ def show_adt_pixel():
     
     if uploaded_file is not None:
         if st.button("Process and Fire Pixels"):
-            # Create a placeholder for progress updates
-            progress_placeholder = st.empty()
-            progress_placeholder.info("Starting pixel firing process...")
-            
-            # Try different encodings
-            encodings = ['utf-8', 'latin1', 'cp1252', 'iso-8859-1']
-            df = None
-            
-            for encoding in encodings:
-                try:
-                    progress_placeholder.info(f"Trying to read file with {encoding} encoding...")
-                    df = pd.read_csv(uploaded_file, encoding=encoding)
-                    progress_placeholder.info(f"Successfully read file with {encoding} encoding!")
-                    break
-                except UnicodeDecodeError:
-                    progress_placeholder.info(f"Failed to read with {encoding} encoding, trying next...")
-                    continue
-            
-            if df is None:
-                st.error("Could not read the file with any of the supported encodings")
-                return
-            
-            # Set up logging
-            log_stream = setup_logging()
-            
             try:
-                # Create a temporary directory
-                temp_dir = tempfile.mkdtemp()
-                temp_path = os.path.join(temp_dir, uploaded_file.name)
+                # Create a placeholder for progress updates
+                progress_placeholder = st.empty()
+                progress_placeholder.info("Starting pixel firing process...")
                 
-                # Save uploaded file with original filename
-                with open(temp_path, 'wb') as f:
-                    f.write(uploaded_file.getvalue())
+                # Save uploaded file temporarily
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as temp_file:
+                    temp_file.write(uploaded_file.getvalue())
+                    temp_path = temp_file.name
+                
+                # Set up logging
+                log_stream = setup_logging()
                 
                 # Process the report
                 process_adt_report(temp_path)
                 
-                # Clean up temporary files
+                # Clean up temporary file
                 os.unlink(temp_path)
-                os.rmdir(temp_dir)
                 
                 # Show success message
                 st.success("Processing complete!")
@@ -562,25 +540,28 @@ def show_adt_pixel():
                 log_content = log_stream.getvalue()
                 
                 # Extract DIFM and DIY counts using regex
-                difm_match = re.search(r'DIFM Sales: (\d+)', log_content)
-                diy_match = re.search(r'DIY Sales: (\d+)', log_content)
+                difm_match = re.search(r'DIFM pixels fired successfully: (\d+) out of (\d+)', log_content)
+                diy_match = re.search(r'DIY pixels fired successfully: (\d+) out of (\d+)', log_content)
                 total_match = re.search(r'Total pixels fired: (\d+) out of (\d+)', log_content)
                 
-                # Display metrics
-                col1, col2, col3 = st.columns(3)
-                
-                with col1:
-                    difm_count = int(difm_match.group(1)) if difm_match else 0
-                    st.metric("DIFM Pixels", difm_count)
-                
-                with col2:
-                    diy_count = int(diy_match.group(1)) if diy_match else 0
-                    st.metric("DIY Pixels", diy_count)
-                
-                with col3:
-                    total_fired = int(total_match.group(1)) if total_match else 0
-                    total_sales = int(total_match.group(2)) if total_match else 0
-                    st.metric("Total Pixels", f"{total_fired}/{total_sales}")
+                if difm_match and diy_match and total_match:
+                    # Display metrics
+                    col1, col2, col3 = st.columns(3)
+                    
+                    with col1:
+                        difm_fired = int(difm_match.group(1))
+                        difm_total = int(difm_match.group(2))
+                        st.metric("DIFM Pixels", f"{difm_fired}/{difm_total}")
+                    
+                    with col2:
+                        diy_fired = int(diy_match.group(1))
+                        diy_total = int(diy_match.group(2))
+                        st.metric("DIY Pixels", f"{diy_fired}/{diy_total}")
+                    
+                    with col3:
+                        total_fired = int(total_match.group(1))
+                        total_sales = int(total_match.group(2))
+                        st.metric("Total Pixels", f"{total_fired}/{total_sales}")
                 
                 # Show logs
                 with st.expander("View Processing Logs"):
