@@ -444,12 +444,18 @@ def show_adt_pixel():
     st.title("ADT Pixel Firing")
     
     st.write("""
-    This tool processes ADT Athena reports and fires pixels for qualifying sales. 
-    Upload your ADT Athena report (CSV format) to begin.
+    ## Upload ADT Athena Report
     
-    **Important**: The tool will process data for the day BEFORE the date in the filename.
-    Example: For file ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20250502.csv (dated May 2, 2025), 
-    the tool will fire pixels for sales on May 1, 2025.
+    Upload your ADT Athena report (CSV format) that includes sales data.
+    
+    The tool will fire pixels for sales that occurred on the **day before** the date in the report filename.
+    """)
+    
+    st.warning("""
+    **Important**: Make sure your filename follows this pattern:
+    ADT_Athena_DLY_Lead_CallData_Direct_Agnts_YYYYMMDD.csv
+    
+    Example: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20250502.csv
     """)
     
     uploaded_file = st.file_uploader("Upload ADT Athena Report (CSV)", type=['csv'])
@@ -465,20 +471,31 @@ def show_adt_pixel():
                 st.code(log_file.read())
     
     if uploaded_file is not None:
-        # Show date that will be processed
-        import re
+        # Show filename and extract date
         filename = uploaded_file.name
-        date_match = re.search(r'(\d{8})', filename)
+        st.write(f"File selected: **{filename}**")
         
-        if date_match:
-            report_date_str = date_match.group(1)
-            try:
-                from datetime import datetime, timedelta
-                report_date = datetime.strptime(report_date_str, '%Y%m%d').date()
-                process_date = report_date - timedelta(days=1)
-                st.info(f"Based on the filename, pixels will be fired for sales on: {process_date.strftime('%B %d, %Y')}")
-            except ValueError:
-                st.warning(f"Could not parse date from filename. Please ensure your file contains a date in YYYYMMDD format.")
+        # Extract date from the filename - simple approach
+        date_part = None
+        if '_20' in filename and '.csv' in filename:
+            # Get the part between the last underscore and .csv
+            date_part = filename.split('_')[-1].split('.')[0]
+            
+            if len(date_part) == 8 and date_part.isdigit():
+                try:
+                    from datetime import datetime, timedelta
+                    report_date = datetime.strptime(date_part, '%Y%m%d').date()
+                    process_date = report_date - timedelta(days=1)
+                    st.success(f"Based on the filename, pixels will be fired for sales on: **{process_date.strftime('%B %d, %Y')}**")
+                except ValueError:
+                    st.warning(f"Could not parse date from filename part: {date_part}")
+                    st.info("Will use yesterday's date as the default processing date")
+            else:
+                st.warning(f"Date part doesn't look right: {date_part}")
+                st.info("Will use yesterday's date as the default processing date")
+        else:
+            st.warning("Filename doesn't match expected pattern")
+            st.info("Will use yesterday's date as the default processing date")
         
         if st.button("Process and Fire Pixels"):
             try:
@@ -490,7 +507,7 @@ def show_adt_pixel():
                 
                 # Create a placeholder for progress updates
                 progress_placeholder = st.empty()
-                progress_placeholder.info("Starting pixel firing process...")
+                progress_placeholder.info("⏳ Starting pixel firing process...")
                 
                 # Save the uploaded file to a temporary file
                 temp_file_path = None
@@ -499,7 +516,7 @@ def show_adt_pixel():
                     temp_file.write(uploaded_file.read())
                     temp_file_path = temp_file.name
                 
-                progress_placeholder.info(f"Processing file: {uploaded_file.name}")
+                progress_placeholder.info(f"⚙️ Processing file: {uploaded_file.name}")
                 
                 # Process the file
                 process_adt_report(temp_file_path)
@@ -509,6 +526,8 @@ def show_adt_pixel():
                     os.remove(temp_file_path)
                 
                 # Display the results by reading from the log file
+                progress_placeholder.empty()
+                
                 if os.path.exists(today_log):
                     with open(today_log, 'r') as log_file:
                         log_content = log_file.read()
@@ -523,7 +542,10 @@ def show_adt_pixel():
                         date_processed = date_processed_match.group(1) if date_processed_match else "unknown date"
                         
                         # Display a summary
-                        st.success(f"✅ Pixel firing completed for sales on {date_processed}!")
+                        if difm_count > 0 or diy_count > 0:
+                            st.success(f"✅ Pixel firing completed for sales on {date_processed}!")
+                        else:
+                            st.warning(f"⚠️ No qualifying sales found for {date_processed}")
                         
                         # Display counts in columns
                         col1, col2, col3 = st.columns(3)
@@ -539,7 +561,7 @@ def show_adt_pixel():
                             st.code(log_content)
                 
                 else:
-                    st.warning("Log file not found. Process may not have completed successfully.")
+                    st.error("Log file not found. Process may not have completed successfully.")
                 
             except Exception as e:
                 st.error(f"Error: {str(e)}")

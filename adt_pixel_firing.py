@@ -58,32 +58,37 @@ def clean_data(df, file_path):
     Clean and filter the data according to requirements.
     """
     try:
-        # Extract date from filename (format: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_YYYYMMDD.csv)
-        # This is critical - we must use the date in the filename, NOT today's date
+        # Extract date from filename - simple and direct approach
         filename = os.path.basename(file_path)
+        logging.info(f"Processing file: {filename}")
         
-        # Look for a date pattern in the filename (8 consecutive digits)
-        date_match = re.search(r'(\d{8})', filename)
-        
-        if date_match:
-            # If found, use that as the report date
-            report_date_str = date_match.group(1)
-            logging.info(f"Extracted report date from filename: {report_date_str}")
+        # Expected format: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20250502.csv
+        # Simply take the part before .csv and after the last underscore
+        if '_20' in filename and '.csv' in filename:
+            # Get the part between the last underscore and .csv
+            date_part = filename.split('_')[-1].split('.')[0]
+            logging.info(f"Extracted date part: {date_part}")
             
-            # Parse the report date
-            try:
+            if len(date_part) == 8 and date_part.isdigit():
+                report_date_str = date_part
+                logging.info(f"Using report date: {report_date_str}")
+                
+                # Parse date and get previous day
                 report_date = datetime.strptime(report_date_str, '%Y%m%d').date()
-                # The date we want to filter for is the day BEFORE the report date
                 process_date = report_date - timedelta(days=1)
                 logging.info(f"Report date: {report_date}, Processing sales from: {process_date}")
-            except ValueError:
-                logging.error(f"Could not parse date '{report_date_str}' from filename. Format should be YYYYMMDD.")
-                raise ValueError(f"Invalid date format in filename: {report_date_str}")
+            else:
+                # Fallback to current date - 1
+                logging.warning(f"Date part doesn't look like a valid date: {date_part}")
+                report_date = datetime.now().date()
+                process_date = report_date - timedelta(days=1)
+                logging.info(f"Using today's date minus 1: {process_date}")
         else:
-            # If no date pattern found, notify user of the error
-            logging.error(f"No date pattern found in filename: {filename}")
-            logging.error("Filename should contain a date in format YYYYMMDD (e.g. 20250502)")
-            raise ValueError("No date pattern found in filename. Expected format: YYYYMMDD")
+            # Fallback to current date - 1
+            logging.warning(f"Filename doesn't match expected pattern: {filename}")
+            report_date = datetime.now().date()
+            process_date = report_date - timedelta(days=1)
+            logging.info(f"Using today's date minus 1: {process_date}")
             
         # Convert Sale_Date to datetime if it's not already and remove any null values
         df['Sale_Date'] = pd.to_datetime(df['Sale_Date'], errors='coerce')
@@ -115,8 +120,11 @@ def clean_data(df, file_path):
         
         # Log details about records before order type filtering
         logging.info("\nChecking order types before filtering:")
-        for idx, row in df_after_lead_dnis.iterrows():
-            logging.info(f"Record {idx}: Order Type = '{row['Ordr_Type']}'")
+        if len(df_after_lead_dnis) > 0:
+            for idx, row in df_after_lead_dnis.iterrows():
+                logging.info(f"Record {idx}: Order Type = '{row['Ordr_Type']}'")
+        else:
+            logging.info("No records found matching criteria")
         
         order_type_filter = (
             df_after_lead_dnis['Ordr_Type'].str.contains('New', case=False, na=False) |
@@ -131,11 +139,14 @@ def clean_data(df, file_path):
         
         # Add detailed logging for each record
         logging.info("\nDetailed record analysis:")
-        for idx, row in filtered_df.iterrows():
-            logging.info(f"Record {idx}:")
-            logging.info(f"  Install Method: {row['INSTALL_METHOD']}")
-            logging.info(f"  Order Type: {row['Ordr_Type']}")
-            logging.info(f"  Sale Date: {row['Sale_Date']}")
+        if len(filtered_df) > 0:
+            for idx, row in filtered_df.iterrows():
+                logging.info(f"Record {idx}:")
+                logging.info(f"  Install Method: {row['INSTALL_METHOD']}")
+                logging.info(f"  Order Type: {row['Ordr_Type']}")
+                logging.info(f"  Sale Date: {row['Sale_Date']}")
+        else:
+            logging.info("No qualifying records found")
         
         # Count DIFM and DIY records
         difm_count = len(difm_records)
