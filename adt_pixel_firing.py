@@ -221,6 +221,10 @@ def process_adt_report(file_path):
         
         # Count of sales to process
         total_sales = len(filtered_df)
+        if total_sales == 0:
+            logging.info("No qualifying sales found to process.")
+            return
+            
         logging.info(f"\nFound {total_sales} qualifying sales for date: {filtered_df['Sale_Date'].dt.date.iloc[0].strftime('%Y-%m-%d')}")
         
         # Count DIFM and DIY sales
@@ -232,6 +236,8 @@ def process_adt_report(file_path):
         # Fire pixels for each sale
         logging.info("\nFiring pixels...")
         successful_pixels = 0
+        
+        # Process each sale
         for idx, row in filtered_df.iterrows():
             # Generate a unique transaction ID
             transaction_id = f"ADT_{row['Sale_Date'].strftime('%Y%m%d')}_{uuid.uuid4().hex[:8]}"
