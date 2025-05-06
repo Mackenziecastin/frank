@@ -532,38 +532,11 @@ def show_adt_pixel():
                 os.rmdir(temp_dir)
                 
                 # Show success message
-                st.success("Processing complete!")
-                
-                # Read and parse the log file to get counts
-                log_content = log_stream.getvalue()
-                
-                # Extract DIFM and DIY counts using regex
-                difm_match = re.search(r'DIFM pixels fired successfully: (\d+) out of (\d+)', log_content)
-                diy_match = re.search(r'DIY pixels fired successfully: (\d+) out of (\d+)', log_content)
-                total_match = re.search(r'Total pixels fired: (\d+) out of (\d+)', log_content)
-                
-                if difm_match and diy_match and total_match:
-                    # Display metrics
-                    col1, col2, col3 = st.columns(3)
-                    
-                    with col1:
-                        difm_fired = int(difm_match.group(1))
-                        difm_total = int(difm_match.group(2))
-                        st.metric("DIFM Pixels", f"{difm_fired}/{difm_total}")
-                    
-                    with col2:
-                        diy_fired = int(diy_match.group(1))
-                        diy_total = int(diy_match.group(2))
-                        st.metric("DIY Pixels", f"{diy_fired}/{diy_total}")
-                    
-                    with col3:
-                        total_fired = int(total_match.group(1))
-                        total_sales = int(total_match.group(2))
-                        st.metric("Total Pixels", f"{total_fired}/{total_sales}")
+                st.success("Pixels fired successfully!")
                 
                 # Show logs
                 with st.expander("View Processing Logs"):
-                    st.text(log_content)
+                    st.text(log_stream.getvalue())
                     
             except Exception as e:
                 st.error(f"Error processing ADT report: {str(e)}")
