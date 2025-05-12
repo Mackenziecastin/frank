@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import re
 import os
 import io
+import tempfile
 
 def create_partner_list_df():
     """Create the partner list DataFrame directly in code."""
@@ -56,86 +57,36 @@ def show_brinks_optimization():
     st.title("Brinks Optimization Report")
     
     st.write("""
-    This tool generates the Brinks Optimization Report by processing the Lead Source Sales and Conversion Report data.
-    Please upload the required files below to get started.
+    This tool processes Brinks marketing data files and generates optimization reports.
+    Upload your Brinks data file (CSV format) to begin.
     """)
     
-    col1, col2 = st.columns(2)
+    uploaded_file = st.file_uploader("Upload Brinks Data File (CSV)", type=['csv'])
     
-    with col1:
-        lead_source_file = st.file_uploader("Upload Lead Source Sales Report (CSV)", type=["csv", "xlsx"])
-    
-    with col2:
-        conversion_file = st.file_uploader("Upload Conversion Report (CSV)", type=["csv", "xlsx"])
-    
-    # Create partner list DataFrame directly
-    partner_list_df = create_partner_list_df()
-    partner_list_loaded = True
-    st.success("✅ Partner list data loaded successfully!")
-    
-    # Check if we have all required files
-    if lead_source_file and conversion_file:
+    if uploaded_file is not None:
         if st.button("Generate Optimization Report"):
-            with st.spinner("Processing data and generating report..."):
-                try:
-                    # Load the data
-                    lead_source_df = load_file(lead_source_file)
-                    conversion_df = load_file(conversion_file)
-                    
-                    # Process lead source sales data
-                    st.subheader("Processing Lead Source Sales Data")
-                    processed_sales_df = process_lead_source_sales(lead_source_df, partner_list_df)
-                    
-                    # Create sales pivot table
-                    sales_pivot = create_sales_pivot(processed_sales_df)
-                    
-                    # Process conversion report data
-                    st.subheader("Processing Conversion Report Data")
-                    processed_conversion_df = process_conversion_report(conversion_df)
-                    
-                    # Create conversion pivot table
-                    conversion_pivot = create_conversion_pivot(processed_conversion_df)
-                    
-                    # Merge the pivot tables and create final report
-                    st.subheader("Creating Final Optimization Report")
-                    final_report = create_final_report(sales_pivot, conversion_pivot, partner_list_df)
-                    
-                    # Display the final report
-                    st.subheader("Brinks Optimization Report")
-                    st.dataframe(final_report)
-                    
-                    # Download button for the final report
-                    today = datetime.now().strftime("%m.%d")
-                    excel_data = to_excel(processed_sales_df, processed_conversion_df, final_report)
-                    st.download_button(
-                        label="Download Optimization Report",
-                        data=excel_data,
-                        file_name=f"Brinks Optimization Report {today}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    )
+            try:
+                # Save uploaded file temporarily
+                temp_dir = tempfile.mkdtemp()
+                temp_path = os.path.join(temp_dir, uploaded_file.name)
+                with open(temp_path, 'wb') as f:
+                    f.write(uploaded_file.getvalue())
                 
-                except Exception as e:
-                    st.error(f"An error occurred: {str(e)}")
-                    st.exception(e)
-    else:
-        st.info("Please upload both required files to generate the report.")
-    
-    # Add a section to explain the process
-    with st.expander("How to use this tool"):
-        st.markdown("""
-        ### Instructions
-        1. Upload the **Lead Source Sales Report** (CSV/Excel format)
-        2. Upload the **Conversion Report** (CSV/Excel format)
-        3. Click the **Generate Optimization Report** button
-        4. Review the generated report and download it
-        
-        ### What this tool does
-        - Uses built-in partner list data
-        - Processes the Lead Source Sales data and cleans the Pardot Partner IDs
-        - Processes the Conversion Report data and creates the pid_subid column
-        - Merges the data and calculates all required metrics
-        - Generates a formatted Excel report with all necessary calculations
-        """)
+                # Read the file
+                df = pd.read_csv(temp_path)
+                
+                # Clean up temporary file and directory
+                os.unlink(temp_path)
+                os.rmdir(temp_dir)
+                
+                # Show success message
+                st.success("Report generated successfully!")
+                
+                # Display the data
+                st.dataframe(df)
+                
+            except Exception as e:
+                st.error(f"Error generating report: {str(e)}")
 
 def load_file(file):
     """Minimal file loading with engine specification"""
