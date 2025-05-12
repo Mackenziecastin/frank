@@ -64,6 +64,11 @@ def show_brinks_optimization():
     sales_file = st.file_uploader("Upload Brinks Sales Report (CSV)", type=['csv'], key='brinks_sales')
     conversion_file = st.file_uploader("Upload Brinks Conversion Report (CSV)", type=['csv'], key='brinks_conversion')
     
+    if sales_file is not None:
+        st.info("Sales Report uploaded.")
+    if conversion_file is not None:
+        st.info("Conversion Report uploaded.")
+    
     if sales_file is not None and conversion_file is not None:
         if st.button("Generate Optimization Report"):
             try:
