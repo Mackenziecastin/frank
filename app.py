@@ -557,7 +557,7 @@ def setup_logging():
 def main():
     # Create the navigation
     st.sidebar.title("Navigation")
-    page = st.sidebar.radio("Go to", ["Frank (LaserAway)", "Bob (ADT)", "ADT Pixel Firing"])
+    page = st.sidebar.radio("Go to", ["Frank (LaserAway)", "Bob (ADT)", "ADT Pixel Firing", "Brinks Optimization Report"])
     
     if page == "Frank (LaserAway)":
         show_main_page()
@@ -567,6 +567,10 @@ def main():
         show_bob_analysis()
     elif page == "ADT Pixel Firing":
         show_adt_pixel()
+    elif page == "Brinks Optimization Report":
+        # Import and show Brinks optimization page
+        from pages.brinks_optimization import show_brinks_optimization
+        show_brinks_optimization()
 
 if __name__ == "__main__":
     main() 
