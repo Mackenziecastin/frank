@@ -58,32 +58,41 @@ def show_brinks_optimization():
     
     st.write("""
     This tool processes Brinks marketing data files and generates optimization reports.
-    Upload your Brinks data file (CSV format) to begin.
+    Upload your Brinks Sales Report and Conversion Report (CSV format) to begin.
     """)
     
-    uploaded_file = st.file_uploader("Upload Brinks Data File (CSV)", type=['csv'])
+    sales_file = st.file_uploader("Upload Brinks Sales Report (CSV)", type=['csv'], key='brinks_sales')
+    conversion_file = st.file_uploader("Upload Brinks Conversion Report (CSV)", type=['csv'], key='brinks_conversion')
     
-    if uploaded_file is not None:
+    if sales_file is not None and conversion_file is not None:
         if st.button("Generate Optimization Report"):
             try:
-                # Save uploaded file temporarily
+                # Save uploaded files temporarily
                 temp_dir = tempfile.mkdtemp()
-                temp_path = os.path.join(temp_dir, uploaded_file.name)
-                with open(temp_path, 'wb') as f:
-                    f.write(uploaded_file.getvalue())
+                sales_path = os.path.join(temp_dir, sales_file.name)
+                conversion_path = os.path.join(temp_dir, conversion_file.name)
+                with open(sales_path, 'wb') as f:
+                    f.write(sales_file.getvalue())
+                with open(conversion_path, 'wb') as f:
+                    f.write(conversion_file.getvalue())
                 
-                # Read the file
-                df = pd.read_csv(temp_path)
+                # Read the files
+                sales_df = pd.read_csv(sales_path)
+                conversion_df = pd.read_csv(conversion_path)
                 
-                # Clean up temporary file and directory
-                os.unlink(temp_path)
+                # Clean up temporary files and directory
+                os.unlink(sales_path)
+                os.unlink(conversion_path)
                 os.rmdir(temp_dir)
                 
                 # Show success message
                 st.success("Report generated successfully!")
                 
                 # Display the data
-                st.dataframe(df)
+                st.subheader("Sales Report Preview")
+                st.dataframe(sales_df)
+                st.subheader("Conversion Report Preview")
+                st.dataframe(conversion_df)
                 
             except Exception as e:
                 st.error(f"Error generating report: {str(e)}")
