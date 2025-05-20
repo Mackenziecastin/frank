@@ -93,107 +93,114 @@ def robust_read_csv(path):
 
 def show_brinks_optimization():
     """Display the Brinks Optimization Report interface with two file uploaders"""
-    st.title("Brinks Optimization Report")
+    try:
+        st.title("Brinks Optimization Report")
+        
+        # Display this message so we know we're seeing the latest version
+        st.write("Version: 2023-05-11 - Robust Against Session State Issues")
+        
+        # Create partner list with TFN data automatically
+        partner_list_df = create_partner_list_df()
+        
+        st.write("""
+        This tool processes Brinks marketing data files and generates optimization reports.
+        The TFN sheet data is already built into the tool, so you don't need to upload it separately.
+        Upload your Brinks Sales Report and Conversion Report (CSV format) to begin.
+        """)
+        
+        # First file uploader for Sales Report
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            sales_file = st.file_uploader("Upload Brinks Sales Report (CSV)", 
+                                           type=['csv'], 
+                                           key='brinks_sales_report')
+            if sales_file is not None:
+                st.success("✅ Sales Report uploaded")
+        
+        # Second file uploader for Conversion Report
+        with col2:
+            conversion_file = st.file_uploader("Upload Brinks Conversion Report (CSV)", 
+                                              type=['csv'], 
+                                              key='brinks_conversion_report')
+            if conversion_file is not None:
+                st.success("✅ Conversion Report uploaded")
+        
+        # Display TFN mapping in a collapsible section
+        with st.expander("View TFN to Affiliate ID Mapping"):
+            st.dataframe(partner_list_df[['Affiliate ID', 'Affiliate Name', 'TFN', 'Account Manager Name']])
+        
+        # Only show the button if both files are uploaded
+        if sales_file is not None and conversion_file is not None:
+            if st.button("Generate Optimization Report"):
+                try:
+                    # Save uploaded files temporarily
+                    temp_dir = tempfile.mkdtemp()
+                    sales_path = os.path.join(temp_dir, sales_file.name)
+                    conversion_path = os.path.join(temp_dir, conversion_file.name)
+                    
+                    with open(sales_path, 'wb') as f:
+                        f.write(sales_file.getvalue())
+                    
+                    with open(conversion_path, 'wb') as f:
+                        f.write(conversion_file.getvalue())
+                    
+                    # Read the files robustly
+                    sales_df = robust_read_csv(sales_path)
+                    conversion_df = robust_read_csv(conversion_path)
+                    
+                    # Process the sales and conversion reports
+                    processed_sales_df = process_lead_source_sales(sales_df, partner_list_df)
+                    processed_conversion_df = process_conversion_report(conversion_df)
+                    
+                    # Create pivot tables
+                    sales_pivot = create_sales_pivot(processed_sales_df)
+                    conversion_pivot = create_conversion_pivot(processed_conversion_df)
+                    
+                    # Create final report
+                    final_report = create_final_report(sales_pivot, conversion_pivot, partner_list_df)
+                    
+                    # Clean up temporary files and directory
+                    os.unlink(sales_path)
+                    os.unlink(conversion_path)
+                    os.rmdir(temp_dir)
+                    
+                    # Show success message
+                    st.success("Report generated successfully!")
+                    
+                    # Display the final report
+                    st.subheader("Brinks Optimization Report")
+                    st.dataframe(final_report)
+                    
+                    # Create Excel file for download
+                    excel_data = to_excel(processed_sales_df, processed_conversion_df, final_report)
+                    today = datetime.now().strftime("%m.%d")
+                    st.download_button(
+                        label="Download Optimization Report",
+                        data=excel_data,
+                        file_name=f"Brinks Optimization Report {today}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+                    
+                    # Display the data previews in expandable sections
+                    with st.expander("Sales Report Preview"):
+                        st.dataframe(processed_sales_df)
+                    
+                    with st.expander("Conversion Report Preview"):
+                        st.dataframe(processed_conversion_df)
+                    
+                except Exception as e:
+                    st.error(f"Error generating report: {str(e)}")
+                    import traceback
+                    st.code(traceback.format_exc())
+        else:
+            st.info("Please upload both files to generate the report")
     
-    # Display this message so we know we're seeing the latest version
-    st.write("Version: 2023-05-10 - With Built-in TFN Data")
-    
-    # Create partner list with TFN data automatically
-    partner_list_df = create_partner_list_df()
-    
-    st.write("""
-    This tool processes Brinks marketing data files and generates optimization reports.
-    The TFN sheet data is already built into the tool, so you don't need to upload it separately.
-    Upload your Brinks Sales Report and Conversion Report (CSV format) to begin.
-    """)
-    
-    # First file uploader for Sales Report
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        sales_file = st.file_uploader("Upload Brinks Sales Report (CSV)", 
-                                       type=['csv'], 
-                                       key='brinks_sales_report')
-        if sales_file is not None:
-            st.success("✅ Sales Report uploaded")
-    
-    # Second file uploader for Conversion Report
-    with col2:
-        conversion_file = st.file_uploader("Upload Brinks Conversion Report (CSV)", 
-                                          type=['csv'], 
-                                          key='brinks_conversion_report')
-        if conversion_file is not None:
-            st.success("✅ Conversion Report uploaded")
-    
-    # Display TFN mapping in a collapsible section
-    with st.expander("View TFN to Affiliate ID Mapping"):
-        st.dataframe(partner_list_df[['Affiliate ID', 'Affiliate Name', 'TFN', 'Account Manager Name']])
-    
-    # Only show the button if both files are uploaded
-    if sales_file is not None and conversion_file is not None:
-        if st.button("Generate Optimization Report"):
-            try:
-                # Save uploaded files temporarily
-                temp_dir = tempfile.mkdtemp()
-                sales_path = os.path.join(temp_dir, sales_file.name)
-                conversion_path = os.path.join(temp_dir, conversion_file.name)
-                
-                with open(sales_path, 'wb') as f:
-                    f.write(sales_file.getvalue())
-                
-                with open(conversion_path, 'wb') as f:
-                    f.write(conversion_file.getvalue())
-                
-                # Read the files robustly
-                sales_df = robust_read_csv(sales_path)
-                conversion_df = robust_read_csv(conversion_path)
-                
-                # Process the sales and conversion reports
-                processed_sales_df = process_lead_source_sales(sales_df, partner_list_df)
-                processed_conversion_df = process_conversion_report(conversion_df)
-                
-                # Create pivot tables
-                sales_pivot = create_sales_pivot(processed_sales_df)
-                conversion_pivot = create_conversion_pivot(processed_conversion_df)
-                
-                # Create final report
-                final_report = create_final_report(sales_pivot, conversion_pivot, partner_list_df)
-                
-                # Clean up temporary files and directory
-                os.unlink(sales_path)
-                os.unlink(conversion_path)
-                os.rmdir(temp_dir)
-                
-                # Show success message
-                st.success("Report generated successfully!")
-                
-                # Display the final report
-                st.subheader("Brinks Optimization Report")
-                st.dataframe(final_report)
-                
-                # Create Excel file for download
-                excel_data = to_excel(processed_sales_df, processed_conversion_df, final_report)
-                today = datetime.now().strftime("%m.%d")
-                st.download_button(
-                    label="Download Optimization Report",
-                    data=excel_data,
-                    file_name=f"Brinks Optimization Report {today}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
-                
-                # Display the data previews in expandable sections
-                with st.expander("Sales Report Preview"):
-                    st.dataframe(processed_sales_df)
-                
-                with st.expander("Conversion Report Preview"):
-                    st.dataframe(processed_conversion_df)
-                
-            except Exception as e:
-                st.error(f"Error generating report: {str(e)}")
-                import traceback
-                st.code(traceback.format_exc())
-    else:
-        st.info("Please upload both files to generate the report")
+    except Exception as e:
+        st.error(f"Error loading Brinks Optimization Report interface: {str(e)}")
+        st.error("Please try refreshing the page. If the error persists, contact support.")
+        import traceback
+        st.code(traceback.format_exc())
 
 def load_file(file):
     """Minimal file loading with engine specification"""

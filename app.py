@@ -11,7 +11,11 @@ import uuid
 import requests
 import io
 import tempfile
-from adt_pixel_firing import process_adt_report
+import importlib
+
+# Custom modules
+from adt_pixel_firing import process_adt_report 
+# For other pages, we'll import dynamically to avoid caching issues
 
 st.set_page_config(page_title="Partner Optimization Report Generator", layout="wide")
 
@@ -553,7 +557,7 @@ def setup_logging():
     )
     return log_stream
 
-# At the bottom of the file, modify the main execution logic
+# Main function that sets up navigation and page routing
 def main():
     # Create the navigation
     st.sidebar.title("Navigation")
@@ -562,15 +566,18 @@ def main():
     if page == "Frank (LaserAway)":
         show_main_page()
     elif page == "Bob (ADT)":
-        # Import and show Bob's analysis page
-        from pages.bob_analysis import show_bob_analysis
-        show_bob_analysis()
+        # Import Bob's analysis module
+        import pages.bob_analysis
+        # Call the function
+        pages.bob_analysis.show_bob_analysis()
     elif page == "ADT Pixel Firing":
         show_adt_pixel()
     elif page == "Brinks Optimization Report":
-        # Import and show Brinks optimization page - use standard import
-        from pages.brinks_optimization import show_brinks_optimization
-        show_brinks_optimization()
+        # Import Brinks module directly
+        import pages.brinks_optimization
+        # Call the function
+        pages.brinks_optimization.show_brinks_optimization()
 
+# This is outside the main function
 if __name__ == "__main__":
     main() 
