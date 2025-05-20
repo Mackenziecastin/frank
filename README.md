@@ -53,4 +53,4 @@ The script includes comprehensive error handling and logging for:
 - Data processing errors
 - Pixel firing failures
 
-All errors are logged to the daily log file. 
+All errors are logged to the daily log file.

@@ -568,12 +568,9 @@ def main():
     elif page == "ADT Pixel Firing":
         show_adt_pixel()
     elif page == "Brinks Optimization Report":
-        # Import and show Brinks optimization page - ensure we get the latest version
-        import importlib
-        import pages.brinks_optimization
-        # Force reload to get the latest version
-        importlib.reload(pages.brinks_optimization)
-        pages.brinks_optimization.show_brinks_optimization()
+        # Import and show Brinks optimization page - use standard import
+        from pages.brinks_optimization import show_brinks_optimization
+        show_brinks_optimization()
 
 if __name__ == "__main__":
     main() 
