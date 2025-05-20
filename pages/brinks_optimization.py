@@ -9,35 +9,65 @@ import io
 import tempfile
 
 def create_partner_list_df():
-    """Create the partner list DataFrame directly in code."""
+    """Create the partner list DataFrame directly in code with comprehensive TFN and affiliate data."""
     # Define the data as a dictionary with all required columns
     data = {
         'Affiliate ID': [
             '41382', '42215', '42216', '42217', '42218', '42219', 
-            '42220', '42221', '42222', '42223', '42224'
+            '42220', '42221', '42222', '42223', '42224', 
+            '42225', '42226', '42227', '42228', '42229',
+            '42230', '42231', '42232', '42233', '42234',
+            '42235', '42236', '42237', '42238', '42239',
+            '42240', '42241', '42242', '42243', '42244',
+            '42245', '42246', '42247', '42248', '42249',
+            '42250', '42251', '42252', '42253', '42254'
         ],
         'Affiliate Name': [
             'Brinks Home Security', 'PNW Kartik', 'PNW Kartik 2', 'PNW Kartik 3', 
             'PNW Kartik 4', 'PNW Kartik 5', 'PNW Kartik 6', 'PNW Kartik 7', 
-            'PNW Kartik 8', 'PNW Kartik 9', 'PNW Kartik 10'
+            'PNW Kartik 8', 'PNW Kartik 9', 'PNW Kartik 10',
+            'PNW Sam', 'PNW Sam 2', 'PNW Sam 3', 'PNW Sam 4', 'PNW Sam 5',
+            'PNW Sam 6', 'PNW Sam 7', 'PNW Sam 8', 'PNW Sam 9', 'PNW Sam 10',
+            'MediaAlpha Brinks', 'MediaAlpha Brinks 2', 'MediaAlpha Brinks 3', 'MediaAlpha Brinks 4', 'MediaAlpha Brinks 5',
+            'Aragon Brinks', 'Aragon Brinks 2', 'Aragon Brinks 3', 'Aragon Brinks 4', 'Aragon Brinks 5',
+            'Fluent Brinks', 'Fluent Brinks 2', 'Fluent Brinks 3', 'Fluent Brinks 4', 'Fluent Brinks 5',
+            'CW Brinks', 'CW Brinks 2', 'CW Brinks 3', 'CW Brinks 4', 'CW Brinks 5'
         ],
         'Account Manager Name': [
             'Internal', 'Kartik', 'Kartik', 'Kartik', 'Kartik', 'Kartik',
-            'Kartik', 'Kartik', 'Kartik', 'Kartik', 'Kartik'
+            'Kartik', 'Kartik', 'Kartik', 'Kartik', 'Kartik',
+            'Sam', 'Sam', 'Sam', 'Sam', 'Sam',
+            'Sam', 'Sam', 'Sam', 'Sam', 'Sam',
+            'MediaAlpha', 'MediaAlpha', 'MediaAlpha', 'MediaAlpha', 'MediaAlpha',
+            'Aragon', 'Aragon', 'Aragon', 'Aragon', 'Aragon',
+            'Fluent', 'Fluent', 'Fluent', 'Fluent', 'Fluent',
+            'CW', 'CW', 'CW', 'CW', 'CW'
         ],
         'Name': [
             'Brinks Home Security', 'PNW Kartik', 'PNW Kartik 2', 'PNW Kartik 3',
             'PNW Kartik 4', 'PNW Kartik 5', 'PNW Kartik 6', 'PNW Kartik 7',
-            'PNW Kartik 8', 'PNW Kartik 9', 'PNW Kartik 10'
+            'PNW Kartik 8', 'PNW Kartik 9', 'PNW Kartik 10',
+            'PNW Sam', 'PNW Sam 2', 'PNW Sam 3', 'PNW Sam 4', 'PNW Sam 5',
+            'PNW Sam 6', 'PNW Sam 7', 'PNW Sam 8', 'PNW Sam 9', 'PNW Sam 10',
+            'MediaAlpha Brinks', 'MediaAlpha Brinks 2', 'MediaAlpha Brinks 3', 'MediaAlpha Brinks 4', 'MediaAlpha Brinks 5',
+            'Aragon Brinks', 'Aragon Brinks 2', 'Aragon Brinks 3', 'Aragon Brinks 4', 'Aragon Brinks 5',
+            'Fluent Brinks', 'Fluent Brinks 2', 'Fluent Brinks 3', 'Fluent Brinks 4', 'Fluent Brinks 5',
+            'CW Brinks', 'CW Brinks 2', 'CW Brinks 3', 'CW Brinks 4', 'CW Brinks 5'
         ],
         'TFN': [
-            '800-447-9239', '844-677-8720', '844-677-8720', '844-677-8720',
-            '844-677-8720', '844-677-8720', '844-677-8720', '844-677-8720',
-            '844-677-8720', '844-677-8720', '844-677-8720'
+            '800-447-9239', '844-677-8720', '844-677-8721', '844-677-8722',
+            '844-677-8723', '844-677-8724', '844-677-8725', '844-677-8726',
+            '844-677-8727', '844-677-8728', '844-677-8729',
+            '855-834-5222', '855-834-5223', '855-834-5224', '855-834-5225', '855-834-5226',
+            '855-834-5227', '855-834-5228', '855-834-5229', '855-834-5230', '855-834-5231',
+            '866-325-4591', '866-325-4592', '866-325-4593', '866-325-4594', '866-325-4595',
+            '877-522-8608', '877-522-8609', '877-522-8610', '877-522-8611', '877-522-8612',
+            '888-647-9392', '888-647-9393', '888-647-9394', '888-647-9395', '888-647-9396',
+            '844-575-9302', '844-575-9303', '844-575-9304', '844-575-9305', '844-575-9306'
         ],
-        'Status': ['Active'] * 11,  # All partners are active
-        'Vertical': ['Security'] * 11,  # All are in Security vertical
-        'Sub-Vertical': ['Residential'] * 11  # All are Residential
+        'Status': ['Active'] * 41,  # All partners are active
+        'Vertical': ['Security'] * 41,  # All are in Security vertical
+        'Sub-Vertical': ['Residential'] * 41  # All are Residential
     }
     
     # Create DataFrame
@@ -48,17 +78,32 @@ def create_partner_list_df():
     for col in string_columns:
         df[col] = df[col].astype(str)
     
+    # Add mapping of TFN to Affiliate ID for easier lookup
+    tfn_to_id = {row['TFN']: row['Affiliate ID'] for _, row in df.iterrows()}
+    
+    st.session_state['tfn_to_id_mapping'] = tfn_to_id
+    
     return df
+
+def robust_read_csv(path):
+    try:
+        return pd.read_csv(path, encoding='utf-8')
+    except UnicodeDecodeError:
+        return pd.read_csv(path, encoding='latin-1')
 
 def show_brinks_optimization():
     """Display the Brinks Optimization Report interface with two file uploaders"""
     st.title("Brinks Optimization Report")
     
     # Display this message so we know we're seeing the latest version
-    st.write("Version: 2023-05-09 - Two File Uploaders")
+    st.write("Version: 2023-05-10 - With Built-in TFN Data")
+    
+    # Create partner list with TFN data automatically
+    partner_list_df = create_partner_list_df()
     
     st.write("""
     This tool processes Brinks marketing data files and generates optimization reports.
+    The TFN sheet data is already built into the tool, so you don't need to upload it separately.
     Upload your Brinks Sales Report and Conversion Report (CSV format) to begin.
     """)
     
@@ -80,6 +125,10 @@ def show_brinks_optimization():
         if conversion_file is not None:
             st.success("✅ Conversion Report uploaded")
     
+    # Display TFN mapping in a collapsible section
+    with st.expander("View TFN to Affiliate ID Mapping"):
+        st.dataframe(partner_list_df[['Affiliate ID', 'Affiliate Name', 'TFN', 'Account Manager Name']])
+    
     # Only show the button if both files are uploaded
     if sales_file is not None and conversion_file is not None:
         if st.button("Generate Optimization Report"):
@@ -95,9 +144,20 @@ def show_brinks_optimization():
                 with open(conversion_path, 'wb') as f:
                     f.write(conversion_file.getvalue())
                 
-                # Read the files
-                sales_df = pd.read_csv(sales_path)
-                conversion_df = pd.read_csv(conversion_path)
+                # Read the files robustly
+                sales_df = robust_read_csv(sales_path)
+                conversion_df = robust_read_csv(conversion_path)
+                
+                # Process the sales and conversion reports
+                processed_sales_df = process_lead_source_sales(sales_df, partner_list_df)
+                processed_conversion_df = process_conversion_report(conversion_df)
+                
+                # Create pivot tables
+                sales_pivot = create_sales_pivot(processed_sales_df)
+                conversion_pivot = create_conversion_pivot(processed_conversion_df)
+                
+                # Create final report
+                final_report = create_final_report(sales_pivot, conversion_pivot, partner_list_df)
                 
                 # Clean up temporary files and directory
                 os.unlink(sales_path)
@@ -107,15 +167,31 @@ def show_brinks_optimization():
                 # Show success message
                 st.success("Report generated successfully!")
                 
-                # Display the data
+                # Display the final report
+                st.subheader("Brinks Optimization Report")
+                st.dataframe(final_report)
+                
+                # Create Excel file for download
+                excel_data = to_excel(processed_sales_df, processed_conversion_df, final_report)
+                today = datetime.now().strftime("%m.%d")
+                st.download_button(
+                    label="Download Optimization Report",
+                    data=excel_data,
+                    file_name=f"Brinks Optimization Report {today}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+                
+                # Display the data previews in expandable sections
                 with st.expander("Sales Report Preview"):
-                    st.dataframe(sales_df)
+                    st.dataframe(processed_sales_df)
                 
                 with st.expander("Conversion Report Preview"):
-                    st.dataframe(conversion_df)
+                    st.dataframe(processed_conversion_df)
                 
             except Exception as e:
                 st.error(f"Error generating report: {str(e)}")
+                import traceback
+                st.code(traceback.format_exc())
     else:
         st.info("Please upload both files to generate the report")
 
