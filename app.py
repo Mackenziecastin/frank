@@ -72,6 +72,23 @@ def show_main_page():
                 affiliate_df_processed['Created Date'] = pd.to_datetime(affiliate_df_processed['Created Date'])
                 advanced_df_processed['Action Date'] = pd.to_datetime(advanced_df_processed['Action Date'])
                 
+                # Check if Purchased Date exists, and use that instead of Created Date if available
+                use_purchased_date = False
+                if 'Purchased Date' in affiliate_df_processed.columns:
+                    affiliate_df_processed['Purchased Date'] = pd.to_datetime(affiliate_df_processed['Purchased Date'])
+                    st.info("Using 'Purchased Date' for filtering rather than 'Created Date'")
+                    use_purchased_date = True
+                    
+                    # Display info about Purchased Date values
+                    purchased_date_counts = affiliate_df_processed['Purchased Date'].dt.month.value_counts().sort_index()
+                    st.write("Debug - Purchased Date month distribution:")
+                    st.write(purchased_date_counts)
+                    
+                    # Count rows with different date combinations
+                    has_both_dates = affiliate_df_processed[affiliate_df_processed['Purchased Date'].notna() & 
+                                                            affiliate_df_processed['Created Date'].notna()].shape[0]
+                    st.write(f"Debug - Rows with both Created Date and Purchased Date: {has_both_dates}")
+                
                 # Get the date range from Advanced Action report
                 full_end_date = advanced_df_processed['Action Date'].max()
                 full_start_date = advanced_df_processed['Action Date'].min()
@@ -87,10 +104,19 @@ def show_main_page():
                 
                 # Create full report dataframes with date filtering
                 # Filter both datasets to match exactly
-                affiliate_df_full = affiliate_df_processed[
-                    (affiliate_df_processed['Created Date'].dt.date >= full_start_date.date()) &
-                    (affiliate_df_processed['Created Date'].dt.date <= full_end_date.date())
-                ]
+                if use_purchased_date:
+                    # Filter using Purchased Date
+                    affiliate_df_full = affiliate_df_processed[
+                        (affiliate_df_processed['Purchased Date'].dt.date >= full_start_date.date()) &
+                        (affiliate_df_processed['Purchased Date'].dt.date <= full_end_date.date())
+                    ]
+                else:
+                    # Filter using Created Date
+                    affiliate_df_full = affiliate_df_processed[
+                        (affiliate_df_processed['Created Date'].dt.date >= full_start_date.date()) &
+                        (affiliate_df_processed['Created Date'].dt.date <= full_end_date.date())
+                    ]
+                
                 advanced_df_full = advanced_df_processed[
                     (advanced_df_processed['Action Date'].dt.date >= full_start_date.date()) &
                     (advanced_df_processed['Action Date'].dt.date <= full_end_date.date())
@@ -100,13 +126,27 @@ def show_main_page():
                 st.write("\nDebug - After full report filtering:")
                 st.write(f"Records in affiliate data: {len(affiliate_df_full)}")
                 st.write(f"Transaction Count: {affiliate_df_full['Transaction Count'].sum()}")
-                st.write(f"Date range: {affiliate_df_full['Created Date'].min()} to {affiliate_df_full['Created Date'].max()}")
+                st.write(f"Net Sales Amount: ${affiliate_df_full['Net Sales Amount'].sum():.2f}")
+                
+                if use_purchased_date:
+                    st.write(f"Date range: {affiliate_df_full['Purchased Date'].min()} to {affiliate_df_full['Purchased Date'].max()}")
+                else:
+                    st.write(f"Date range: {affiliate_df_full['Created Date'].min()} to {affiliate_df_full['Created Date'].max()}")
                 
                 # Create matured report dataframes with date filtering
-                affiliate_df_matured = affiliate_df_processed[
-                    (affiliate_df_processed['Created Date'].dt.date >= matured_start_date.date()) &
-                    (affiliate_df_processed['Created Date'].dt.date <= matured_end_date.date())
-                ]
+                if use_purchased_date:
+                    # Filter using Purchased Date
+                    affiliate_df_matured = affiliate_df_processed[
+                        (affiliate_df_processed['Purchased Date'].dt.date >= matured_start_date.date()) &
+                        (affiliate_df_processed['Purchased Date'].dt.date <= matured_end_date.date())
+                    ]
+                else:
+                    # Filter using Created Date
+                    affiliate_df_matured = affiliate_df_processed[
+                        (affiliate_df_processed['Created Date'].dt.date >= matured_start_date.date()) &
+                        (affiliate_df_processed['Created Date'].dt.date <= matured_end_date.date())
+                    ]
+                
                 advanced_df_matured = advanced_df_processed[
                     (advanced_df_processed['Action Date'].dt.date >= matured_start_date.date()) &
                     (advanced_df_processed['Action Date'].dt.date <= matured_end_date.date())
@@ -116,7 +156,12 @@ def show_main_page():
                 st.write("\nDebug - After matured report filtering:")
                 st.write(f"Records in affiliate data: {len(affiliate_df_matured)}")
                 st.write(f"Transaction Count: {affiliate_df_matured['Transaction Count'].sum()}")
-                st.write(f"Date range: {affiliate_df_matured['Created Date'].min()} to {affiliate_df_matured['Created Date'].max()}")
+                st.write(f"Net Sales Amount: ${affiliate_df_matured['Net Sales Amount'].sum():.2f}")
+                
+                if use_purchased_date:
+                    st.write(f"Date range: {affiliate_df_matured['Purchased Date'].min()} to {affiliate_df_matured['Purchased Date'].max()}")
+                else:
+                    st.write(f"Date range: {affiliate_df_matured['Created Date'].min()} to {affiliate_df_matured['Created Date'].max()}")
                 
                 # Show date ranges for both reports
                 st.subheader("Date Ranges")
@@ -129,10 +174,15 @@ def show_main_page():
                 st.write(f"- End Date: {matured_end_date.strftime('%Y-%m-%d')}")
                 
                 # Add date range validation and warning
-                if affiliate_df_processed['Created Date'].max() > full_end_date:
-                    extra_days = (affiliate_df_processed['Created Date'].max() - full_end_date).days
-                    st.warning(f"Note: Affiliate data contains {extra_days} additional day(s) beyond {full_end_date.strftime('%Y-%m-%d')}. These dates have been excluded for consistency with Advanced Action data.")
-                
+                if use_purchased_date:
+                    if affiliate_df_processed['Purchased Date'].max() > full_end_date:
+                        extra_days = (affiliate_df_processed['Purchased Date'].max() - full_end_date).days
+                        st.warning(f"Note: Affiliate data contains {extra_days} additional day(s) beyond {full_end_date.strftime('%Y-%m-%d')}. These dates have been excluded for consistency with Advanced Action data.")
+                else:
+                    if affiliate_df_processed['Created Date'].max() > full_end_date:
+                        extra_days = (affiliate_df_processed['Created Date'].max() - full_end_date).days
+                        st.warning(f"Note: Affiliate data contains {extra_days} additional day(s) beyond {full_end_date.strftime('%Y-%m-%d')}. These dates have been excluded for consistency with Advanced Action data.")
+                    
                 # Create pivot tables and reports
                 # Full report
                 affiliate_pivot_full = create_affiliate_pivot(affiliate_df_full)
@@ -251,9 +301,15 @@ def process_dataframe(df, url_column):
     # Make a copy to avoid modifying the original
     df = df.copy()
     
-    # Convert date column to datetime if it exists
-    if 'Date' in df.columns:
-        df['Date'] = pd.to_datetime(df['Date'])
+    # Display the first few rows to understand format
+    st.write("Debug - First few rows of data:")
+    st.dataframe(df.head(2))
+    
+    # Convert date columns to datetime if they exist
+    date_columns = ['Date', 'Created Date', 'Booked Date', 'Purchased Date']
+    for date_col in date_columns:
+        if date_col in df.columns:
+            df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
     
     # Check for variations of URL column names
     url_column_variations = {
@@ -336,10 +392,31 @@ def process_dataframe(df, url_column):
     st.write("Debug - Available columns in processed data:", list(df.columns))
     if 'Net Sales Amount' in df.columns:
         # Try to convert the column to numeric and remove any non-numeric characters
-        df['Net Sales Amount'] = df['Net Sales Amount'].astype(str).str.replace('$', '', regex=False)
-        df['Net Sales Amount'] = df['Net Sales Amount'].astype(str).str.replace(',', '', regex=False)
+        # First, ensure it's a string
+        df['Net Sales Amount'] = df['Net Sales Amount'].astype(str)
+        
+        # Check if values have quotes and commas
+        has_quotes = df['Net Sales Amount'].str.contains('"').any()
+        if has_quotes:
+            st.info("Detected quoted values in Net Sales Amount, removing quotes and commas")
+            # Remove quotes and commas from values
+            df['Net Sales Amount'] = df['Net Sales Amount'].str.replace('"', '')
+            
+        # Now remove currency symbols and commas
+        df['Net Sales Amount'] = df['Net Sales Amount'].str.replace('$', '', regex=False)
+        df['Net Sales Amount'] = df['Net Sales Amount'].str.replace(',', '', regex=False)
         df['Net Sales Amount'] = pd.to_numeric(df['Net Sales Amount'], errors='coerce').fillna(0)
         st.write(f"Debug - Total Net Sales Amount: ${df['Net Sales Amount'].sum():.2f}")
+    
+    # Check Transaction Count column too
+    if 'Transaction Count' in df.columns:
+        # Convert to numeric
+        df['Transaction Count'] = pd.to_numeric(df['Transaction Count'], errors='coerce').fillna(0)
+        st.write(f"Debug - Total Transaction Count: {df['Transaction Count'].sum()}")
+        
+        # Show count of rows with transactions
+        transaction_rows = df[df['Transaction Count'] > 0].shape[0]
+        st.write(f"Debug - Rows with transactions: {transaction_rows}")
     
     return df
 
@@ -371,12 +448,34 @@ def create_affiliate_pivot(df):
             if col == 'Net Sales Amount':
                 df[col] = df[col].astype(str).str.replace('$', '', regex=False)
                 df[col] = df[col].astype(str).str.replace(',', '', regex=False)
+                df[col] = df[col].astype(str).str.replace('"', '', regex=False)
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+    
+    # Check date columns 
+    date_columns = ['Created Date', 'Purchased Date']
+    date_ranges = {}
+    
+    for date_col in date_columns:
+        if date_col in df.columns:
+            date_ranges[date_col] = f"{df[date_col].min()} to {df[date_col].max()}"
     
     # Log data for debugging
     st.write(f"Debug - Total Transaction Count before pivot: {df['Transaction Count'].sum()}")
     st.write(f"Debug - Total Net Sales Amount before pivot: ${df['Net Sales Amount'].sum():.2f}")
-    st.write(f"Debug - Date range in data: {df['Created Date'].min()} to {df['Created Date'].max()}")
+    if date_ranges:
+        for col, range_str in date_ranges.items():
+            st.write(f"Debug - {col} range: {range_str}")
+    
+    # Check if "Purchased Date" exists and filter for May if doing May report
+    if 'Purchased Date' in df.columns:
+        # Count May purchases
+        may_rows = df[df['Purchased Date'].dt.month == 5]
+        st.write(f"Debug - May purchases data sample:")
+        st.dataframe(may_rows[['Purchased Date', 'Transaction Count', 'Net Sales Amount']].head(5))
+        
+        may_sales = may_rows['Transaction Count'].sum()
+        may_revenue = may_rows['Net Sales Amount'].sum()
+        st.write(f"Debug - May purchases: {len(may_rows)} rows, {may_sales} sales, ${may_revenue:.2f} revenue")
     
     # Create pivot table with specific aggregation methods
     pivot = df.groupby('partnerID').agg({
