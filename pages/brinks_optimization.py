@@ -86,10 +86,70 @@ def create_partner_list_df():
     return df
 
 def robust_read_csv(path):
-    try:
-        return pd.read_csv(path, encoding='utf-8')
-    except UnicodeDecodeError:
-        return pd.read_csv(path, encoding='latin-1')
+    """Enhanced CSV file reader that handles problematic files with inconsistent delimiters or quotes"""
+    # Try multiple approaches to read the CSV file
+    for encoding in ['utf-8', 'latin-1', 'cp1252']:
+        try:
+            # First attempt: standard reading with automatic quoting detection
+            return pd.read_csv(path, encoding=encoding)
+        except Exception as e1:
+            try:
+                # Second attempt: force quoted CSV format
+                return pd.read_csv(path, encoding=encoding, quoting=pd.io.common.csv.QUOTE_ALL)
+            except Exception as e2:
+                try:
+                    # Third attempt: with quotechar as double-quote and escapechar
+                    return pd.read_csv(path, encoding=encoding, quotechar='"', escapechar='\\')
+                except Exception as e3:
+                    try:
+                        # Fourth attempt: with quotechar as double-quote and allowing line breaks inside quotes
+                        return pd.read_csv(path, encoding=encoding, quotechar='"', doublequote=True, error_bad_lines=False, warn_bad_lines=True)
+                    except Exception as e4:
+                        try:
+                            # Check if the error might be from deprecated parameters
+                            if "error_bad_lines" in str(e4) or "warn_bad_lines" in str(e4):
+                                # Try with newer pandas parameter names
+                                return pd.read_csv(path, encoding=encoding, quotechar='"', doublequote=True, 
+                                                  on_bad_lines='skip')
+                        except Exception:
+                            pass
+                        
+                        try:
+                            # Fifth attempt: Python's built-in CSV reader with custom processing
+                            import csv
+                            import io
+                            
+                            st.warning("Using fallback CSV parser due to formatting issues")
+                            
+                            # Read file content
+                            with open(path, 'r', encoding=encoding) as file:
+                                content = file.read()
+                            
+                            # Parse using Python's CSV module which is more forgiving
+                            lines = []
+                            reader = csv.reader(io.StringIO(content))
+                            header = next(reader)  # Get header
+                            
+                            for row in reader:
+                                # Pad or truncate rows to match header length
+                                if len(row) < len(header):
+                                    row.extend([''] * (len(header) - len(row)))
+                                elif len(row) > len(header):
+                                    row = row[:len(header)]
+                                lines.append(row)
+                            
+                            # Create DataFrame from processed lines
+                            return pd.DataFrame(lines, columns=header)
+                        except Exception as e5:
+                            if encoding == 'cp1252':  # This was our last attempt
+                                st.error(f"All CSV parsing methods failed. Error details: {str(e5)}")
+                                # Re-raise the most informative error
+                                raise Exception(f"Could not parse CSV file: {str(e1)}\nTried multiple approaches but all failed.")
+                            # Otherwise continue to next encoding
+                            continue
+    
+    # This should never be reached because the last encoding attempt will either return or raise
+    raise Exception("Failed to read CSV file with all available methods")
 
 def show_brinks_optimization():
     """Display the Brinks Optimization Report interface with two file uploaders"""
@@ -175,54 +235,131 @@ def show_brinks_optimization():
                     with open(conversion_path, 'wb') as f:
                         f.write(conversion_file.getvalue())
                     
-                    # Read the files robustly
-                    sales_df = robust_read_csv(sales_path)
-                    conversion_df = robust_read_csv(conversion_path)
+                    # Display file info for debugging
+                    st.info("Analyzing uploaded files...")
                     
-                    # Process the sales and conversion reports
-                    processed_sales_df = process_lead_source_sales(sales_df, partner_list_df)
-                    processed_conversion_df = process_conversion_report(conversion_df)
+                    # Read the first few lines of each file to diagnose issues
+                    def analyze_csv_structure(file_path, file_type):
+                        try:
+                            with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+                                lines = [f.readline().strip() for _ in range(5)]  # Read first 5 lines
+                            
+                            st.write(f"### {file_type} File Structure Analysis")
+                            for i, line in enumerate(lines):
+                                field_count = len(line.split(','))
+                                st.write(f"Line {i+1}: {field_count} fields")
+                                if i < 3:  # Show first 3 lines content
+                                    st.code(line, language="csv")
+                                    
+                            # Check for quotes in file that might indicate CSV format issues
+                            with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+                                content = f.read(5000)  # Read first 5000 chars
+                                has_quotes = '"' in content
+                                has_commas_in_quotes = re.search(r'"[^"]*,[^"]*"', content) is not None
+                                
+                            if has_quotes and has_commas_in_quotes:
+                                st.warning("⚠️ Found commas inside quoted fields, which might cause parsing issues.")
+                                
+                        except Exception as e:
+                            st.error(f"Error analyzing file structure: {str(e)}")
                     
-                    # Create pivot tables
-                    sales_pivot = create_sales_pivot(processed_sales_df)
-                    conversion_pivot = create_conversion_pivot(processed_conversion_df)
+                    # Analyze both files
+                    with st.expander("CSV Structure Analysis"):
+                        analyze_csv_structure(sales_path, "Sales Report")
+                        analyze_csv_structure(conversion_path, "Conversion Report")
                     
-                    # Create final report
-                    final_report = create_final_report(sales_pivot, conversion_pivot, partner_list_df)
+                    try:
+                        # Read the files robustly
+                        st.info("Attempting to parse Sales Report...")
+                        sales_df = robust_read_csv(sales_path)
+                        st.success(f"✅ Sales Report parsed successfully with {sales_df.shape[0]} rows and {sales_df.shape[1]} columns")
+                        
+                        st.info("Attempting to parse Conversion Report...")
+                        conversion_df = robust_read_csv(conversion_path)
+                        st.success(f"✅ Conversion Report parsed successfully with {conversion_df.shape[0]} rows and {conversion_df.shape[1]} columns")
+                        
+                        # Show column names from both files for verification
+                        with st.expander("File Columns"):
+                            st.write("Sales Report Columns:", list(sales_df.columns))
+                            st.write("Conversion Report Columns:", list(conversion_df.columns))
+                        
+                        # Process the sales and conversion reports
+                        processed_sales_df = process_lead_source_sales(sales_df, partner_list_df)
+                        processed_conversion_df = process_conversion_report(conversion_df)
+                        
+                        # Create pivot tables
+                        sales_pivot = create_sales_pivot(processed_sales_df)
+                        conversion_pivot = create_conversion_pivot(processed_conversion_df)
+                        
+                        # Create final report
+                        final_report = create_final_report(sales_pivot, conversion_pivot, partner_list_df)
+                        
+                        # Clean up temporary files and directory
+                        os.unlink(sales_path)
+                        os.unlink(conversion_path)
+                        os.rmdir(temp_dir)
+                        
+                        # Show success message
+                        st.success("Report generated successfully!")
+                        
+                        # Display the final report
+                        st.subheader("Brinks Optimization Report")
+                        st.dataframe(final_report)
+                        
+                        # Create Excel file for download
+                        excel_data = to_excel(processed_sales_df, processed_conversion_df, final_report)
+                        today = datetime.now().strftime("%m.%d")
+                        st.download_button(
+                            label="Download Optimization Report",
+                            data=excel_data,
+                            file_name=f"Brinks Optimization Report {today}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        )
+                        
+                        # Display the data previews in expandable sections
+                        with st.expander("Sales Report Preview"):
+                            st.dataframe(processed_sales_df)
+                        
+                        with st.expander("Conversion Report Preview"):
+                            st.dataframe(processed_conversion_df)
                     
-                    # Clean up temporary files and directory
-                    os.unlink(sales_path)
-                    os.unlink(conversion_path)
-                    os.rmdir(temp_dir)
-                    
-                    # Show success message
-                    st.success("Report generated successfully!")
-                    
-                    # Display the final report
-                    st.subheader("Brinks Optimization Report")
-                    st.dataframe(final_report)
-                    
-                    # Create Excel file for download
-                    excel_data = to_excel(processed_sales_df, processed_conversion_df, final_report)
-                    today = datetime.now().strftime("%m.%d")
-                    st.download_button(
-                        label="Download Optimization Report",
-                        data=excel_data,
-                        file_name=f"Brinks Optimization Report {today}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    )
-                    
-                    # Display the data previews in expandable sections
-                    with st.expander("Sales Report Preview"):
-                        st.dataframe(processed_sales_df)
-                    
-                    with st.expander("Conversion Report Preview"):
-                        st.dataframe(processed_conversion_df)
-                    
-                except Exception as e:
-                    st.error(f"Error generating report: {str(e)}")
-                    import traceback
-                    st.code(traceback.format_exc())
+                    except Exception as e:
+                        st.error(f"Error generating report: {str(e)}")
+                        
+                        # Provide more helpful context about CSV errors
+                        if "Error tokenizing data" in str(e):
+                            st.error("""
+                            CSV parsing error detected. This typically happens when:
+                            1. A field contains a comma but isn't properly quoted
+                            2. The file has inconsistent number of columns across rows
+                            3. There are special characters or line breaks within fields
+                            
+                            Try the following:
+                            - Open the CSV in Excel or Google Sheets and re-save it
+                            - Make sure all text fields with commas are properly quoted
+                            - Ensure consistent column count across all rows
+                            """)
+                            
+                            # Show the lines around the problematic area if possible
+                            error_line_match = re.search(r'line (\d+)', str(e))
+                            if error_line_match:
+                                try:
+                                    error_line = int(error_line_match.group(1))
+                                    st.write(f"Issue detected around line {error_line}. Showing nearby rows:")
+                                    
+                                    with open(sales_path if "sales" in str(e).lower() else conversion_path, 'r', encoding='utf-8', errors='replace') as f:
+                                        lines = f.readlines()
+                                        
+                                    start_line = max(0, error_line - 2)
+                                    end_line = min(len(lines), error_line + 2)
+                                    
+                                    for i in range(start_line, end_line):
+                                        st.code(f"Line {i+1}: {lines[i].strip()}")
+                                except Exception:
+                                    pass
+                        
+                        import traceback
+                        st.code(traceback.format_exc())
         else:
             st.info("Please upload both Sales and Conversion files to generate the report")
     
@@ -278,8 +415,43 @@ def process_lead_source_sales(df, partner_list_df):
     """Process the Lead Source Sales report according to instructions"""
     st.write("Original Lead Source Sales data shape:", df.shape)
     
-    # Sort by Pardot_Partner_ID
-    df = df.sort_values(by="Pardot_Partner_ID")
+    # Check if required columns exist
+    required_columns = ["Pardot_Partner_ID", "First ACD Call Keyword"]
+    missing_columns = [col for col in required_columns if col not in df.columns]
+    
+    if missing_columns:
+        st.error(f"Missing required columns in Sales Report: {', '.join(missing_columns)}")
+        st.write("Available columns:", list(df.columns))
+        
+        # Try to identify potential substitute columns
+        for missing_col in missing_columns:
+            if missing_col == "Pardot_Partner_ID":
+                potential_substitutes = [col for col in df.columns if "partner" in col.lower() or "id" in col.lower()]
+                if potential_substitutes:
+                    st.warning(f"Potential substitutes for 'Pardot_Partner_ID': {potential_substitutes}")
+                    # Use the first potential substitute
+                    df = df.rename(columns={potential_substitutes[0]: "Pardot_Partner_ID"})
+                    st.info(f"Using '{potential_substitutes[0]}' as 'Pardot_Partner_ID'")
+                else:
+                    # Create empty column if no substitute found
+                    df["Pardot_Partner_ID"] = ""
+                    st.warning("Created empty 'Pardot_Partner_ID' column - results may be limited")
+                    
+            elif missing_col == "First ACD Call Keyword":
+                potential_substitutes = [col for col in df.columns if "keyword" in col.lower() or "call" in col.lower()]
+                if potential_substitutes:
+                    st.warning(f"Potential substitutes for 'First ACD Call Keyword': {potential_substitutes}")
+                    # Use the first potential substitute
+                    df = df.rename(columns={potential_substitutes[0]: "First ACD Call Keyword"})
+                    st.info(f"Using '{potential_substitutes[0]}' as 'First ACD Call Keyword'")
+                else:
+                    # Create empty column if no substitute found
+                    df["First ACD Call Keyword"] = ""
+                    st.warning("Created empty 'First ACD Call Keyword' column - results may be limited")
+    
+    # Sort by Pardot_Partner_ID (handle cases where it might be empty)
+    if "Pardot_Partner_ID" in df.columns:
+        df = df.sort_values(by="Pardot_Partner_ID", na_position='last')
     
     # Create a mapping from First ACD Call Keyword to Affiliate ID
     keyword_to_id_map = {}
@@ -297,6 +469,11 @@ def process_lead_source_sales(df, partner_list_df):
     
     # Clean up all Pardot_Partner_ID values
     df['Pardot_Partner_ID'] = df['Pardot_Partner_ID'].apply(clean_pardot_partner_id)
+    
+    # Analyze post-processing results
+    empty_partner_ids = df['Pardot_Partner_ID'].isna().sum()
+    if empty_partner_ids > 0:
+        st.warning(f"Found {empty_partner_ids} rows with empty Partner IDs after processing")
     
     st.write("Processed Lead Source Sales data shape:", df.shape)
     st.write("Sample of processed data:")
@@ -319,15 +496,80 @@ def process_conversion_report(df):
     """Process the Conversion Report according to instructions"""
     st.write("Original Conversion Report data shape:", df.shape)
     
+    # Check if required columns exist
+    required_columns = ["Advertiser ID", "Sub ID"]
+    missing_columns = [col for col in required_columns if col not in df.columns]
+    
+    if missing_columns:
+        st.error(f"Missing required columns in Conversion Report: {', '.join(missing_columns)}")
+        st.write("Available columns:", list(df.columns))
+        
+        # Try to identify potential substitute columns
+        for missing_col in missing_columns:
+            if missing_col == "Advertiser ID":
+                potential_substitutes = [col for col in df.columns if "advertiser" in col.lower() or "id" in col.lower()]
+                if potential_substitutes:
+                    st.warning(f"Potential substitutes for 'Advertiser ID': {potential_substitutes}")
+                    # Use the first potential substitute
+                    df = df.rename(columns={potential_substitutes[0]: "Advertiser ID"})
+                    st.info(f"Using '{potential_substitutes[0]}' as 'Advertiser ID'")
+                else:
+                    # Create empty column if no substitute found
+                    df["Advertiser ID"] = ""
+                    st.warning("Created empty 'Advertiser ID' column - results may be limited")
+                    
+            elif missing_col == "Sub ID":
+                potential_substitutes = [col for col in df.columns if "sub" in col.lower() or "id" in col.lower()]
+                if potential_substitutes:
+                    st.warning(f"Potential substitutes for 'Sub ID': {potential_substitutes}")
+                    # Use the first potential substitute
+                    df = df.rename(columns={potential_substitutes[0]: "Sub ID"})
+                    st.info(f"Using '{potential_substitutes[0]}' as 'Sub ID'")
+                else:
+                    # Create empty column if no substitute found
+                    df["Sub ID"] = ""
+                    st.warning("Created empty 'Sub ID' column - results may be limited")
+    
+    # Check for required numeric columns
+    required_numeric_columns = ["Lead ID", "Paid", "Received"]
+    missing_numeric_columns = [col for col in required_numeric_columns if col not in df.columns]
+    
+    if missing_numeric_columns:
+        st.error(f"Missing required numeric columns in Conversion Report: {', '.join(missing_numeric_columns)}")
+        
+        # Create missing columns with zeros
+        for col in missing_numeric_columns:
+            df[col] = 0
+            st.warning(f"Created '{col}' column with zeros - results may be limited")
+    
+    # Ensure numeric columns are numeric
+    for col in required_numeric_columns:
+        if col in df.columns:
+            # Try to convert string values (remove currency symbols, commas, etc.)
+            if df[col].dtype == object:  # If it's a string or mixed type
+                df[col] = df[col].astype(str).str.replace('$', '', regex=False)
+                df[col] = df[col].astype(str).str.replace(',', '', regex=False)
+                df[col] = df[col].astype(str).str.replace('"', '', regex=False)
+            
+            # Convert to numeric
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+    
     # Create pid_subid column by concatenating Advertiser ID and Sub ID
-    df['pid_subid'] = df.apply(lambda row: f"{row['Advertiser ID']}_{row['Sub ID']}" if pd.notna(row['Sub ID']) else f"{row['Advertiser ID']}_", axis=1)
+    df['pid_subid'] = df.apply(
+        lambda row: f"{row['Advertiser ID']}_{row['Sub ID']}" if pd.notna(row['Sub ID']) and str(row['Sub ID']).strip() != '' 
+        else f"{row['Advertiser ID']}_", 
+        axis=1
+    )
     
     # Clean up the pid_subid column using the same rules
     df['pid_subid'] = df['pid_subid'].apply(clean_pardot_partner_id)
     
     st.write("Processed Conversion Report data shape:", df.shape)
     st.write("Sample of processed data:")
-    st.dataframe(df[['Advertiser ID', 'Sub ID', 'pid_subid']].head(10))
+    
+    display_columns = ['Advertiser ID', 'Sub ID', 'pid_subid']
+    display_columns = [col for col in display_columns if col in df.columns]
+    st.dataframe(df[display_columns].head(10))
     
     return df
 
