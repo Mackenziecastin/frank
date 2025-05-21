@@ -306,8 +306,40 @@ def process_dataframe(df, url_column):
     # Replace any partnerID that is just "_" with "Unattributed"
     df.loc[df['partnerID'] == "_", 'partnerID'] = "Unattributed"
     
+    # Ensure Net Sales Amount is recognized with different column name variations
+    net_sales_variations = ['Net Sales Amount', 'NetSalesAmount', 'Net_Sales_Amount', 'Net Sales', 'Revenue']
+    found_net_sales_column = None
+    
+    for col in df.columns:
+        # Check if column name matches any variation (case insensitive)
+        for var in net_sales_variations:
+            if col.lower() == var.lower():
+                found_net_sales_column = col
+                break
+        if found_net_sales_column:
+            break
+            
+    # If a Net Sales Amount column is found with a different name, standardize it
+    if found_net_sales_column and found_net_sales_column != 'Net Sales Amount':
+        df['Net Sales Amount'] = df[found_net_sales_column]
+        st.info(f"Found revenue data in column '{found_net_sales_column}' and mapped it to 'Net Sales Amount'")
+    
+    # If Net Sales Amount column doesn't exist but there's a Revenue column, use that
+    if 'Net Sales Amount' not in df.columns and 'Revenue' in df.columns:
+        df['Net Sales Amount'] = df['Revenue']
+        st.info("Using 'Revenue' column as 'Net Sales Amount'")
+        
     # Drop the temporary column
     df = df.drop('After_3D', axis=1)
+    
+    # Display column information for debugging
+    st.write("Debug - Available columns in processed data:", list(df.columns))
+    if 'Net Sales Amount' in df.columns:
+        # Try to convert the column to numeric and remove any non-numeric characters
+        df['Net Sales Amount'] = df['Net Sales Amount'].astype(str).str.replace('$', '', regex=False)
+        df['Net Sales Amount'] = df['Net Sales Amount'].astype(str).str.replace(',', '', regex=False)
+        df['Net Sales Amount'] = pd.to_numeric(df['Net Sales Amount'], errors='coerce').fillna(0)
+        st.write(f"Debug - Total Net Sales Amount: ${df['Net Sales Amount'].sum():.2f}")
     
     return df
 
@@ -326,14 +358,24 @@ def create_affiliate_pivot(df):
     # Convert Transaction Count to numeric, treating any non-numeric values as 0
     df['Transaction Count'] = pd.to_numeric(df['Transaction Count'], errors='coerce').fillna(0)
     
+    # Make sure Net Sales Amount column exists, create it with zeros if not
+    if 'Net Sales Amount' not in df.columns:
+        st.warning("'Net Sales Amount' column not found in affiliate data. Creating it with zeros.")
+        df['Net Sales Amount'] = 0
+    
     # Ensure other numeric columns are properly converted if they exist
     numeric_cols = ['Booked Count', 'Net Sales Amount']
     for col in numeric_cols:
         if col in df.columns:
+            # Clean currency indicators if present
+            if col == 'Net Sales Amount':
+                df[col] = df[col].astype(str).str.replace('$', '', regex=False)
+                df[col] = df[col].astype(str).str.replace(',', '', regex=False)
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
     
     # Log data for debugging
     st.write(f"Debug - Total Transaction Count before pivot: {df['Transaction Count'].sum()}")
+    st.write(f"Debug - Total Net Sales Amount before pivot: ${df['Net Sales Amount'].sum():.2f}")
     st.write(f"Debug - Date range in data: {df['Created Date'].min()} to {df['Created Date'].max()}")
     
     # Create pivot table with specific aggregation methods
@@ -345,6 +387,7 @@ def create_affiliate_pivot(df):
     
     # Log pivot results for debugging
     st.write(f"Debug - Total Transaction Count after pivot: {pivot['Transaction Count'].sum()}")
+    st.write(f"Debug - Total Net Sales Amount after pivot: ${pivot['Net Sales Amount'].sum():.2f}")
     
     return pivot
 
@@ -388,21 +431,56 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
     5. Sales = sum of transaction count from Cleaned_Affliate_Leads_QA pivot table
     6. Revenue = sum of net sales amount from Cleaned_Affliate_Leads_QA pivot table
     """
+    # Print debugging info about affiliate pivot
+    st.write("Debug - Affiliate pivot columns:", list(affiliate_pivot.columns))
+    if 'Net Sales Amount' in affiliate_pivot.columns:
+        st.write(f"Debug - Total Net Sales Amount in affiliate pivot: ${affiliate_pivot['Net Sales Amount'].sum():.2f}")
+    
     # First, rename the affiliate pivot columns for clarity
     renamed_affiliate = affiliate_pivot.copy()
-    if 'Transaction Count' in renamed_affiliate.columns:
+    
+    # Check for required columns
+    has_transaction_count = 'Transaction Count' in renamed_affiliate.columns
+    has_booked_count = 'Booked Count' in renamed_affiliate.columns
+    has_net_sales = 'Net Sales Amount' in renamed_affiliate.columns
+    
+    if has_transaction_count and has_booked_count and has_net_sales:
+        st.success("All required columns found in affiliate data")
         renamed_affiliate = renamed_affiliate.rename(columns={
             'Booked Count': 'Bookings',
             'Transaction Count': 'Sales',
             'Net Sales Amount': 'Revenue'
         })
     else:
-        st.warning("Expected columns not found in affiliate data. Using default column names.")
-        renamed_affiliate = renamed_affiliate.rename(columns={
-            renamed_affiliate.columns[1]: 'Bookings',
-            renamed_affiliate.columns[2]: 'Sales',
-            renamed_affiliate.columns[3]: 'Revenue'
-        })
+        st.warning(f"Some expected columns not found in affiliate data. Found: Transaction Count={has_transaction_count}, Booked Count={has_booked_count}, Net Sales Amount={has_net_sales}")
+        # Try to use available columns or create defaults
+        column_mapping = {}
+        if has_booked_count:
+            column_mapping['Booked Count'] = 'Bookings'
+        if has_transaction_count:
+            column_mapping['Transaction Count'] = 'Sales'
+        if has_net_sales:
+            column_mapping['Net Sales Amount'] = 'Revenue'
+            
+        # Apply the mapping if we have any
+        if column_mapping:
+            renamed_affiliate = renamed_affiliate.rename(columns=column_mapping)
+        else:
+            # Fallback to using column positions if names don't match
+            st.warning("Using column positions since column names don't match expected values")
+            column_mapping = {}
+            if len(renamed_affiliate.columns) >= 2:
+                column_mapping[renamed_affiliate.columns[1]] = 'Bookings'
+            if len(renamed_affiliate.columns) >= 3:
+                column_mapping[renamed_affiliate.columns[2]] = 'Sales'
+            if len(renamed_affiliate.columns) >= 4:
+                column_mapping[renamed_affiliate.columns[3]] = 'Revenue'
+            renamed_affiliate = renamed_affiliate.rename(columns=column_mapping)
+    
+    # Display the renamed affiliate data for debugging
+    st.write("Debug - Renamed affiliate columns:", list(renamed_affiliate.columns))
+    if 'Revenue' in renamed_affiliate.columns:
+        st.write(f"Debug - Total Revenue in renamed affiliate: ${renamed_affiliate['Revenue'].sum():.2f}")
     
     # Merge the pivot tables
     merged_df = pd.merge(
@@ -412,9 +490,26 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
         how='outer'
     ).fillna(0)
     
+    # Debug merged dataframe
+    st.write("Debug - Merged dataframe columns:", list(merged_df.columns))
+    
+    # Ensure all required columns exist
+    required_columns = ['Leads', 'Spend', 'Bookings', 'Sales', 'Revenue']
+    for col in required_columns:
+        if col not in merged_df.columns:
+            st.warning(f"Creating missing column '{col}' with zeros")
+            merged_df[col] = 0
+    
     # Ensure all numeric columns are properly converted
-    for col in ['Leads', 'Spend', 'Bookings', 'Sales', 'Revenue']:
+    for col in required_columns:
+        # For Revenue, make sure we strip any currency symbols
+        if col == 'Revenue':
+            merged_df[col] = merged_df[col].astype(str).str.replace('$', '', regex=False)
+            merged_df[col] = merged_df[col].astype(str).str.replace(',', '', regex=False)
         merged_df[col] = pd.to_numeric(merged_df[col], errors='coerce').fillna(0)
+    
+    # Show total revenue after conversion
+    st.write(f"Debug - Total Revenue after numeric conversion: ${merged_df['Revenue'].sum():.2f}")
     
     # Remove rows with all zeros
     merged_df = merged_df[~((merged_df['Leads'] == 0) & 
@@ -430,6 +525,9 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
     
     # Clean up infinity values
     merged_df = merged_df.replace([np.inf, -np.inf], 0)
+    
+    # Final check on revenue total
+    st.write(f"Debug - Final Revenue total in optimization report: ${merged_df['Revenue'].sum():.2f}")
     
     # Add VLOOKUP data if partner list is provided
     if partner_list is not None:
