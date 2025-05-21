@@ -11,11 +11,11 @@ import uuid
 import requests
 import io
 import tempfile
+import importlib.util
 import importlib
 
 # Custom modules
-from adt_pixel_firing import process_adt_report 
-# For other pages, we'll import dynamically to avoid caching issues
+from adt_pixel_firing import process_adt_report
 
 st.set_page_config(page_title="Partner Optimization Report Generator", layout="wide")
 
@@ -557,6 +557,41 @@ def setup_logging():
     )
     return log_stream
 
+def load_module_reliably(module_path):
+    """
+    Load a Python module bypassing the import cache
+    
+    This ensures we always get the latest version of the module,
+    which is essential when making frequent changes during development.
+    """
+    try:
+        # Get the absolute path to the module
+        # First check if it exists in the /pages directory
+        if os.path.exists(f"pages/{module_path}.py"):
+            file_path = os.path.abspath(f"pages/{module_path}.py")
+        else:
+            file_path = os.path.abspath(f"{module_path}.py")
+        
+        # Generate a unique module name to avoid cache conflicts
+        module_name = f"{module_path}_{uuid.uuid4().hex[:8]}"
+        
+        # Load the module specification
+        spec = importlib.util.spec_from_file_location(module_name, file_path)
+        if spec is None:
+            raise ImportError(f"Could not find module: {module_path}")
+        
+        # Create the module
+        module = importlib.util.module_from_spec(spec)
+        
+        # Execute the module
+        spec.loader.exec_module(module)
+        
+        return module
+    except Exception as e:
+        st.error(f"Error loading module {module_path}: {str(e)}")
+        st.error(f"This is likely due to a syntax error in your module file.")
+        raise
+
 # Main function that sets up navigation and page routing
 def main():
     # Create the navigation
@@ -566,17 +601,28 @@ def main():
     if page == "Frank (LaserAway)":
         show_main_page()
     elif page == "Bob (ADT)":
-        # Import Bob's analysis module
-        import pages.bob_analysis
-        # Call the function
-        pages.bob_analysis.show_bob_analysis()
+        # Import Bob's analysis dynamically
+        bob_module = load_module_reliably("bob_analysis")
+        bob_module.show_bob_analysis()
     elif page == "ADT Pixel Firing":
         show_adt_pixel()
     elif page == "Brinks Optimization Report":
-        # Import Brinks module directly
-        import pages.brinks_optimization
-        # Call the function
-        pages.brinks_optimization.show_brinks_optimization()
+        try:
+            # Import Brinks module dynamically
+            brinks_module = load_module_reliably("brinks_optimization")
+            brinks_module.show_brinks_optimization()
+        except Exception as e:
+            st.error("Failed to load the Brinks Optimization Report page.")
+            st.error("If you've made recent changes to the code, there might be a syntax error.")
+            st.error(f"Error details: {str(e)}")
+            
+            # Provide recovery instructions
+            st.warning("To fix this issue, please check your brinks_optimization.py file for syntax errors.")
+            st.warning("Common issues include:")
+            st.warning("- Missing parentheses or quotes")
+            st.warning("- Indentation errors") 
+            st.warning("- Using undefined variables")
+            st.warning("- Incorrect function parameters")
 
 # This is outside the main function
 if __name__ == "__main__":
