@@ -103,17 +103,19 @@ def robust_read_csv(path):
                 except Exception as e3:
                     try:
                         # Fourth attempt: with quotechar as double-quote and allowing line breaks inside quotes
-                        return pd.read_csv(path, encoding=encoding, quotechar='"', doublequote=True, error_bad_lines=False, warn_bad_lines=True)
-                    except Exception as e4:
                         try:
-                            # Check if the error might be from deprecated parameters
-                            if "error_bad_lines" in str(e4) or "warn_bad_lines" in str(e4):
-                                # Try with newer pandas parameter names
+                            # Try with old parameter names first
+                            return pd.read_csv(path, encoding=encoding, quotechar='"', doublequote=True, 
+                                              error_bad_lines=False, warn_bad_lines=True)
+                        except Exception as param_error:
+                            # If it fails due to deprecated parameters, try with newer names
+                            if "error_bad_lines" in str(param_error) or "warn_bad_lines" in str(param_error):
                                 return pd.read_csv(path, encoding=encoding, quotechar='"', doublequote=True, 
                                                   on_bad_lines='skip')
-                        except Exception:
-                            pass
-                        
+                            else:
+                                # Re-raise if it's not a parameter issue
+                                raise
+                    except Exception as e4:
                         try:
                             # Fifth attempt: Python's built-in CSV reader with custom processing
                             import csv
