@@ -97,16 +97,50 @@ def show_brinks_optimization():
         st.title("Brinks Optimization Report")
         
         # Display this message so we know we're seeing the latest version
-        st.write("Version: 2023-05-11 - Robust Against Session State Issues")
-        
-        # Create partner list with TFN data automatically
-        partner_list_df = create_partner_list_df()
+        st.write("Version: 2023-05-15 - With Custom TFN Mapping Upload Option")
         
         st.write("""
         This tool processes Brinks marketing data files and generates optimization reports.
-        The TFN sheet data is already built into the tool, so you don't need to upload it separately.
-        Upload your Brinks Sales Report and Conversion Report (CSV format) to begin.
+        Upload your Brinks Sales Report, Conversion Report, and optionally your own TFN mapping file to begin.
         """)
+        
+        # Option to use built-in TFN mapping or upload custom
+        use_custom_tfn = st.checkbox("Upload my own TFN mapping file", value=False)
+        
+        if use_custom_tfn:
+            tfn_file = st.file_uploader("Upload TFN Mapping File (CSV)", 
+                                       type=['csv'], 
+                                       key='tfn_mapping_file',
+                                       help="CSV file with Affiliate ID and TFN columns")
+            if tfn_file is not None:
+                try:
+                    # Read the custom TFN mapping file
+                    tfn_df = pd.read_csv(tfn_file)
+                    # Validate columns
+                    required_cols = ['Affiliate ID', 'TFN']
+                    if all(col in tfn_df.columns for col in required_cols):
+                        st.success("✅ Custom TFN mapping file uploaded successfully")
+                        partner_list_df = tfn_df
+                    else:
+                        st.error(f"The TFN mapping file must contain these columns: {', '.join(required_cols)}")
+                        st.info("Using built-in TFN mapping as fallback")
+                        partner_list_df = create_partner_list_df()
+                except Exception as e:
+                    st.error(f"Error reading TFN mapping file: {str(e)}")
+                    st.info("Using built-in TFN mapping as fallback")
+                    partner_list_df = create_partner_list_df()
+            else:
+                st.info("Please upload a TFN mapping file or uncheck the box to use the built-in mapping")
+                partner_list_df = create_partner_list_df()
+        else:
+            # Use the built-in TFN data
+            partner_list_df = create_partner_list_df()
+            
+        # Display TFN mapping in a collapsible section
+        with st.expander("View Current TFN to Affiliate ID Mapping"):
+            st.dataframe(partner_list_df[['Affiliate ID', 'Affiliate Name', 'TFN', 'Account Manager Name']] 
+                         if 'Affiliate Name' in partner_list_df.columns and 'Account Manager Name' in partner_list_df.columns
+                         else partner_list_df[['Affiliate ID', 'TFN']])
         
         # First file uploader for Sales Report
         col1, col2 = st.columns(2)
@@ -125,10 +159,6 @@ def show_brinks_optimization():
                                               key='brinks_conversion_report')
             if conversion_file is not None:
                 st.success("✅ Conversion Report uploaded")
-        
-        # Display TFN mapping in a collapsible section
-        with st.expander("View TFN to Affiliate ID Mapping"):
-            st.dataframe(partner_list_df[['Affiliate ID', 'Affiliate Name', 'TFN', 'Account Manager Name']])
         
         # Only show the button if both files are uploaded
         if sales_file is not None and conversion_file is not None:
@@ -194,7 +224,7 @@ def show_brinks_optimization():
                     import traceback
                     st.code(traceback.format_exc())
         else:
-            st.info("Please upload both files to generate the report")
+            st.info("Please upload both Sales and Conversion files to generate the report")
     
     except Exception as e:
         st.error(f"Error loading Brinks Optimization Report interface: {str(e)}")
