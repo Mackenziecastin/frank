@@ -7,7 +7,6 @@ import io
 import uuid
 import re
 import subprocess
-import chardet
 
 # Set page config first
 st.set_page_config(page_title="ADT Pixel Firing", layout="wide")
@@ -60,7 +59,7 @@ try:
     st.sidebar.success("✓ Successfully imported chardet")
 except ImportError:
     st.warning("Chardet not found. Attempting to install...")
-    if install_package("chardet==5.1.0"):
+    if install_package("chardet==5.2.0"):
         try:
             import chardet
             st.sidebar.success("✓ Successfully installed and imported chardet")
@@ -78,6 +77,7 @@ Python Version: {sys.version}
 Working Directory: {os.getcwd()}
 Python Path: {sys.path}
 Pandas Version: {pd.__version__ if 'pd' in locals() else 'Not installed'}
+Chardet Version: {chardet.__version__ if 'chardet' in locals() else 'Not installed'}
 """)
 
 def setup_logging():
@@ -86,7 +86,8 @@ def setup_logging():
     logging.basicConfig(
         stream=log_stream,
         level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s'
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        force=True
     )
     return log_stream
 
@@ -192,89 +193,128 @@ def fire_pixel(transaction_id, install_method, sale_date):
         logging.error(f"Error firing pixel for {transaction_id}: {str(e)}")
         return False
 
-def detect_encoding(file_content):
+def safe_read_csv_file(uploaded_file):
     """
-    Use chardet to detect the file encoding
+    Safely read a CSV file with robust encoding detection and handling
     """
-    result = chardet.detect(file_content)
-    encoding = result['encoding']
-    confidence = result['confidence']
-    logging.info(f"Detected encoding: {encoding} with confidence: {confidence}")
-    return encoding, confidence
+    try:
+        # Get the raw file content as bytes
+        file_bytes = uploaded_file.getvalue()
+        
+        st.write(f"File size: {len(file_bytes)} bytes")
+        
+        # Detect encoding using chardet
+        encoding_result = chardet.detect(file_bytes)
+        detected_encoding = encoding_result['encoding']
+        confidence = encoding_result['confidence']
+        
+        st.write(f"Detected encoding: {detected_encoding} (confidence: {confidence:.2%})")
+        
+        # List of encodings to try in order
+        encodings_to_try = []
+        
+        # Add detected encoding if confidence is reasonable
+        if detected_encoding and confidence > 0.5:
+            encodings_to_try.append(detected_encoding)
+        
+        # Add common encodings
+        common_encodings = [
+            'utf-8', 'utf-8-sig', 'latin1', 'cp1252', 'iso-8859-1', 
+            'windows-1252', 'ascii', 'utf-16', 'utf-16-le', 'utf-16-be'
+        ]
+        
+        for enc in common_encodings:
+            if enc not in encodings_to_try:
+                encodings_to_try.append(enc)
+        
+        # Try each encoding
+        for encoding in encodings_to_try:
+            try:
+                st.write(f"Attempting to decode with {encoding}...")
+                
+                # Decode the bytes to string
+                if encoding.startswith('utf-16'):
+                    # UTF-16 might have BOM issues, try both with and without BOM handling
+                    try:
+                        text_content = file_bytes.decode(encoding)
+                    except UnicodeDecodeError:
+                        # Try without BOM
+                        if file_bytes.startswith(b'\xff\xfe') or file_bytes.startswith(b'\xfe\xff'):
+                            text_content = file_bytes[2:].decode(encoding)
+                        else:
+                            raise
+                else:
+                    text_content = file_bytes.decode(encoding)
+                
+                # Create a StringIO object from the decoded text
+                text_io = io.StringIO(text_content)
+                
+                # Try to read with pandas
+                df = pd.read_csv(text_io, on_bad_lines='warn', encoding=None)
+                
+                st.success(f"Successfully read file using {encoding} encoding!")
+                logging.info(f"File read successfully with {encoding} encoding")
+                
+                return df, encoding
+                
+            except (UnicodeDecodeError, UnicodeError) as e:
+                st.write(f"Unicode error with {encoding}: {str(e)[:100]}...")
+                continue
+            except Exception as e:
+                st.write(f"Other error with {encoding}: {str(e)[:100]}...")
+                continue
+        
+        # If all encodings fail, try with error replacement
+        st.write("All standard encodings failed. Trying with character replacement...")
+        
+        try:
+            # Try UTF-8 with replacement of bad characters
+            text_content = file_bytes.decode('utf-8', errors='replace')
+            text_io = io.StringIO(text_content)
+            df = pd.read_csv(text_io, on_bad_lines='warn', encoding=None)
+            
+            st.warning("File read with character replacement. Some characters may be corrupted.")
+            logging.warning("File read with character replacement")
+            
+            return df, "utf-8 (with replacement)"
+            
+        except Exception as e:
+            st.error(f"Final attempt failed: {str(e)}")
+            raise Exception(f"Could not read the file with any encoding method. Error: {str(e)}")
+    
+    except Exception as e:
+        logging.error(f"Error in safe_read_csv_file: {str(e)}")
+        raise
 
 def process_adt_report(uploaded_file):
     """
     Process the ADT report and fire pixels
     """
+    log_stream = None
     try:
         # Set up logging
         log_stream = setup_logging()
         
         st.write("=== ADT Pixel Firing Process Started ===")
         
-        # Read the file content to detect encoding
-        file_content = uploaded_file.getvalue()
-        detected_encoding, confidence = detect_encoding(file_content)
+        # Safely read the CSV file
+        df, encoding_used = safe_read_csv_file(uploaded_file)
         
-        st.write(f"Detected file encoding: {detected_encoding} (confidence: {confidence:.2f})")
+        st.write(f"File loaded successfully using: {encoding_used}")
+        st.write(f"DataFrame shape: {df.shape}")
         
-        # Try with detected encoding first
-        encodings = [detected_encoding] if detected_encoding else []
-        # Add fallback encodings
-        encodings.extend(['utf-8', 'latin1', 'cp1252', 'iso-8859-1', 'utf-16', 'utf-16-le', 'utf-16-be'])
-        
-        # Make encodings unique
-        encodings = list(dict.fromkeys(encodings))
-        
-        df = None
-        successful_encoding = None
-        
-        for encoding in encodings:
-            try:
-                st.write(f"Trying to read file with {encoding} encoding...")
-                # Reset file pointer to the beginning
-                uploaded_file.seek(0)
-                
-                # Try to read with pandas
-                df = pd.read_csv(uploaded_file, encoding=encoding, on_bad_lines='warn')
-                
-                successful_encoding = encoding
-                st.write(f"Successfully read file with {encoding} encoding!")
-                break
-            except UnicodeDecodeError as e:
-                st.write(f"Failed to read with {encoding} encoding: {str(e)}")
-                continue
-            except Exception as e:
-                st.write(f"Error with {encoding} encoding: {str(e)}")
-                continue
-        
-        if df is None:
-            # Last resort: try reading with errors='replace'
-            st.write("Trying one last approach: reading with errors='replace'...")
-            uploaded_file.seek(0)
-            
-            try:
-                # Read the file as bytes
-                content = uploaded_file.read()
-                # Decode with replacement of invalid characters
-                text_content = content.decode('utf-8', errors='replace')
-                # Create StringIO object from the decoded content
-                string_io = io.StringIO(text_content)
-                # Read CSV from StringIO
-                df = pd.read_csv(string_io)
-                successful_encoding = "utf-8 with replacement"
-                st.write("Successfully read file with character replacement!")
-            except Exception as e:
-                st.error(f"All encoding attempts failed: {str(e)}")
-                raise Exception("Could not read the file with any of the supported encodings. The file may be corrupted or in an unsupported format.")
-        
-        st.success(f"File successfully loaded using {successful_encoding} encoding.")
+        # Display first few columns to verify data loaded correctly
+        st.write("First few column names:")
+        st.write(list(df.columns[:10]))
         
         # Check if required columns exist
         required_columns = ['Sale_Date', 'Ln_of_Busn', 'DNIS_BUSN_SEG_CD', 'Lead_DNIS', 'Ordr_Type', 'INSTALL_METHOD']
         missing_columns = [col for col in required_columns if col not in df.columns]
         
         if missing_columns:
+            st.error(f"Missing required columns: {', '.join(missing_columns)}")
+            st.write("Available columns:")
+            st.write(list(df.columns))
             raise Exception(f"Missing required columns in the CSV file: {', '.join(missing_columns)}")
         
         # Clean and filter the data
@@ -310,13 +350,15 @@ def process_adt_report(uploaded_file):
         
         # Show logs
         with st.expander("View Processing Logs"):
-            st.text(log_stream.getvalue())
+            if log_stream:
+                st.text(log_stream.getvalue())
         
     except Exception as e:
         st.error(f"Error processing ADT report: {str(e)}")
         st.error("Check the logs below for more details")
         with st.expander("View Error Logs"):
-            st.text(log_stream.getvalue())
+            if log_stream:
+                st.text(log_stream.getvalue())
 
 def main():
     st.title("ADT Pixel Firing")
