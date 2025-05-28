@@ -7,6 +7,7 @@ import io
 import uuid
 import re
 import subprocess
+import chardet
 
 # Set page config first
 st.set_page_config(page_title="ADT Pixel Firing", layout="wide")
@@ -51,6 +52,23 @@ except ImportError:
             st.stop()
     else:
         st.error("Failed to install requests. Please contact support.")
+        st.stop()
+
+# Try importing chardet, install if not available
+try:
+    import chardet
+    st.sidebar.success("✓ Successfully imported chardet")
+except ImportError:
+    st.warning("Chardet not found. Attempting to install...")
+    if install_package("chardet==5.1.0"):
+        try:
+            import chardet
+            st.sidebar.success("✓ Successfully installed and imported chardet")
+        except ImportError as e:
+            st.error(f"Failed to import chardet even after installation: {str(e)}")
+            st.stop()
+    else:
+        st.error("Failed to install chardet. Please contact support.")
         st.stop()
 
 # Display Python environment information
@@ -174,6 +192,16 @@ def fire_pixel(transaction_id, install_method, sale_date):
         logging.error(f"Error firing pixel for {transaction_id}: {str(e)}")
         return False
 
+def detect_encoding(file_content):
+    """
+    Use chardet to detect the file encoding
+    """
+    result = chardet.detect(file_content)
+    encoding = result['encoding']
+    confidence = result['confidence']
+    logging.info(f"Detected encoding: {encoding} with confidence: {confidence}")
+    return encoding, confidence
+
 def process_adt_report(uploaded_file):
     """
     Process the ADT report and fire pixels
@@ -184,22 +212,70 @@ def process_adt_report(uploaded_file):
         
         st.write("=== ADT Pixel Firing Process Started ===")
         
-        # Try different encodings
-        encodings = ['utf-8', 'latin1', 'cp1252', 'iso-8859-1']
+        # Read the file content to detect encoding
+        file_content = uploaded_file.getvalue()
+        detected_encoding, confidence = detect_encoding(file_content)
+        
+        st.write(f"Detected file encoding: {detected_encoding} (confidence: {confidence:.2f})")
+        
+        # Try with detected encoding first
+        encodings = [detected_encoding] if detected_encoding else []
+        # Add fallback encodings
+        encodings.extend(['utf-8', 'latin1', 'cp1252', 'iso-8859-1', 'utf-16', 'utf-16-le', 'utf-16-be'])
+        
+        # Make encodings unique
+        encodings = list(dict.fromkeys(encodings))
+        
         df = None
+        successful_encoding = None
         
         for encoding in encodings:
             try:
                 st.write(f"Trying to read file with {encoding} encoding...")
-                df = pd.read_csv(uploaded_file, encoding=encoding)
+                # Reset file pointer to the beginning
+                uploaded_file.seek(0)
+                
+                # Try to read with pandas
+                df = pd.read_csv(uploaded_file, encoding=encoding, on_bad_lines='warn')
+                
+                successful_encoding = encoding
                 st.write(f"Successfully read file with {encoding} encoding!")
                 break
-            except UnicodeDecodeError:
-                st.write(f"Failed to read with {encoding} encoding, trying next...")
+            except UnicodeDecodeError as e:
+                st.write(f"Failed to read with {encoding} encoding: {str(e)}")
+                continue
+            except Exception as e:
+                st.write(f"Error with {encoding} encoding: {str(e)}")
                 continue
         
         if df is None:
-            raise Exception("Could not read the file with any of the supported encodings")
+            # Last resort: try reading with errors='replace'
+            st.write("Trying one last approach: reading with errors='replace'...")
+            uploaded_file.seek(0)
+            
+            try:
+                # Read the file as bytes
+                content = uploaded_file.read()
+                # Decode with replacement of invalid characters
+                text_content = content.decode('utf-8', errors='replace')
+                # Create StringIO object from the decoded content
+                string_io = io.StringIO(text_content)
+                # Read CSV from StringIO
+                df = pd.read_csv(string_io)
+                successful_encoding = "utf-8 with replacement"
+                st.write("Successfully read file with character replacement!")
+            except Exception as e:
+                st.error(f"All encoding attempts failed: {str(e)}")
+                raise Exception("Could not read the file with any of the supported encodings. The file may be corrupted or in an unsupported format.")
+        
+        st.success(f"File successfully loaded using {successful_encoding} encoding.")
+        
+        # Check if required columns exist
+        required_columns = ['Sale_Date', 'Ln_of_Busn', 'DNIS_BUSN_SEG_CD', 'Lead_DNIS', 'Ordr_Type', 'INSTALL_METHOD']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        
+        if missing_columns:
+            raise Exception(f"Missing required columns in the CSV file: {', '.join(missing_columns)}")
         
         # Clean and filter the data
         filtered_df = clean_data(df, uploaded_file.name)
