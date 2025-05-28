@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import logging
 import uuid
 import re
+import chardet
 
 # Set up logging first
 log_filename = f'adt_pixel_firing_{datetime.now().strftime("%Y%m%d")}.log'
@@ -39,10 +40,20 @@ except ImportError as e:
 
 try:
     import requests
-    logging.info("Successfully imported all other required packages")
+    logging.info("Successfully imported requests")
 except ImportError as e:
-    logging.error(f"Failed to import required package: {str(e)}")
-    print(f"Error: Failed to import required package: {str(e)}")
+    logging.error(f"Failed to import requests: {str(e)}")
+    print(f"Error: Failed to import requests. Please ensure it's installed: {str(e)}")
+    print("Try running: pip install requests")
+    sys.exit(1)
+
+try:
+    import chardet
+    logging.info("Successfully imported chardet")
+except ImportError as e:
+    logging.error(f"Failed to import chardet: {str(e)}")
+    print(f"Error: Failed to import chardet. Please ensure it's installed: {str(e)}")
+    print("Try running: pip install chardet")
     sys.exit(1)
 
 # Print Python environment information for debugging
@@ -224,8 +235,33 @@ def process_adt_report(file_path):
     try:
         logging.info("\n=== ADT Pixel Firing Process Started ===")
         
-        # Read the file
-        df = pd.read_csv(file_path)
+        # Try to detect encoding first
+        detected_encoding = detect_encoding(file_path)
+        
+        # Try different encodings if needed
+        encodings_to_try = [detected_encoding] if detected_encoding else []
+        encodings_to_try.extend(['utf-8', 'latin1', 'cp1252', 'ISO-8859-1'])
+        
+        # Remove duplicates while preserving order
+        encodings_to_try = list(dict.fromkeys(encodings_to_try))
+        
+        df = None
+        successful_encoding = None
+        
+        for encoding in encodings_to_try:
+            try:
+                logging.info(f"Attempting to read file with {encoding} encoding")
+                df = pd.read_csv(file_path, encoding=encoding)
+                successful_encoding = encoding
+                logging.info(f"Successfully read file with {encoding} encoding")
+                break
+            except UnicodeDecodeError as e:
+                logging.warning(f"Failed to read with {encoding} encoding: {str(e)}")
+            except Exception as e:
+                logging.warning(f"Error reading CSV with {encoding} encoding: {str(e)}")
+        
+        if df is None:
+            raise Exception("Failed to read CSV file with any of the attempted encodings")
         
         # Clean and filter the data
         filtered_df = clean_data(df, file_path)
@@ -261,6 +297,7 @@ def process_adt_report(file_path):
         
         # Log summary
         logging.info("\n=== Summary ===")
+        logging.info(f"File processed successfully with encoding: {successful_encoding}")
         logging.info(f"DIFM pixels fired successfully: {successful_difm} out of {difm_count}")
         logging.info(f"DIY pixels fired successfully: {successful_diy} out of {diy_count}")
         logging.info(f"Total pixels fired: {successful_difm + successful_diy} out of {difm_count + diy_count}")
@@ -268,6 +305,26 @@ def process_adt_report(file_path):
     except Exception as e:
         logging.error(f"Error processing ADT report: {str(e)}")
         raise
+
+def detect_encoding(file_path):
+    """
+    Attempt to detect the file encoding using chardet
+    """
+    try:
+        # Read a sample of the file to detect encoding
+        with open(file_path, 'rb') as f:
+            raw_data = f.read(min(1024 * 1024, os.path.getsize(file_path)))  # Read up to 1MB
+        
+        # Detect encoding
+        result = chardet.detect(raw_data)
+        encoding = result['encoding']
+        confidence = result['confidence']
+        
+        logging.info(f"Detected encoding: {encoding} with {confidence:.1%} confidence")
+        return encoding
+    except Exception as e:
+        logging.error(f"Error detecting encoding: {str(e)}")
+        return None
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
@@ -278,6 +335,11 @@ if __name__ == "__main__":
         logging.info("3. Run the script with: python3 adt_pixel_firing.py your_report_file.csv")
         logging.info("\nExample:")
         logging.info("python3 adt_pixel_firing.py ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20250326.csv")
+        logging.info("\nIf you're having issues with file encoding:")
+        logging.info("This script now handles different file encodings automatically.")
+        logging.info("If you're still having issues, try converting your file to UTF-8 encoding:")
+        logging.info("1. Open the file in Excel")
+        logging.info("2. Save As -> CSV UTF-8 (Comma delimited) (*.csv)")
         sys.exit(1)
     
     report_path = sys.argv[1]
@@ -307,9 +369,22 @@ if __name__ == "__main__":
     
     # Check if file is readable
     try:
-        with open(report_path, 'r') as f:
-            first_line = f.readline()
-        if not first_line:
+        with open(report_path, 'rb') as f:  # Open in binary mode to check for non-UTF-8 characters
+            first_few_lines = f.read(4096)  # Read first 4KB
+            
+            # Check if file starts with BOM (Byte Order Mark)
+            has_bom = False
+            if first_few_lines.startswith(b'\xef\xbb\xbf'):  # UTF-8 BOM
+                has_bom = True
+                logging.info("File has UTF-8 BOM marker")
+            
+            # Check for potential encoding issues
+            try:
+                first_few_lines.decode('utf-8')
+            except UnicodeDecodeError:
+                logging.warning("File contains non-UTF-8 characters. Will try alternative encodings.")
+                
+        if not first_few_lines:
             logging.error(f"\nError: File '{report_path}' is empty!")
             sys.exit(1)
     except Exception as e:
