@@ -5,7 +5,14 @@ from datetime import datetime, timedelta
 import logging
 import uuid
 import re
-import chardet
+
+# Optional import of chardet
+CHARDET_AVAILABLE = False
+try:
+    import chardet
+    CHARDET_AVAILABLE = True
+except ImportError:
+    pass  # We'll handle this gracefully
 
 # Set up logging first
 log_filename = f'adt_pixel_firing_{datetime.now().strftime("%Y%m%d")}.log'
@@ -47,14 +54,12 @@ except ImportError as e:
     print("Try running: pip install requests")
     sys.exit(1)
 
-try:
-    import chardet
-    logging.info("Successfully imported chardet")
-except ImportError as e:
-    logging.error(f"Failed to import chardet: {str(e)}")
-    print(f"Error: Failed to import chardet. Please ensure it's installed: {str(e)}")
-    print("Try running: pip install chardet")
-    sys.exit(1)
+# We don't exit if chardet is missing, since it's optional
+if CHARDET_AVAILABLE:
+    logging.info("Successfully imported chardet (optional)")
+else:
+    logging.warning("chardet library not available. Automatic encoding detection will be limited.")
+    logging.info("Consider installing with: pip install chardet")
 
 # Print Python environment information for debugging
 print("\nPython Environment Information:")
@@ -308,20 +313,39 @@ def process_adt_report(file_path):
 
 def detect_encoding(file_path):
     """
-    Attempt to detect the file encoding using chardet
+    Attempt to detect the file encoding
     """
     try:
-        # Read a sample of the file to detect encoding
-        with open(file_path, 'rb') as f:
-            raw_data = f.read(min(1024 * 1024, os.path.getsize(file_path)))  # Read up to 1MB
-        
-        # Detect encoding
-        result = chardet.detect(raw_data)
-        encoding = result['encoding']
-        confidence = result['confidence']
-        
-        logging.info(f"Detected encoding: {encoding} with {confidence:.1%} confidence")
-        return encoding
+        # If chardet is available, use it for better detection
+        if CHARDET_AVAILABLE:
+            # Read a sample of the file to detect encoding
+            with open(file_path, 'rb') as f:
+                raw_data = f.read(min(1024 * 1024, os.path.getsize(file_path)))  # Read up to 1MB
+            
+            # Detect encoding
+            result = chardet.detect(raw_data)
+            encoding = result['encoding']
+            confidence = result['confidence']
+            
+            logging.info(f"Detected encoding: {encoding} with {confidence:.1%} confidence")
+            return encoding
+        else:
+            # Basic detection without chardet
+            # Check for BOM markers
+            with open(file_path, 'rb') as f:
+                raw = f.read(4)
+                
+            if raw.startswith(b'\xef\xbb\xbf'):
+                logging.info("Detected UTF-8 BOM encoding")
+                return 'utf-8-sig'
+            elif raw.startswith(b'\xff\xfe') or raw.startswith(b'\xfe\xff'):
+                logging.info("Detected UTF-16 encoding")
+                return 'utf-16'
+            
+            # Default to utf-8 as a starting point
+            logging.info("No specific encoding detected, will try common encodings")
+            return None
+            
     except Exception as e:
         logging.error(f"Error detecting encoding: {str(e)}")
         return None
@@ -336,8 +360,10 @@ if __name__ == "__main__":
         logging.info("\nExample:")
         logging.info("python3 adt_pixel_firing.py ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20250326.csv")
         logging.info("\nIf you're having issues with file encoding:")
-        logging.info("This script now handles different file encodings automatically.")
-        logging.info("If you're still having issues, try converting your file to UTF-8 encoding:")
+        logging.info("This script will try multiple encodings automatically.")
+        logging.info("For better encoding detection, you can install the optional chardet library:")
+        logging.info("pip install chardet")
+        logging.info("\nIf you're still having issues, try converting your file to UTF-8 encoding:")
         logging.info("1. Open the file in Excel")
         logging.info("2. Save As -> CSV UTF-8 (Comma delimited) (*.csv)")
         sys.exit(1)
