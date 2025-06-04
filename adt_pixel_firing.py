@@ -138,9 +138,25 @@ def clean_data(df, file_path):
             logging.info(f"DNIS {dnis}: {count} records")
         
         df_after_date['Lead_DNIS'] = df_after_date['Lead_DNIS'].fillna('')
-        dnis_filter = (df_after_date['Lead_DNIS'] == 'WEB0021011')
-        df_after_lead_dnis = df_after_date[dnis_filter]
-        logging.info(f"After filtering for Lead_DNIS 'WEB0021011': {len(df_after_lead_dnis)} records")
+        
+        # Filter for both DNIS values and keep track separately
+        web_dnis_filter = (df_after_date['Lead_DNIS'] == 'WEB0021011')
+        phone_dnis_filter = (df_after_date['Lead_DNIS'] == '8669765334')
+        
+        df_web_dnis = df_after_date[web_dnis_filter].copy()
+        df_phone_dnis = df_after_date[phone_dnis_filter].copy()
+        
+        # Add a column to track the source for pixel firing
+        df_web_dnis['pixel_source'] = 'web'
+        df_phone_dnis['pixel_source'] = 'phone'
+        
+        # Combine the dataframes
+        df_after_lead_dnis = pd.concat([df_web_dnis, df_phone_dnis])
+        
+        logging.info(f"After filtering for Lead_DNIS:")
+        logging.info(f"  WEB0021011: {len(df_web_dnis)} records")
+        logging.info(f"  8669765334: {len(df_phone_dnis)} records")
+        logging.info(f"  Total: {len(df_after_lead_dnis)} records")
         
         # Check Order Types before filtering
         unique_order_types = df_after_lead_dnis['Ordr_Type'].unique()
@@ -179,14 +195,21 @@ def clean_data(df, file_path):
             logging.info(f"  Order Type: {row['Ordr_Type']}")
             logging.info(f"  Sale Date: {row['Sale_Date']}")
             logging.info(f"  Lead DNIS: {row['Lead_DNIS']}")
+            logging.info(f"  Pixel Source: {row['pixel_source']}")
         
-        # Count DIFM and DIY records
-        difm_count = len(difm_records)
-        diy_count = len(diy_records)
+        # Count DIFM and DIY records by source
+        web_difm_count = len(difm_records[difm_records['pixel_source'] == 'web'])
+        web_diy_count = len(diy_records[diy_records['pixel_source'] == 'web'])
+        phone_difm_count = len(difm_records[difm_records['pixel_source'] == 'phone'])
+        phone_diy_count = len(diy_records[diy_records['pixel_source'] == 'phone'])
         
         logging.info(f"\nFinal counts:")
-        logging.info(f"DIFM Sales: {difm_count}")
-        logging.info(f"DIY Sales: {diy_count}")
+        logging.info(f"WEB0021011 (speedtrkzone.com):")
+        logging.info(f"  DIFM Sales: {web_difm_count}")
+        logging.info(f"  DIY Sales: {web_diy_count}")
+        logging.info(f"8669765334 (trkfocus.com):")
+        logging.info(f"  DIFM Sales: {phone_difm_count}")
+        logging.info(f"  DIY Sales: {phone_diy_count}")
         
         # Drop the temporary date string column
         filtered_df = filtered_df.drop('Sale_Date_Str', axis=1)
@@ -233,6 +256,43 @@ def fire_pixel(transaction_id, install_method, sale_date):
         logging.error(f"Failed to fire {install_method} pixel - Transaction ID: {transaction_id} - Error: {str(e)}")
         return False
 
+def fire_trkfocus_pixel(transaction_id, install_method, sale_date):
+    """
+    Fire the trkfocus.com pixel for a given transaction ID, install method, and sale date
+    """
+    try:
+        # Base URL
+        pixel_url = "https://trkfocus.com/m.ashx"
+        
+        # Set campaign ID based on install method (DIFM: 93166, DIY: 93168)
+        campaign_id = "93166" if "DIFM" in str(install_method).upper() else "93168"
+        
+        # Set the time to noon on the sale date
+        pixel_datetime = sale_date.replace(hour=12, minute=0, second=0)
+        iso_datetime = pixel_datetime.strftime('%Y-%m-%dT%H:%M:%S+00:00')
+        
+        # Set up parameters
+        params = {
+            'o': '32022',
+            'e': '565',
+            'f': 'pb',
+            't': transaction_id,
+            'pubid': '42865',
+            'campid': campaign_id,
+            'dt': iso_datetime
+        }
+        
+        # Make the request
+        response = requests.get(pixel_url, params=params)
+        response.raise_for_status()
+        
+        logging.info(f"Fired trkfocus {install_method} pixel successfully - Transaction ID: {transaction_id}")
+        return True
+        
+    except Exception as e:
+        logging.error(f"Failed to fire trkfocus {install_method} pixel - Transaction ID: {transaction_id} - Error: {str(e)}")
+        return False
+
 def process_adt_report(file_path):
     """
     Main function to process the ADT report and fire pixels
@@ -275,37 +335,56 @@ def process_adt_report(file_path):
             logging.info("No qualifying sales found to process.")
             return
         
-        # Count DIFM and DIY sales
-        difm_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIFM', case=False, na=False)]
-        diy_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIY', case=False, na=False)]
+        # Count DIFM and DIY sales by source
+        web_difm = filtered_df[(filtered_df['INSTALL_METHOD'].str.contains('DIFM', case=False, na=False)) & 
+                             (filtered_df['pixel_source'] == 'web')]
+        web_diy = filtered_df[(filtered_df['INSTALL_METHOD'].str.contains('DIY', case=False, na=False)) & 
+                            (filtered_df['pixel_source'] == 'web')]
+        phone_difm = filtered_df[(filtered_df['INSTALL_METHOD'].str.contains('DIFM', case=False, na=False)) & 
+                               (filtered_df['pixel_source'] == 'phone')]
+        phone_diy = filtered_df[(filtered_df['INSTALL_METHOD'].str.contains('DIY', case=False, na=False)) & 
+                              (filtered_df['pixel_source'] == 'phone')]
         
-        difm_count = len(difm_records)
-        diy_count = len(diy_records)
+        # Initialize success counters
+        successful_web_difm = 0
+        successful_web_diy = 0
+        successful_phone_difm = 0
+        successful_phone_diy = 0
         
-        logging.info(f"\nFound {difm_count} DIFM and {diy_count} DIY sales to process")
-        
-        # Fire pixels
-        successful_difm = 0
-        successful_diy = 0
-        
-        # Process DIFM sales
-        for _, row in difm_records.iterrows():
+        # Process web DIFM sales (speedtrkzone.com)
+        for _, row in web_difm.iterrows():
             transaction_id = f"ADT_{row['Sale_Date'].strftime('%Y%m%d')}_{uuid.uuid4().hex[:8]}"
             if fire_pixel(transaction_id, "DIFM", row['Sale_Date']):
-                successful_difm += 1
+                successful_web_difm += 1
         
-        # Process DIY sales
-        for _, row in diy_records.iterrows():
+        # Process web DIY sales (speedtrkzone.com)
+        for _, row in web_diy.iterrows():
             transaction_id = f"ADT_{row['Sale_Date'].strftime('%Y%m%d')}_{uuid.uuid4().hex[:8]}"
             if fire_pixel(transaction_id, "DIY", row['Sale_Date']):
-                successful_diy += 1
+                successful_web_diy += 1
+        
+        # Process phone DIFM sales (trkfocus.com)
+        for _, row in phone_difm.iterrows():
+            transaction_id = f"ADT_{row['Sale_Date'].strftime('%Y%m%d')}_{uuid.uuid4().hex[:8]}"
+            if fire_trkfocus_pixel(transaction_id, "DIFM", row['Sale_Date']):
+                successful_phone_difm += 1
+        
+        # Process phone DIY sales (trkfocus.com)
+        for _, row in phone_diy.iterrows():
+            transaction_id = f"ADT_{row['Sale_Date'].strftime('%Y%m%d')}_{uuid.uuid4().hex[:8]}"
+            if fire_trkfocus_pixel(transaction_id, "DIY", row['Sale_Date']):
+                successful_phone_diy += 1
         
         # Log summary
         logging.info("\n=== Summary ===")
         logging.info(f"File processed successfully with encoding: {successful_encoding}")
-        logging.info(f"DIFM pixels fired successfully: {successful_difm} out of {difm_count}")
-        logging.info(f"DIY pixels fired successfully: {successful_diy} out of {diy_count}")
-        logging.info(f"Total pixels fired: {successful_difm + successful_diy} out of {difm_count + diy_count}")
+        logging.info(f"\nWEB0021011 (speedtrkzone.com):")
+        logging.info(f"  DIFM pixels fired successfully: {successful_web_difm} out of {len(web_difm)}")
+        logging.info(f"  DIY pixels fired successfully: {successful_web_diy} out of {len(web_diy)}")
+        logging.info(f"\n8669765334 (trkfocus.com):")
+        logging.info(f"  DIFM pixels fired successfully: {successful_phone_difm} out of {len(phone_difm)}")
+        logging.info(f"  DIY pixels fired successfully: {successful_phone_diy} out of {len(phone_diy)}")
+        logging.info(f"\nTotal pixels fired: {successful_web_difm + successful_web_diy + successful_phone_difm + successful_phone_diy} out of {len(filtered_df)}")
         
     except Exception as e:
         logging.error(f"Error processing ADT report: {str(e)}")
