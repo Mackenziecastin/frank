@@ -1214,6 +1214,13 @@ def allocate_phone_metrics(cake_df, phone_pivot, athena_df=None):
     """Allocate phone metrics to subIDs based on web activity."""
     st.write("\n### Phone Attribution Debug")
     
+    # Initialize web columns if they don't exist
+    web_columns = ['Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs', 'DIY Web Installs']
+    for col in web_columns:
+        if col not in cake_df.columns:
+            cake_df[col] = 0
+            st.write(f"Initialized missing column: {col}")
+    
     # If athena_df not provided, try to get it from session state
     if athena_df is None and 'athena_df' in st.session_state:
         athena_df = st.session_state['athena_df']
@@ -1222,7 +1229,10 @@ def allocate_phone_metrics(cake_df, phone_pivot, athena_df=None):
     # Convert phone metrics to integers
     phone_metrics = ['Phone DIFM Sales', 'Phone DIY Sales', 'DIFM Phone Installs']
     for metric in phone_metrics:
-        cake_df[metric] = 0  # Initialize all phone metrics to 0
+        if metric not in cake_df.columns:
+            cake_df[metric] = 0
+        else:
+            cake_df[metric] = 0  # Reset to 0
     
     # Debug specific affiliate that has discrepancies
     st.write("\n### Debugging 42299_ Phone DIFM Installs")
