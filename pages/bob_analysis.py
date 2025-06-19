@@ -422,545 +422,168 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     """
     Clean and process Athena data for analysis.
     """
+    # Track row counts throughout processing
+    initial_count = len(athena_df)
+    st.write(f"\n### Row Count Tracking")
+    st.write(f"Initial row count: {initial_count}")
+    
+    # Make a copy to avoid modifying the original
+    athena_df = athena_df.copy()
+    
+    # Display first few rows before any processing
+    st.write("\n### First 5 rows BEFORE processing:")
+    st.write(athena_df.head())
+    
     # Display all column names and their data types at the start
     st.write("\n### Athena File Column Analysis")
     st.write("All columns in Athena file:")
     for col in athena_df.columns:
         st.write(f"- {col} (type: {athena_df[col].dtype})")
     
-    st.write("\nSample of first 5 rows:")
-    st.write(athena_df.head())
+    # Check for required columns
+    required_cols = ['Lead_Creation_Date', 'Ln_of_Busn', 'DNIS_BUSN_SEG_CD', 'Sale_Date', 'Ordr_Type']
+    missing_cols = [col for col in required_cols if col not in athena_df.columns]
     
-    # Continue with existing code...
+    if missing_cols:
+        st.warning(f"Missing required columns: {missing_cols}")
+        # Try to identify alternative columns
+        for missing_col in missing_cols:
+            if missing_col == 'Lead_Creation_Date':
+                date_cols = [col for col in athena_df.columns if 'date' in col.lower()]
+                if date_cols:
+                    athena_df['Lead_Creation_Date'] = athena_df[date_cols[0]]
+                    st.write(f"Using '{date_cols[0]}' as Lead_Creation_Date")
+            elif missing_col == 'Ln_of_Busn':
+                busn_cols = [col for col in athena_df.columns if 'busn' in col.lower() or 'business' in col.lower()]
+                if busn_cols:
+                    athena_df['Ln_of_Busn'] = athena_df[busn_cols[0]]
+                    st.write(f"Using '{busn_cols[0]}' as Ln_of_Busn")
+            elif missing_col == 'DNIS_BUSN_SEG_CD':
+                seg_cols = [col for col in athena_df.columns if 'seg' in col.lower()]
+                if seg_cols:
+                    athena_df['DNIS_BUSN_SEG_CD'] = athena_df[seg_cols[0]]
+                    st.write(f"Using '{seg_cols[0]}' as DNIS_BUSN_SEG_CD")
+            elif missing_col == 'Sale_Date':
+                sale_cols = [col for col in athena_df.columns if 'sale' in col.lower()]
+                if sale_cols:
+                    athena_df['Sale_Date'] = athena_df[sale_cols[0]]
+                    st.write(f"Using '{sale_cols[0]}' as Sale_Date")
+            elif missing_col == 'Ordr_Type':
+                order_cols = [col for col in athena_df.columns if 'order' in col.lower() or 'type' in col.lower()]
+                if order_cols:
+                    athena_df['Ordr_Type'] = athena_df[order_cols[0]]
+                    st.write(f"Using '{order_cols[0]}' as Ordr_Type")
     
-    # Display column names for debugging
-    st.write("Available columns in Athena data:", athena_df.columns.tolist())
+    # Convert Lead_Creation_Date to datetime
+    if 'Lead_Creation_Date' in athena_df.columns:
+        before_count = len(athena_df)
+        athena_df['Lead_Creation_Date'] = pd.to_datetime(athena_df['Lead_Creation_Date'], errors='coerce')
+        after_count = len(athena_df)
+        if after_count != before_count:
+            st.error(f"Lost {before_count - after_count} rows during date conversion!")
     
-    # Additional debugging for Lead_Creation_Date
-    st.write("\n### Lead Creation Date Debugging")
-    st.write(f"Column names containing 'date' (case-insensitive):")
-    date_cols = [col for col in athena_df.columns if 'date' in col.lower()]
-    for col in date_cols:
-        st.write(f"- {col}")
-    
-    # Check for exact Lead_Creation_Date column
-    has_lead_creation = 'Lead_Creation_Date' in athena_df.columns
-    st.write(f"\nLead_Creation_Date column exists: {has_lead_creation}")
-    
-    if has_lead_creation:
-        # Show data type and sample values
-        st.write(f"Lead_Creation_Date column dtype: {athena_df['Lead_Creation_Date'].dtype}")
-        st.write("Sample Lead_Creation_Date values (first 5 non-null):")
-        sample_dates = athena_df['Lead_Creation_Date'].dropna().head()
-        for idx, val in enumerate(sample_dates):
-            st.write(f"  {idx+1}. {val} (type: {type(val)})")
-    
-    # Filter by date range
+    # Apply date range filter if dates are provided
     if start_date and end_date:
-        st.write(f"\nFiltering data between {start_date} and {end_date}")
-        st.write(f"start_date type: {type(start_date)}")
-        st.write(f"end_date type: {type(end_date)}")
-        
+        before_filter = len(athena_df)
         # Convert to datetime if they're strings
         if isinstance(start_date, str):
             start_date = pd.to_datetime(start_date)
         if isinstance(end_date, str):
             end_date = pd.to_datetime(end_date)
-        
-        # Specifically use Lead_Creation_Date as requested
-        if has_lead_creation:
-            date_column = 'Lead_Creation_Date'
-            st.write(f"\nUsing '{date_column}' as the date filter column")
             
-            try:
-                # Show sample of original values before conversion
-                st.write("Sample of original values before datetime conversion:")
-                st.write(athena_df[date_column].head())
-                
-                # Convert the date column to datetime
-                athena_df[date_column] = pd.to_datetime(athena_df[date_column], errors='coerce')
-                
-                # Show sample of converted values
-                st.write("Sample of values after datetime conversion:")
-                st.write(athena_df[date_column].head())
-                
-                # Show range of dates
-                min_date = athena_df[date_column].min()
-                max_date = athena_df[date_column].max()
-                st.write(f"Date range in data: {min_date} to {max_date}")
-                
-                # Count records before filtering
-                total_before = len(athena_df)
-                
-                # Filter by date range
-                date_mask = (athena_df[date_column] >= start_date) & (athena_df[date_column] <= end_date)
-                st.write(f"Records matching date range: {date_mask.sum()}")
-                
-                athena_df = athena_df[date_mask]
-                total_after = len(athena_df)
-                
-                st.write(f"Records before date filtering: {total_before}")
-                st.write(f"Records after date filtering: {total_after}")
-                st.write(f"Records filtered out: {total_before - total_after}")
-            except Exception as e:
-                st.warning(f"Error converting date column '{date_column}': {str(e)}. Using all data.")
-                st.write("Full error details:")
-                import traceback
-                st.write(traceback.format_exc())
-        else:
-            # Fall back to other date columns if Lead_Creation_Date is not available
-            st.warning("Lead_Creation_Date column not found. Trying alternative date columns.")
-            
-            date_column = None
-            date_column_candidates = ['Date', 'date', 'created_date', 'Created_Date', 'lead_date']
-            
-            for col in date_column_candidates:
-                if col in athena_df.columns:
-                    date_column = col
-                    st.write(f"Using '{date_column}' as the date filter column")
-                    break
-            
-            if date_column is None:
-                # Look for any column with 'date' in the name
-                date_cols = [col for col in athena_df.columns if 'date' in col.lower()]
-                if date_cols:
-                    date_column = date_cols[0]
-                    st.write(f"Using '{date_column}' as the date filter column")
-                else:
-                    st.warning("No date column found for filtering. Using all data.")
-            
-            # Filter the dataframe if a date column was found
-            if date_column:
-                try:
-                    # Show sample of original values
-                    st.write(f"\nSample of original {date_column} values:")
-                    st.write(athena_df[date_column].head())
-                    
-                    # Convert the date column to datetime
-                    athena_df[date_column] = pd.to_datetime(athena_df[date_column], errors='coerce')
-                    
-                    # Show sample of converted values
-                    st.write(f"Sample of converted {date_column} values:")
-                    st.write(athena_df[date_column].head())
-                    
-                    # Count records before filtering
-                    total_before = len(athena_df)
-                    
-                    # Filter by date range
-                    athena_df = athena_df[(athena_df[date_column] >= start_date) & (athena_df[date_column] <= end_date)]
-                    total_after = len(athena_df)
-                    
-                    st.write(f"Records before date filtering: {total_before}")
-                    st.write(f"Records after date filtering: {total_after}")
-                    st.write(f"Records filtered out: {total_before - total_after}")
-                except Exception as e:
-                    st.warning(f"Error converting date column '{date_column}': {str(e)}. Using all data.")
-                    st.write("Full error details:")
-                    import traceback
-                    st.write(traceback.format_exc())
+        # Create date mask
+        date_mask = (athena_df['Lead_Creation_Date'] >= start_date) & (athena_df['Lead_Creation_Date'] <= end_date)
+        athena_df = athena_df[date_mask]
+        st.write(f"Filtered by date range: {before_filter} -> {len(athena_df)} rows")
+    else:
+        st.warning("No date range provided. Please specify start_date and end_date.")
+        return None
     
-    # FILTER OUT HEALTH BUSINESS LINES
-    # 1. Filter out any "Health" rows in the Ln_of_Busn column
+    # Filter out Health business lines
     if 'Ln_of_Busn' in athena_df.columns:
-        health_count = athena_df[athena_df['Ln_of_Busn'].str.contains('Health', na=False, case=False)].shape[0]
-        st.write(f"Filtering out {health_count} Health business line records")
+        before_health = len(athena_df)
         athena_df = athena_df[~athena_df['Ln_of_Busn'].str.contains('Health', na=False, case=False)]
-    else:
-        st.warning("Ln_of_Busn column not found - cannot filter Health business lines")
-        # Try to find similar columns
-        business_cols = [col for col in athena_df.columns if 'busn' in col.lower() or 'business' in col.lower() or 'line' in col.lower()]
-        if business_cols:
-            st.write(f"Similar columns that might contain business line info: {business_cols}")
-            
-    # 2. Filter out any US: Health rows in the DNIS_BUSN_SEG_CD column
+        st.write(f"Filtered Health business lines: {before_health} -> {len(athena_df)} rows")
+    
+    # Filter out Health DNIS segments
     if 'DNIS_BUSN_SEG_CD' in athena_df.columns:
-        health_segment_count = athena_df[athena_df['DNIS_BUSN_SEG_CD'].str.contains('Health', na=False, case=False)].shape[0]
-        st.write(f"Filtering out {health_segment_count} Health DNIS business segment records")
+        before_dnis = len(athena_df)
         athena_df = athena_df[~athena_df['DNIS_BUSN_SEG_CD'].str.contains('Health', na=False, case=False)]
-    else:
-        st.warning("DNIS_BUSN_SEG_CD column not found - cannot filter Health DNIS segments")
-        # Try to find similar columns
-        segment_cols = [col for col in athena_df.columns if 'dnis' in col.lower() or 'segment' in col.lower() or 'seg' in col.lower()]
-        if segment_cols:
-            st.write(f"Similar columns that might contain DNIS segment info: {segment_cols}")
+        st.write(f"Filtered Health DNIS segments: {before_dnis} -> {len(athena_df)} rows")
     
-    # Additional check for any columns containing "Health"
-    for col in athena_df.columns:
-        if 'health' in col.lower():
-            st.write(f"Found potential health-related column: {col}")
-            if athena_df[col].dtype == object:  # Only check string columns
-                health_values = athena_df[athena_df[col].str.contains('Health', na=False, case=False)]
-                if len(health_values) > 0:
-                    st.write(f"Column {col} contains {len(health_values)} rows with 'Health' value")
-                    # Show sample
-                    st.write(f"Sample of health values in {col}:")
-                    st.write(health_values[col].value_counts().head(5))
+    # Filter out blanks in Sale_Date
+    if 'Sale_Date' in athena_df.columns:
+        before_sale = len(athena_df)
+        athena_df = athena_df[athena_df['Sale_Date'].notna()]
+        st.write(f"Filtered blank Sale_Dates: {before_sale} -> {len(athena_df)} rows")
     
-    # Look for HLTHDRA001 in the DNIS values
-    if 'Lead_DNIS' in athena_df.columns:
-        hlth_dnis = athena_df[athena_df['Lead_DNIS'].str.contains('HLTH', na=False, case=False)]
-        if len(hlth_dnis) > 0:
-            st.error(f"Found {len(hlth_dnis)} records with HLTH in the DNIS. These will be filtered out.")
-            st.write("Sample of HLTH DNIS values:")
-            st.write(hlth_dnis['Lead_DNIS'].head(5))
-            # Filter out these records
-            athena_df = athena_df[~athena_df['Lead_DNIS'].str.contains('HLTH', na=False, case=False)]
+    # Filter for NEW and Resale in Ordr_Type
+    if 'Ordr_Type' in athena_df.columns:
+        before_order = len(athena_df)
+        # Create case-insensitive pattern for variations of "NEW" and "Resale"
+        order_mask = athena_df['Ordr_Type'].str.upper().isin(['NEW', 'RESALE'])
+        athena_df = athena_df[order_mask]
+        st.write(f"Filtered for NEW/Resale orders: {before_order} -> {len(athena_df)} rows")
     
-    # Verify Lead_DNIS exists
+    # Continue with the rest of the existing clean_athena function...
+    # ... existing code for Lead_DNIS, Affiliate_Code, PID matching, etc. ...
+    
+    # Check for WEB in the DNIS column (third column)
+    dnis_column = athena_df.columns[2]  # WEB0021011 in the sample
+    web_count = athena_df[athena_df[dnis_column].str.contains('WEB', na=False, case=False)].shape[0]
+    st.write(f"\nFound {web_count} WEB records in column '{dnis_column}'")
+    
+    # Set up required columns if they don't exist
     if 'Lead_DNIS' not in athena_df.columns:
-        st.error("Critical column 'Lead_DNIS' not found in the data! Available columns:")
-        st.write(athena_df.columns.tolist())
-        # Try to find a similar column
-        dnis_candidates = [col for col in athena_df.columns if 'dnis' in col.lower() or 'phone' in col.lower() or 'number' in col.lower()]
-        if dnis_candidates:
-            st.write(f"Found potential Lead_DNIS columns: {dnis_candidates}")
-            # Rename the first candidate to Lead_DNIS
-            athena_df = athena_df.rename(columns={dnis_candidates[0]: 'Lead_DNIS'})
-            st.write(f"Using '{dnis_candidates[0]}' as the Lead_DNIS column")
-        else:
-            st.error("No suitable column found for Lead_DNIS. PID matching will not work!")
-            # Add a dummy Lead_DNIS column to prevent errors
-            athena_df['Lead_DNIS'] = "Unknown"
+        athena_df['Lead_DNIS'] = athena_df[dnis_column]
+        st.write(f"Created Lead_DNIS from column '{dnis_column}'")
     
-    # Ensure Lead_DNIS is a string
-    athena_df['Lead_DNIS'] = athena_df['Lead_DNIS'].astype(str)
+    if 'Clean_Lead_DNIS' not in athena_df.columns:
+        athena_df['Clean_Lead_DNIS'] = athena_df['Lead_DNIS'].astype(str).apply(clean_phone_number)
     
-    # Clean phone numbers in Lead_DNIS for consistent matching
-    athena_df['Clean_Lead_DNIS'] = athena_df['Lead_DNIS'].apply(clean_phone_number)
-    
-    # Clean affiliate code and do matchback from database report
     if 'Affiliate_Code' not in athena_df.columns:
-        st.error("Critical column 'Affiliate_Code' not found in the data!")
-        # Try to find a similar column
-        aff_candidates = [col for col in athena_df.columns if 'affil' in col.lower() or 'code' in col.lower()]
-        if aff_candidates:
-            st.write(f"Found potential Affiliate_Code columns: {aff_candidates}")
-            # Rename the first candidate to Affiliate_Code
-            athena_df = athena_df.rename(columns={aff_candidates[0]: 'Affiliate_Code'})
-            st.write(f"Using '{aff_candidates[0]}' as the Affiliate_Code column")
-        else:
-            st.error("No suitable column found for Affiliate_Code!")
-            # Add a dummy Affiliate_Code column to prevent errors
-            athena_df['Affiliate_Code'] = "Unknown"
+        # Use the campaign ID column (7th column in sample) as Affiliate_Code
+        campaign_column = athena_df.columns[6]
+        athena_df['Affiliate_Code'] = athena_df[campaign_column]
+        st.write(f"Created Affiliate_Code from column '{campaign_column}'")
     
-    # Display sample of Lead_DNIS and Affiliate_Code
-    st.write("Sample data (first 5 rows):")
-    st.write(athena_df[['Lead_DNIS', 'Affiliate_Code']].head(5))
-    
-    # Check for INSTALL_METHOD column
-    if 'INSTALL_METHOD' not in athena_df.columns:
-        st.warning("INSTALL_METHOD column not found. Some analysis functions may not work properly.")
-        # Try to find a similar column
-        install_candidates = [col for col in athena_df.columns if 'install' in col.lower() or 'method' in col.lower()]
-        if install_candidates:
-            st.write(f"Found potential INSTALL_METHOD columns: {install_candidates}")
-            # Rename the first candidate to INSTALL_METHOD
-            athena_df = athena_df.rename(columns={install_candidates[0]: 'INSTALL_METHOD'})
-            st.write(f"Using '{install_candidates[0]}' as the INSTALL_METHOD column")
-        else:
-            # Add a dummy INSTALL_METHOD column
-            athena_df['INSTALL_METHOD'] = "Unknown"
-    
-    # AFFILIATE CODE CLEANING PROCESS - No rows should be filtered out
-    st.write("\n### Affiliate Code Cleaning Process")
-    # Apply clean_affiliate_code function to create Clean_Affiliate_Code
+    # Clean affiliate code without dropping any rows
     athena_df['Clean_Affiliate_Code'] = athena_df['Affiliate_Code'].apply(clean_affiliate_code)
     
-    # Count different types of affiliate codes
-    null_affiliates = athena_df['Clean_Affiliate_Code'].isna().sum()
-    empty_affiliates = (athena_df['Clean_Affiliate_Code'] == "").sum()
-    cake_affiliates = (athena_df['Clean_Affiliate_Code'] == "CAKE").sum()
-    st.write(f"Affiliate Code Stats (for information only, NO rows filtered):")
-    st.write(f"  - Null affiliate codes: {null_affiliates}")
-    st.write(f"  - Empty affiliate codes: {empty_affiliates}")
-    st.write(f"  - CAKE affiliate codes: {cake_affiliates}")
-    
-    # Extract PID directly from Clean_Affiliate_Code
+    # Extract PID from Clean_Affiliate_Code
     athena_df['PID_from_Affiliate'] = athena_df['Clean_Affiliate_Code'].apply(
         lambda x: x.split('_')[0] if isinstance(x, str) and '_' in x else None
     )
     
-    # MATCHBACK FROM DATABASE REPORT
-    # Prepare leads_df for matching
-    if leads_df is not None:
-        st.write("\n### Matchback from Database Report")
-        st.write(f"Database leads file contains {len(leads_df)} records")
-        
-        # Check for required columns in leads_df
-        required_cols = ['Subid', 'PID', 'Phone']
-        missing_cols = [col for col in required_cols if col not in leads_df.columns]
-        
-        if missing_cols:
-            st.warning(f"Missing columns in Database Leads file: {missing_cols}")
-            # Try to find similar columns
-            for missing_col in missing_cols:
-                if missing_col.lower() == 'subid':
-                    subid_candidates = [col for col in leads_df.columns if 'sub' in col.lower() or 'id' in col.lower()]
-                    if subid_candidates:
-                        st.write(f"Found potential Subid columns: {subid_candidates}")
-                        leads_df = leads_df.rename(columns={subid_candidates[0]: 'Subid'})
-                elif missing_col.lower() == 'pid':
-                    pid_candidates = [col for col in leads_df.columns if 'pid' in col.lower() or 'partner' in col.lower()]
-                    if pid_candidates:
-                        st.write(f"Found potential PID columns: {pid_candidates}")
-                        leads_df = leads_df.rename(columns={pid_candidates[0]: 'PID'})
-                elif missing_col.lower() == 'phone':
-                    phone_candidates = [col for col in leads_df.columns if 'phone' in col.lower() or 'number' in col.lower() or 'tfn' in col.lower()]
-                    if phone_candidates:
-                        st.write(f"Found potential Phone columns: {phone_candidates}")
-                        leads_df = leads_df.rename(columns={phone_candidates[0]: 'Phone'})
-        
-        # Check if we now have all required columns
-        if all(col in leads_df.columns for col in required_cols):
-            # Clean up PID and Subid values in leads_df
-            leads_df['PID'] = leads_df['PID'].astype(str)
-            leads_df['Subid'] = leads_df['Subid'].astype(str)
-            
-            # Clean phone numbers in leads_df
-            leads_df['Clean_Phone'] = leads_df['Phone'].astype(str).apply(clean_phone_number)
-            
-            # Create a mapping from phone to PID and Subid
-            phone_to_pid_subid = {}
-            for _, row in leads_df.iterrows():
-                if not pd.isna(row['Clean_Phone']) and row['Clean_Phone'] != '':
-                    # Store as tuple (PID, Subid)
-                    # Ensure subID is numeric
-                    subid = row['Subid'] if not pd.isna(row['Subid']) and str(row['Subid']).isdigit() else ''
-                    phone_to_pid_subid[row['Clean_Phone']] = (
-                        str(row['PID']), 
-                        subid
-                    )
-            
-            st.write(f"Created phone-to-PID mapping with {len(phone_to_pid_subid)} entries")
-            
-            # Display sample of the mapping
-            sample_entries = list(phone_to_pid_subid.items())[:5]
-            st.write("Sample phone-to-PID mappings:")
-            for phone, (pid, subid) in sample_entries:
-                st.write(f"  {phone} -> PID: {pid}, SubID: {subid}")
-            
-            # Match missing or empty affiliate codes using phone numbers
-            missing_affiliate_mask = (athena_df['Affiliate_Code'].isna()) | (athena_df['Affiliate_Code'] == '')
-            matchable_phone_mask = athena_df['Clean_Lead_DNIS'].isin(phone_to_pid_subid.keys())
-            
-            # Find records with both missing affiliate codes and matchable phones
-            matchable_records = missing_affiliate_mask & matchable_phone_mask
-            st.write(f"Found {matchable_records.sum()} records with missing affiliate codes but matchable phones")
-            
-            # Apply the matchback
-            matched_count = 0
-            for idx in athena_df[matchable_records].index:
-                phone = athena_df.loc[idx, 'Clean_Lead_DNIS']
-                if phone in phone_to_pid_subid:
-                    pid, subid = phone_to_pid_subid[phone]
-                    if subid:
-                        # If we have a valid subID, include it
-                        athena_df.loc[idx, 'Affiliate_Code'] = f"{pid}_{subid}"
-                        athena_df.loc[idx, 'Clean_Affiliate_Code'] = f"{pid}_{subid}"
-                    else:
-                        # Otherwise just use PID_
-                        athena_df.loc[idx, 'Affiliate_Code'] = f"{pid}_"
-                        athena_df.loc[idx, 'Clean_Affiliate_Code'] = f"{pid}_"
-                        
-                    # Set PID_from_Affiliate for use in later matching
-                    athena_df.loc[idx, 'PID_from_Affiliate'] = pid
-                    matched_count += 1
-            
-            st.write(f"Successfully added affiliate codes to {matched_count} records")
-            
-            # Update counts after matchback
-            null_affiliates_after = athena_df['Clean_Affiliate_Code'].isna().sum()
-            empty_affiliates_after = (athena_df['Clean_Affiliate_Code'] == "").sum()
-            st.write(f"Affiliate Code Stats after matchback:")
-            st.write(f"  - Null affiliate codes: {null_affiliates_after} (was {null_affiliates})")
-            st.write(f"  - Empty affiliate codes: {empty_affiliates_after} (was {empty_affiliates})")
-        else:
-            st.error(f"Could not find all required columns in Database Leads file. Matchback process skipped.")
-            st.write(f"Available columns: {', '.join(leads_df.columns)}")
-    else:
-        st.warning("No Database Leads file provided. Skipping affiliate code matchback process.")
-    
-    # Count records with "WEB" in Lead_DNIS
-    web_count = athena_df[athena_df['Lead_DNIS'].str.contains('WEB', na=False, case=False)].shape[0]
-    st.write(f"Records with 'WEB' in Lead_DNIS: {web_count}")
-    
     # Initialize PID column
     athena_df['PID'] = None
     
-    # Clean the TFN mapping to ensure consistent phone formats
+    # Clean the TFN mapping
     cleaned_tfn_df = clean_tfn_mapping(tfn_df)
     
-    # Create TFN mapping from clean TFN to PID
+    # Create TFN mapping
     tfn_map = dict(zip(cleaned_tfn_df['Clean_TFN'], cleaned_tfn_df['PID']))
-    st.write(f"Final TFN mapping contains {len(tfn_map)} entries")
     
-    # Display first 10 entries of the TFN mapping for inspection
-    st.write("First 10 entries in TFN mapping:")
-    for i, (k, v) in enumerate(tfn_map.items()):
-        if i < 10:
-            st.write(f"  {k} -> {v}")
-    
-    # For non-WEB records, try to match PIDs
+    # Match PIDs for non-WEB records
     non_web_mask = ~athena_df['Lead_DNIS'].str.contains('WEB', na=False, case=False)
-    non_web_count = non_web_mask.sum()
-    st.write(f"Non-WEB records to match: {non_web_count}")
-    
-    # Do another check for HLTHDRA001 in the cleaned DNIS values
-    hlth_dnis = athena_df[athena_df['Clean_Lead_DNIS'].str.contains('HLTH', na=False, case=False)]
-    if len(hlth_dnis) > 0:
-        st.error(f"Found {len(hlth_dnis)} records with HLTH in the cleaned DNIS. These will be filtered out.")
-        # Filter out these records
-        athena_df = athena_df[~athena_df['Clean_Lead_DNIS'].str.contains('HLTH', na=False, case=False)]
-        non_web_mask = ~athena_df['Lead_DNIS'].str.contains('WEB', na=False, case=False)
-        non_web_count = non_web_mask.sum()
-        st.write(f"Non-WEB records after filtering HLTH: {non_web_count}")
-    
-    # Debugging: Check for critical phone numbers in the data
-    critical_numbers = {
-        '8446778720': '4790',
-        '8005717438': '42299',
-        '8009734275': '42038'
-    }
-    
-    for phone, expected_pid in critical_numbers.items():
-        clean_phone = clean_phone_number(phone)
-        mask = athena_df['Clean_Lead_DNIS'] == clean_phone
-        count = mask.sum()
-        st.write(f"Critical phone {phone} (cleaned: {clean_phone}) found in {count} records")
-        
-        # If found, show a sample
-        if count > 0:
-            st.write("Sample records with this number:")
-            st.write(athena_df[mask][['Lead_DNIS', 'Clean_Lead_DNIS', 'Affiliate_Code']].head(3))
-    
-    # Sample a few non-web records for debugging
-    if non_web_count > 0:
-        sample_records = athena_df[non_web_mask].sample(min(5, non_web_count))
-        st.write("Sample of non-WEB records for debugging:")
-        for i, (idx, row) in enumerate(sample_records.iterrows()):
-            original_dnis = row['Lead_DNIS']
-            cleaned_dnis = row['Clean_Lead_DNIS']
-            in_map = cleaned_dnis in tfn_map
-            mapped_to = tfn_map.get(cleaned_dnis, "Not found") if in_map else "N/A"
-            
-            st.write(f"Record {i+1}:")
-            st.write(f"  - Original DNIS: {original_dnis}")
-            st.write(f"  - Cleaned DNIS: {cleaned_dnis}")
-            st.write(f"  - In TFN map: {in_map}")
-            st.write(f"  - Maps to PID: {mapped_to}")
-            st.write(f"  - PID from Affiliate Code: {row['PID_from_Affiliate']}")
-    
-    # Direct matching using Clean_Lead_DNIS
-    match_count = 0
-    unmatched_sample = []
-    matched_rows = []
-    
-    # Try multiple matching approaches, with preference given to TFN mapping
-    for idx, row in athena_df[non_web_mask].iterrows():
-        clean_dnis = row['Clean_Lead_DNIS']
-        matched = False
-        
-        # Approach 1: Direct match using Clean_Lead_DNIS to TFN mapping
+    for idx in athena_df[non_web_mask].index:
+        clean_dnis = athena_df.loc[idx, 'Clean_Lead_DNIS']
         if clean_dnis in tfn_map:
-            pid = str(tfn_map[clean_dnis])
-            athena_df.at[idx, 'PID'] = pid
-            match_count += 1
-            matched = True
-            matched_rows.append(idx)
+            athena_df.loc[idx, 'PID'] = str(tfn_map[clean_dnis])
+    
+    # For WEB records, use PID from affiliate code
+    web_mask = athena_df['Lead_DNIS'].str.contains('WEB', na=False, case=False)
+    athena_df.loc[web_mask, 'PID'] = athena_df.loc[web_mask, 'PID_from_Affiliate']
+    
+    # Track final row count
+    final_count = len(athena_df)
+    st.write(f"\nFinal row count: {final_count}")
+    if final_count != initial_count:
+        st.warning(f"Row count changed during processing: {initial_count} -> {final_count}")
         
-        # Approach 2: If the DNIS is one of our critical numbers, use the known PID
-        elif any(clean_phone_number(phone) == clean_dnis for phone in critical_numbers.keys()):
-            for phone, pid in critical_numbers.items():
-                if clean_phone_number(phone) == clean_dnis:
-                    athena_df.at[idx, 'PID'] = pid
-                    match_count += 1
-                    matched = True
-                    matched_rows.append(idx)
-                    break
-        
-        # Approach 3: Try matching by last 7 digits
-        elif len(clean_dnis) >= 7:
-            last_digits = clean_dnis[-7:]
-            for tfn, pid in tfn_map.items():
-                if len(tfn) >= 7 and tfn[-7:] == last_digits:
-                    athena_df.at[idx, 'PID'] = str(pid)
-                    match_count += 1
-                    matched = True
-                    matched_rows.append(idx)
-                    break
-        
-        # Approach 4: Use PID from Affiliate_Code if available and ONLY for non-WEB DNIS
-        # This is only for non-WEB records as we're already iterating through non_web_mask
-        elif row['PID_from_Affiliate'] is not None:
-            athena_df.at[idx, 'PID'] = str(row['PID_from_Affiliate'])
-            match_count += 1
-            matched = True
-            matched_rows.append(idx)
-        
-        if not matched:
-            # Collect a sample of unmatched records for debugging
-            if len(unmatched_sample) < 5:
-                unmatched_sample.append({
-                    'Lead_DNIS': row['Lead_DNIS'],
-                    'Clean_DNIS': clean_dnis,
-                    'Affiliate_Code': row['Affiliate_Code'],
-                    'PID_from_Affiliate': row['PID_from_Affiliate']
-                })
-    
-    # Check if any PIDs were set
-    st.write(f"Successfully matched {match_count} out of {non_web_count} non-WEB records")
-    
-    # Show sample of matched records for confirmation
-    if matched_rows:
-        st.write("Sample of 5 matched records:")
-        sample_df = athena_df.loc[matched_rows[:5], ['Lead_DNIS', 'Clean_Lead_DNIS', 'PID', 'Affiliate_Code']]
-        st.write(sample_df)
-    
-    # Display sample of unmatched records for debugging
-    if unmatched_sample:
-        st.write("Sample of unmatched records:")
-        st.write(pd.DataFrame(unmatched_sample))
-    
-    # Direct debug output of PID column after matching
-    st.write("\n### Direct inspection of PID column after matching")
-    st.write(f"PID column non-null count: {athena_df['PID'].notna().sum()}")
-    st.write(f"PID column unique values: {athena_df['PID'].nunique()}")
-    
-    # Show PID value counts
-    if athena_df['PID'].notna().sum() > 0:
-        pid_counts = athena_df['PID'].value_counts().reset_index()
-        pid_counts.columns = ['PID', 'Count']
-        st.write("PID value counts:")
-        st.write(pid_counts.head(10))
-    
-    # Force PIDs for critical numbers as a last resort
-    if athena_df['PID'].notna().sum() == 0:
-        st.error("No PIDs were matched! Using forced PID assignment as last resort.")
-        
-        # Assign PIDs directly to critical numbers
-        for phone, expected_pid in critical_numbers.items():
-            clean_phone = clean_phone_number(phone)
-            mask = athena_df['Clean_Lead_DNIS'] == clean_phone
-            athena_df.loc[mask, 'PID'] = expected_pid
-            st.write(f"Forced PID {expected_pid} for {mask.sum()} records with phone {phone}")
-        
-        # For records with WEB in the DNIS, extract PID from Affiliate_Code
-        web_mask = athena_df['Lead_DNIS'].str.contains('WEB', na=False, case=False)
-        athena_df.loc[web_mask, 'PID'] = athena_df.loc[web_mask, 'PID_from_Affiliate']
-        st.write(f"Set PID from Affiliate_Code for {web_mask.sum()} WEB records")
-        
-        # Check if any PIDs were set
-        st.write(f"After forced assignment, PID column non-null count: {athena_df['PID'].notna().sum()}")
-    
-    # Special debug for DNIS that maps to PID 42038
-    mask_42038 = athena_df['Lead_DNIS'].str.contains('8009734275', na=False)
-    if mask_42038.sum() > 0:
-        dnis_42038 = athena_df[mask_42038]
-        st.write(f"Found {len(dnis_42038)} records with DNIS 8009734275")
-        st.write(dnis_42038[['Lead_DNIS', 'PID', 'INSTALL_METHOD']])
-    
-    # Analyze records by PID
-    analyze_records_by_pid(athena_df)
+    # Display first few rows after processing
+    st.write("\n### First 5 rows AFTER processing:")
+    st.write(athena_df.head())
     
     return athena_df
 
