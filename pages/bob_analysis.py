@@ -1964,8 +1964,9 @@ def merge_and_compute(cake_df, web_pivot, phone_pivot, conversion_df, start_date
     # Start with Cake Pivot as base
     final_df = cake_df.copy()
     
-    # Rename Concatenated to Affiliate ID
-    final_df = final_df.rename(columns={'Concatenated': 'Affiliate ID'})
+    # Rename Concatenated to Affiliate ID if it still exists
+    if 'Concatenated' in final_df.columns:
+        final_df = final_df.rename(columns={'Concatenated': 'Affiliate ID'})
     
     # Initialize all the new columns with 0
     new_columns = [
@@ -1989,7 +1990,7 @@ def merge_and_compute(cake_df, web_pivot, phone_pivot, conversion_df, start_date
                 st.warning(f"Adding missing column {col} to web_pivot")
                 web_pivot[col] = 0
         
-        # Perform the merge
+        # Perform the merge using Affiliate ID
         final_df = final_df.merge(
             web_pivot[required_web_columns],
             left_on='Affiliate ID',
