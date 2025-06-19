@@ -1760,24 +1760,19 @@ def generate_pivots(df):
 def clean_conversion(conversion_df):
     """
     Clean and process the Cake Conversion report.
-    
-    Parameters:
-    ----------
-    conversion_df : pd.DataFrame
-        Raw conversion report DataFrame
-        
-    Returns:
-    -------
-    pd.DataFrame
-        Cleaned conversion report with standardized columns
     """
-    st.write("Cleaning conversion report...")
+    st.write("\n### Cleaning Conversion Report")
+    st.write("Starting conversion report cleaning process...")
     
     # Make a copy to avoid modifying the original
     df = conversion_df.copy()
     
-    # Display initial columns
+    # Display initial data info
+    st.write("\nInitial Data Info:")
+    st.write(f"Initial rows: {len(df)}")
     st.write("Initial columns:", df.columns.tolist())
+    st.write("\nFirst few rows of raw data:")
+    st.write(df.head())
     
     # Expected columns and their potential alternatives
     column_mappings = {
@@ -1801,8 +1796,11 @@ def clean_conversion(conversion_df):
             # Create empty column if missing
             df[standard_name] = None
     
+    st.write("\nColumns after standardization:", df.columns.tolist())
+    
     # Clean Sub ID - keep only if numeric
     df['Sub ID'] = df['Sub ID'].astype(str)
+    df['Original Sub ID'] = df['Sub ID']  # Keep original for comparison
     df['Sub ID'] = df['Sub ID'].apply(lambda x: x if x.isdigit() else '')
     
     # Clean Affiliate ID
@@ -1817,11 +1815,13 @@ def clean_conversion(conversion_df):
         axis=1
     )
     
-    # Convert Paid to numeric, handling any currency symbols or commas
+    # Convert Paid to numeric, handling any currency symbols and commas
+    df['Original Paid'] = df['Paid']  # Keep original for comparison
     df['Paid'] = df['Paid'].astype(str).str.replace('$', '').str.replace(',', '')
     df['Paid'] = pd.to_numeric(df['Paid'], errors='coerce')
     
     # Convert date
+    df['Original Date'] = df['Conversion Date']  # Keep original for comparison
     df['Conversion Date'] = pd.to_datetime(df['Conversion Date'], errors='coerce')
     
     # Sort by date descending to get most recent rates
@@ -1830,13 +1830,37 @@ def clean_conversion(conversion_df):
     # Get most recent rate for each Concatenated ID
     current_rates = df.groupby('Concatenated', as_index=False).agg({
         'Paid': 'first',
-        'Conversion Date': 'first'
+        'Conversion Date': 'first',
+        'Affiliate ID': 'first',
+        'Sub ID': 'first'
     }).rename(columns={'Paid': 'Current Rate'})
     
+    # Add download button for full cleaned data
+    st.write("\n### Download Cleaned Conversion Data")
+    
+    # Create Excel buffer
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        # Write full cleaned data
+        df.to_excel(writer, sheet_name='Full Cleaned Data', index=False)
+        # Write current rates
+        current_rates.to_excel(writer, sheet_name='Current Rates', index=False)
+    
+    output.seek(0)
+    
+    st.download_button(
+        label="Download Cleaned Conversion Data (Excel)",
+        data=output,
+        file_name="cleaned_conversion_data.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    
     # Debug output
-    st.write("\nCleaned conversion report summary:")
+    st.write("\n### Cleaning Summary")
+    st.write(f"Total rows processed: {len(df)}")
     st.write(f"Total unique Concatenated IDs: {len(current_rates)}")
-    st.write("Sample of current rates (first 5 rows):")
+    
+    st.write("\nSample of current rates (first 5 rows):")
     st.write(current_rates.head())
     
     # Special debug for 42865 entries
