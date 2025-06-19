@@ -555,7 +555,7 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
         lambda x: x.split('_')[0] if isinstance(x, str) and '_' in x else None
     )
     
-    # Initialize PID column
+    # Initialize PID column as None
     athena_df['PID'] = None
     
     # Clean the TFN mapping
@@ -564,16 +564,17 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     # Create TFN mapping
     tfn_map = dict(zip(cleaned_tfn_df['Clean_TFN'], cleaned_tfn_df['PID']))
     
-    # Match PIDs for non-WEB records
+    # Only match PIDs for non-WEB records
     non_web_mask = ~athena_df['Lead_DNIS'].str.contains('WEB', na=False, case=False)
     for idx in athena_df[non_web_mask].index:
         clean_dnis = athena_df.loc[idx, 'Clean_Lead_DNIS']
         if clean_dnis in tfn_map:
             athena_df.loc[idx, 'PID'] = str(tfn_map[clean_dnis])
     
-    # For WEB records, use PID from affiliate code
-    web_mask = athena_df['Lead_DNIS'].str.contains('WEB', na=False, case=False)
-    athena_df.loc[web_mask, 'PID'] = athena_df.loc[web_mask, 'PID_from_Affiliate']
+    # For WEB records, we keep PID as None - they will be handled by the web pivot using PID_from_Affiliate
+    # Remove this line as we don't want to set PID for WEB records:
+    # web_mask = athena_df['Lead_DNIS'].str.contains('WEB', na=False, case=False)
+    # athena_df.loc[web_mask, 'PID'] = athena_df.loc[web_mask, 'PID_from_Affiliate']
     
     # Track final row count
     final_count = len(athena_df)
