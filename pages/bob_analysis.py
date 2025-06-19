@@ -872,12 +872,9 @@ def show_bob_analysis():
         return
     
     # Convert dates to datetime
-    # Start date is automatically set to 00:00:00 of the selected day
     start_date = pd.Timestamp(start_date)
-    # Ensure the end date includes the entire day (up to 23:59:59)
     end_date = pd.Timestamp(end_date) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)
     
-    # Display the exact date range being used for analysis
     st.info(f"Analyzing leads created from {start_date.strftime('%Y-%m-%d %H:%M:%S')} to {end_date.strftime('%Y-%m-%d %H:%M:%S')}")
     
     # File uploaders in three columns
@@ -907,7 +904,6 @@ def show_bob_analysis():
     
     if athena_file and cake_conversion_file and database_leads_file:
         try:
-            # Load and process data with debugging
             st.write("DEBUG: Starting data loading...")
             
             try:
@@ -915,9 +911,26 @@ def show_bob_analysis():
                 encodings_to_try = ['utf-8', 'latin1', 'cp1252', 'iso-8859-1']
                 for encoding in encodings_to_try:
                     try:
-                        athena_df = pd.read_csv(athena_file, encoding=encoding)
-                        st.write(f"DEBUG: Successfully loaded Athena file with {encoding} encoding")
-                        st.write("Athena columns:", athena_df.columns.tolist())
+                        # Read the first few lines to check the structure
+                        athena_peek = pd.read_csv(athena_file, nrows=5, encoding=encoding)
+                        st.write("First 5 rows with automatic header detection:")
+                        st.write(athena_peek)
+                        
+                        # Reset file pointer
+                        athena_file.seek(0)
+                        
+                        # Now read the file without assuming first row is header
+                        athena_df = pd.read_csv(athena_file, header=None, encoding=encoding)
+                        
+                        # Set the column names to be the first row
+                        athena_df.columns = athena_df.iloc[0]
+                        
+                        # Now we can safely drop the first row since we've used it as headers
+                        athena_df = athena_df.iloc[1:].reset_index(drop=True)
+                        
+                        st.write("DEBUG: Successfully loaded Athena file with {encoding} encoding")
+                        st.write("First 5 rows after proper loading:")
+                        st.write(athena_df.head())
                         break
                     except UnicodeDecodeError:
                         continue
