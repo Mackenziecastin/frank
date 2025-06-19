@@ -421,25 +421,18 @@ def clean_phone(phone_str):
 def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     """
     Clean and process Athena data for analysis.
-    
-    Parameters:
-    ----------
-    athena_df : DataFrame
-        Raw Athena data
-    tfn_df : DataFrame
-        TFN mapping data
-    leads_df : DataFrame
-        Leads data
-    start_date : str or datetime
-        Start date for filtering
-    end_date : str or datetime
-        End date for filtering
-    
-    Returns:
-    -------
-    DataFrame
-        Cleaned Athena data with matched PIDs
     """
+    # Display all column names and their data types at the start
+    st.write("\n### Athena File Column Analysis")
+    st.write("All columns in Athena file:")
+    for col in athena_df.columns:
+        st.write(f"- {col} (type: {athena_df[col].dtype})")
+    
+    st.write("\nSample of first 5 rows:")
+    st.write(athena_df.head())
+    
+    # Continue with existing code...
+    
     # Display column names for debugging
     st.write("Available columns in Athena data:", athena_df.columns.tolist())
     
