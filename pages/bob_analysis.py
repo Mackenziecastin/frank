@@ -1127,7 +1127,16 @@ def show_bob_analysis():
                 st.error(f"Error cleaning conversion report: {str(e)}")
                 return
             
-            # Step 4-5: Merge and Compute Final Metrics
+            # Step 4: Allocate phone metrics (moved before merge)
+            st.write("DEBUG: Allocating phone metrics...")
+            try:
+                cake_df = allocate_phone_metrics(cake_df, phone_pivot, athena_df)
+                st.write("DEBUG: Successfully allocated phone metrics")
+            except Exception as e:
+                st.error(f"Error allocating phone metrics: {str(e)}")
+                return
+            
+            # Step 5: Merge and Compute Final Metrics
             st.write("DEBUG: Merging and computing metrics...")
             try:
                 final_df = merge_and_compute(cake_df, web_pivot, phone_pivot, conversion_df, start_date, end_date)
@@ -1201,7 +1210,7 @@ def show_bob_analysis():
             import traceback
             st.error(f"Full traceback:\n{traceback.format_exc()}")
 
-def allocate_phone_metrics(cake_df, phone_df, athena_df=None):
+def allocate_phone_metrics(cake_df, phone_pivot, athena_df=None):
     """Allocate phone metrics to subIDs based on web activity."""
     st.write("\n### Phone Attribution Debug")
     
@@ -1219,14 +1228,14 @@ def allocate_phone_metrics(cake_df, phone_df, athena_df=None):
     st.write("\n### Debugging 42299_ Phone DIFM Installs")
     
     # Group by PID to handle each partner's phone metrics
-    for pid in phone_df.index.unique():
+    for pid in phone_pivot.index.unique():
         if pd.isna(pid) or pid == '': continue
         
         # Special debug for 42299
         if pid == '42299':
             st.write(f"\n--- Detailed Debug for PID {pid} ---")
             st.write("Phone pivot data for this PID:")
-            st.write(phone_df.loc[pid])
+            st.write(phone_pivot.loc[pid])
             
             # Check raw Athena data for this PID
             st.write("\nRaw Athena data counts for this PID:")
@@ -1248,7 +1257,7 @@ def allocate_phone_metrics(cake_df, phone_df, athena_df=None):
             st.write(rows_42299[['Concatenated', 'PID', 'Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs']])
         
         # Get phone metrics for this PID
-        phone_metrics_for_pid = phone_df.loc[pid]
+        phone_metrics_for_pid = phone_pivot.loc[pid]
         
         # Get all rows for this PID in cake_df
         pid_mask = cake_df['PID'] == pid
@@ -1384,6 +1393,23 @@ def allocate_phone_metrics(cake_df, phone_df, athena_df=None):
     pid_mask = cake_df['PID'] == pid
     st.write(f"\nFinal check for {pid}:")
     st.write(f"Total DIFM Phone Installs for {pid}: {cake_df.loc[pid_mask, 'DIFM Phone Installs'].sum()}")
+    
+    # Display final allocation summary for all PIDs
+    st.write("\n### Final Phone Attribution Summary")
+    summary_data = []
+    for pid in phone_pivot.index.unique():
+        if pd.isna(pid) or pid == '': continue
+        pid_mask = cake_df['PID'] == pid
+        summary_data.append({
+            'PID': pid,
+            'Total Phone DIFM Sales': cake_df.loc[pid_mask, 'Phone DIFM Sales'].sum(),
+            'Total Phone DIY Sales': cake_df.loc[pid_mask, 'Phone DIY Sales'].sum(),
+            'Total DIFM Phone Installs': cake_df.loc[pid_mask, 'DIFM Phone Installs'].sum()
+        })
+    
+    summary_df = pd.DataFrame(summary_data)
+    st.write("Attribution summary by PID:")
+    st.write(summary_df)
     
     return cake_df
 
