@@ -1832,9 +1832,17 @@ def clean_conversion(conversion_df):
     df = df[~df['Offer Name'].str.contains('Medical Alert', case=False, na=False)]
     st.write(f"\nRemoved {initial_rows - len(df)} rows containing 'Medical Alert'")
     
-    # 2. Clean Sub ID - remove values with letters
+    # Store original Sub ID for comparison
+    df['Original Sub ID'] = df['Sub ID']
+    
+    # 2. Clean Sub ID - remove values with letters and handle special case for 42865
     df['Sub ID'] = df['Sub ID'].astype(str)
-    df['Sub ID'] = df['Sub ID'].apply(lambda x: x if x.isdigit() else '')
+    df['Sub ID'] = df.apply(lambda row: '' if str(row['Affiliate ID']) == '42865' else 
+                           (row['Sub ID'] if row['Sub ID'].isdigit() else ''), axis=1)
+    
+    # Count how many subIDs were removed for 42865
+    pid_42865_count = len(df[df['Affiliate ID'] == '42865'])
+    st.write(f"\nRemoved subIDs from {pid_42865_count} rows with PID 42865")
     
     # 3. Create Concatenated column
     df['Concatenated'] = df.apply(
@@ -1846,7 +1854,43 @@ def clean_conversion(conversion_df):
     df['Paid'] = df['Paid'].astype(str).str.replace('$', '').str.replace(',', '')
     df['Paid'] = pd.to_numeric(df['Paid'], errors='coerce')
     
+    # Add download button for cleaned data before pivot creation
+    st.write("\n### Download Cleaned Conversion Data")
+    st.write("Review the cleaned data before pivot creation:")
+    
+    # Show sample of cleaned data
+    st.write("\nSample of cleaned data (first 10 rows):")
+    sample_cols = ['Affiliate ID', 'Original Sub ID', 'Sub ID', 'Concatenated', 'Paid', 'Offer Name']
+    st.write(df[sample_cols].head(10))
+    
+    # Special check for 42865
+    st.write("\nVerifying PID 42865 entries:")
+    pid_42865_df = df[df['Affiliate ID'] == '42865']
+    st.write(f"Found {len(pid_42865_df)} entries for PID 42865")
+    if not pid_42865_df.empty:
+        st.write("Sample of PID 42865 entries:")
+        st.write(pid_42865_df[sample_cols].head())
+        
+        # Verify all 42865 entries have no subID
+        has_subid = pid_42865_df[pid_42865_df['Sub ID'] != '']
+        if not has_subid.empty:
+            st.error(f"Found {len(has_subid)} entries for PID 42865 that still have subIDs!")
+    
+    # Create download button for cleaned data
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, sheet_name='Cleaned Conversion Data', index=False)
+    
+    output.seek(0)
+    st.download_button(
+        label="Download Cleaned Conversion Data (Excel)",
+        data=output,
+        file_name="cleaned_conversion_data.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    
     # 4. Create Cake Pivot
+    st.write("\n### Creating Cake Pivot")
     cake_pivot = df.groupby('Concatenated').agg({
         'Affiliate ID': 'mean',  # Average of Affiliate ID
         'Concatenated': 'count',  # Count of occurrences
@@ -1871,18 +1915,16 @@ def clean_conversion(conversion_df):
     st.write("Sample of Cake Pivot (first 10 rows):")
     st.write(cake_pivot.head(10))
     
-    # Add download button for both full data and pivot
-    st.write("\n### Download Cleaned Data")
+    # Add download button for pivot
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df.to_excel(writer, sheet_name='Full Cleaned Data', index=False)
         cake_pivot.to_excel(writer, sheet_name='Cake Pivot', index=False)
     
     output.seek(0)
     st.download_button(
-        label="Download Cleaned Data and Pivot (Excel)",
+        label="Download Cake Pivot (Excel)",
         data=output,
-        file_name="cake_conversion_data.xlsx",
+        file_name="cake_pivot.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
     
