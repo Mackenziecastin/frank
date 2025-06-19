@@ -78,7 +78,26 @@ def proportional_allocation(row, web_val, total_web_val, total_phone_val):
         return 0
 
 def calculate_projected_installs(row):
-    pct = 0.5 if str(row['Concatenated']).startswith('4790') else 0.7
+    """
+    Calculate projected installs based on DIFM sales.
+    Default rate is 60%, except for PIDs 4790 and 42215 which use 55%.
+    
+    Parameters:
+    ----------
+    row : pd.Series
+        Row from the DataFrame containing 'Total DIFM Sales' and 'Concatenated'
+        
+    Returns:
+    -------
+    int
+        Projected number of installs
+    """
+    # Lower rate (55%) for specific PIDs
+    if str(row['PID']) in ['4790', '42215']:
+        pct = 0.55
+    else:
+        pct = 0.60
+    
     return int(round(row['Total DIFM Sales'] * pct))
 
 def get_current_rates(conversion_df):
@@ -1830,22 +1849,6 @@ def clean_conversion(conversion_df):
 def merge_and_compute(cake_df, web_pivot, phone_pivot, conversion_df):
     """
     Merge web and phone pivots with conversion data and compute final metrics.
-    
-    Parameters:
-    ----------
-    cake_df : pd.DataFrame
-        Cleaned conversion report with current rates
-    web_pivot : pd.DataFrame
-        Web metrics pivot table
-    phone_pivot : pd.DataFrame
-        Phone metrics pivot table
-    conversion_df : pd.DataFrame
-        Raw conversion report for additional data
-        
-    Returns:
-    -------
-    pd.DataFrame
-        Final report with all metrics computed
     """
     st.write("\nMerging pivots and computing metrics...")
     
@@ -1880,8 +1883,8 @@ def merge_and_compute(cake_df, web_pivot, phone_pivot, conversion_df):
     # Calculate eCPL
     final_df['eCPL'] = final_df['Cost'] / final_df['Leads'].replace(0, np.nan)
     
-    # Calculate revenue ($1500 per DIFM install)
-    final_df['Revenue'] = final_df['Total DIFM Installs'] * 1500
+    # Calculate revenue ($1080 per DIFM install)
+    final_df['Revenue'] = final_df['Total DIFM Installs'] * 1080
     
     # Calculate profit/loss
     final_df['Profit/Loss'] = final_df['Revenue'] - final_df['Cost']
@@ -1889,8 +1892,8 @@ def merge_and_compute(cake_df, web_pivot, phone_pivot, conversion_df):
     # Calculate projected installs
     final_df['Projected Installs'] = final_df.apply(calculate_projected_installs, axis=1)
     
-    # Calculate projected revenue
-    final_df['Projected Revenue'] = final_df['Projected Installs'] * 1500
+    # Calculate projected revenue ($1080 per projected install)
+    final_df['Projected Revenue'] = final_df['Projected Installs'] * 1080
     
     # Calculate projected profit/loss
     final_df['Projected Profit/Loss'] = final_df['Projected Revenue'] - final_df['Cost']
