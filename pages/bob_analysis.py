@@ -443,9 +443,30 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     # Display column names for debugging
     st.write("Available columns in Athena data:", athena_df.columns.tolist())
     
+    # Additional debugging for Lead_Creation_Date
+    st.write("\n### Lead Creation Date Debugging")
+    st.write(f"Column names containing 'date' (case-insensitive):")
+    date_cols = [col for col in athena_df.columns if 'date' in col.lower()]
+    for col in date_cols:
+        st.write(f"- {col}")
+    
+    # Check for exact Lead_Creation_Date column
+    has_lead_creation = 'Lead_Creation_Date' in athena_df.columns
+    st.write(f"\nLead_Creation_Date column exists: {has_lead_creation}")
+    
+    if has_lead_creation:
+        # Show data type and sample values
+        st.write(f"Lead_Creation_Date column dtype: {athena_df['Lead_Creation_Date'].dtype}")
+        st.write("Sample Lead_Creation_Date values (first 5 non-null):")
+        sample_dates = athena_df['Lead_Creation_Date'].dropna().head()
+        for idx, val in enumerate(sample_dates):
+            st.write(f"  {idx+1}. {val} (type: {type(val)})")
+    
     # Filter by date range
     if start_date and end_date:
-        st.write(f"Filtering data between {start_date} and {end_date}")
+        st.write(f"\nFiltering data between {start_date} and {end_date}")
+        st.write(f"start_date type: {type(start_date)}")
+        st.write(f"end_date type: {type(end_date)}")
         
         # Convert to datetime if they're strings
         if isinstance(start_date, str):
@@ -454,18 +475,45 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
             end_date = pd.to_datetime(end_date)
         
         # Specifically use Lead_Creation_Date as requested
-        if 'Lead_Creation_Date' in athena_df.columns:
+        if has_lead_creation:
             date_column = 'Lead_Creation_Date'
-            st.write(f"Using '{date_column}' as the date filter column")
+            st.write(f"\nUsing '{date_column}' as the date filter column")
             
             try:
+                # Show sample of original values before conversion
+                st.write("Sample of original values before datetime conversion:")
+                st.write(athena_df[date_column].head())
+                
                 # Convert the date column to datetime
                 athena_df[date_column] = pd.to_datetime(athena_df[date_column], errors='coerce')
+                
+                # Show sample of converted values
+                st.write("Sample of values after datetime conversion:")
+                st.write(athena_df[date_column].head())
+                
+                # Show range of dates
+                min_date = athena_df[date_column].min()
+                max_date = athena_df[date_column].max()
+                st.write(f"Date range in data: {min_date} to {max_date}")
+                
+                # Count records before filtering
+                total_before = len(athena_df)
+                
                 # Filter by date range
-                athena_df = athena_df[(athena_df[date_column] >= start_date) & (athena_df[date_column] <= end_date)]
-                st.write(f"Records after date filtering: {len(athena_df)}")
+                date_mask = (athena_df[date_column] >= start_date) & (athena_df[date_column] <= end_date)
+                st.write(f"Records matching date range: {date_mask.sum()}")
+                
+                athena_df = athena_df[date_mask]
+                total_after = len(athena_df)
+                
+                st.write(f"Records before date filtering: {total_before}")
+                st.write(f"Records after date filtering: {total_after}")
+                st.write(f"Records filtered out: {total_before - total_after}")
             except Exception as e:
                 st.warning(f"Error converting date column '{date_column}': {str(e)}. Using all data.")
+                st.write("Full error details:")
+                import traceback
+                st.write(traceback.format_exc())
         else:
             # Fall back to other date columns if Lead_Creation_Date is not available
             st.warning("Lead_Creation_Date column not found. Trying alternative date columns.")
@@ -491,13 +539,32 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
             # Filter the dataframe if a date column was found
             if date_column:
                 try:
+                    # Show sample of original values
+                    st.write(f"\nSample of original {date_column} values:")
+                    st.write(athena_df[date_column].head())
+                    
                     # Convert the date column to datetime
                     athena_df[date_column] = pd.to_datetime(athena_df[date_column], errors='coerce')
+                    
+                    # Show sample of converted values
+                    st.write(f"Sample of converted {date_column} values:")
+                    st.write(athena_df[date_column].head())
+                    
+                    # Count records before filtering
+                    total_before = len(athena_df)
+                    
                     # Filter by date range
                     athena_df = athena_df[(athena_df[date_column] >= start_date) & (athena_df[date_column] <= end_date)]
-                    st.write(f"Records after date filtering: {len(athena_df)}")
+                    total_after = len(athena_df)
+                    
+                    st.write(f"Records before date filtering: {total_before}")
+                    st.write(f"Records after date filtering: {total_after}")
+                    st.write(f"Records filtered out: {total_before - total_after}")
                 except Exception as e:
                     st.warning(f"Error converting date column '{date_column}': {str(e)}. Using all data.")
+                    st.write("Full error details:")
+                    import traceback
+                    st.write(traceback.format_exc())
     
     # FILTER OUT HEALTH BUSINESS LINES
     # 1. Filter out any "Health" rows in the Ln_of_Busn column
