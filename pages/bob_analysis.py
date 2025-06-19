@@ -1727,5 +1727,86 @@ def generate_pivots(df):
     
     return web_pivot, phone_pivot
 
+def clean_conversion(conversion_df):
+    """
+    Clean and process the Cake Conversion report.
+    
+    Parameters:
+    ----------
+    conversion_df : pd.DataFrame
+        Raw conversion report DataFrame
+        
+    Returns:
+    -------
+    pd.DataFrame
+        Cleaned conversion report with standardized columns
+    """
+    st.write("Cleaning conversion report...")
+    
+    # Make a copy to avoid modifying the original
+    df = conversion_df.copy()
+    
+    # Display initial columns
+    st.write("Initial columns:", df.columns.tolist())
+    
+    # Expected columns and their potential alternatives
+    column_mappings = {
+        'Affiliate ID': ['Affiliate ID', 'AffiliateID', 'Affiliate_ID', 'affiliate_id'],
+        'Sub ID': ['Sub ID', 'SubID', 'Sub_ID', 'sub_id'],
+        'Paid': ['Paid', 'Rate', 'Cost', 'Price'],
+        'Conversion Date': ['Conversion Date', 'ConversionDate', 'Date', 'conversion_date']
+    }
+    
+    # Map columns to standardized names
+    for standard_name, alternatives in column_mappings.items():
+        found = False
+        for alt in alternatives:
+            if alt in df.columns:
+                if alt != standard_name:
+                    df = df.rename(columns={alt: standard_name})
+                found = True
+                break
+        if not found:
+            st.warning(f"Could not find column {standard_name} or its alternatives")
+            # Create empty column if missing
+            df[standard_name] = None
+    
+    # Clean Sub ID - keep only if numeric
+    df['Sub ID'] = df['Sub ID'].astype(str)
+    df['Sub ID'] = df['Sub ID'].apply(lambda x: x if x.isdigit() else '')
+    
+    # Clean Affiliate ID
+    df['Affiliate ID'] = df['Affiliate ID'].astype(str)
+    
+    # Create Concatenated key in same format as main report
+    df['Concatenated'] = df.apply(
+        lambda r: f"{r['Affiliate ID']}_{r['Sub ID']}" if r['Sub ID'] else f"{r['Affiliate ID']}_",
+        axis=1
+    )
+    
+    # Convert Paid to numeric, handling any currency symbols or commas
+    df['Paid'] = df['Paid'].astype(str).str.replace('$', '').str.replace(',', '')
+    df['Paid'] = pd.to_numeric(df['Paid'], errors='coerce')
+    
+    # Convert date
+    df['Conversion Date'] = pd.to_datetime(df['Conversion Date'], errors='coerce')
+    
+    # Sort by date descending to get most recent rates
+    df = df.sort_values('Conversion Date', ascending=False)
+    
+    # Get most recent rate for each Concatenated ID
+    current_rates = df.groupby('Concatenated', as_index=False).agg({
+        'Paid': 'first',
+        'Conversion Date': 'first'
+    }).rename(columns={'Paid': 'Current Rate'})
+    
+    # Debug output
+    st.write("\nCleaned conversion report summary:")
+    st.write(f"Total unique Concatenated IDs: {len(current_rates)}")
+    st.write("Sample of current rates (first 5 rows):")
+    st.write(current_rates.head())
+    
+    return current_rates
+
 if __name__ == "__main__":
     show_bob_analysis()
