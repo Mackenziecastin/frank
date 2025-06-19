@@ -1884,20 +1884,41 @@ def merge_and_compute(cake_df, web_pivot, phone_pivot, conversion_df, start_date
         final_df[col] = 0
     
     # Merge with web pivot data
+    st.write("DEBUG: Web pivot columns:", web_pivot.columns.tolist())
+    st.write("DEBUG: Final_df columns before merge:", final_df.columns.tolist())
+    
+    # Check which columns are actually available in web_pivot
+    available_columns = ['Concatenated']
+    expected_columns = ['Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs', 'DIY Web Installs']
+    
+    for col in expected_columns:
+        if col in web_pivot.columns:
+            available_columns.append(col)
+        else:
+            st.warning(f"Column '{col}' not found in web_pivot")
+    
+    st.write("DEBUG: Available columns for merge:", available_columns)
+    
     final_df = final_df.merge(
-        web_pivot[['Concatenated', 'Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs', 'DIY Web Installs']],
+        web_pivot[available_columns],
         left_on='Affiliate ID',
         right_on='Concatenated',
         how='left'
     ).drop('Concatenated', axis=1)
     
-    # Rename web columns to match final format
-    final_df = final_df.rename(columns={
-        'Web DIFM Sales': 'Web DIFM Sales',
-        'Web DIY Sales': 'DIY Web Sales',
-        'DIFM Web Installs': 'DIFM Web Installs',
-        'DIY Web Installs': 'DIY Web Installs'
-    })
+    # Rename web columns to match final format (only if they exist)
+    column_mapping = {}
+    if 'Web DIFM Sales' in final_df.columns:
+        column_mapping['Web DIFM Sales'] = 'Web DIFM Sales'
+    if 'Web DIY Sales' in final_df.columns:
+        column_mapping['Web DIY Sales'] = 'DIY Web Sales'
+    if 'DIFM Web Installs' in final_df.columns:
+        column_mapping['DIFM Web Installs'] = 'DIFM Web Installs'
+    if 'DIY Web Installs' in final_df.columns:
+        column_mapping['DIY Web Installs'] = 'DIY Web Installs'
+    
+    if column_mapping:
+        final_df = final_df.rename(columns=column_mapping)
     
     # Allocate phone metrics based on web activity
     final_df = allocate_phone_metrics(final_df, phone_pivot)
