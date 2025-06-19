@@ -1991,9 +1991,46 @@ def merge_and_compute(cake_df, web_pivot, phone_pivot, conversion_df, start_date
     
     # Display the final report
     st.write(f"\n### ADT Optimizations - {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
-    st.write(f"Total rows: {len(final_df)}")
-    st.write("Final optimization report:")
-    st.dataframe(final_df, use_container_width=True)
+    st.write(f"Total rows in report: {len(final_df)}")
+    
+    # Display column names for verification
+    st.write("\nColumns in final report:")
+    st.write(final_df.columns.tolist())
+    
+    # Display the full report
+    st.write("\nFull Optimization Report:")
+    st.dataframe(final_df.style.format({
+        'Cost': '${:,.2f}',
+        'Revenue': '${:,.2f}',
+        'Profit/Loss': '${:,.2f}',
+        'Projected Revenue': '${:,.2f}',
+        'Projected Profit/Loss': '${:,.2f}',
+        'Projected Margin': '{:.1f}%',
+        'Current Rate': '${:,.2f}',
+        'eCPL': '${:,.2f}'
+    }), use_container_width=True)
+    
+    # Display summary totals
+    st.write("\n### Summary Totals")
+    summary = pd.DataFrame({
+        'Metric': [
+            'Total Leads',
+            'Total Cost',
+            'Total DIFM Sales',
+            'Total DIFM Installs',
+            'Total Revenue',
+            'Total Projected Revenue'
+        ],
+        'Value': [
+            f"{final_df['Leads'].sum():,}",
+            f"${final_df['Cost'].sum():,.2f}",
+            f"{final_df['Total DIFM Sales'].sum():,}",
+            f"{final_df['Total DIFM Installs'].sum():,}",
+            f"${final_df['Revenue'].sum():,.2f}",
+            f"${final_df['Projected Revenue'].sum():,.2f}"
+        ]
+    })
+    st.table(summary)
     
     return final_df
 
