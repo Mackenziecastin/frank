@@ -1790,8 +1790,11 @@ def clean_conversion(conversion_df):
     df['Affiliate ID'] = df['Affiliate ID'].astype(str)
     
     # Create Concatenated key in same format as main report
+    # Special rule: For PID 42865, always use 42865_ regardless of Sub ID
     df['Concatenated'] = df.apply(
-        lambda r: f"{r['Affiliate ID']}_{r['Sub ID']}" if r['Sub ID'] else f"{r['Affiliate ID']}_",
+        lambda r: '42865_' if r['Affiliate ID'] == '42865' else (
+            f"{r['Affiliate ID']}_{r['Sub ID']}" if r['Sub ID'] else f"{r['Affiliate ID']}_"
+        ),
         axis=1
     )
     
@@ -1816,6 +1819,11 @@ def clean_conversion(conversion_df):
     st.write(f"Total unique Concatenated IDs: {len(current_rates)}")
     st.write("Sample of current rates (first 5 rows):")
     st.write(current_rates.head())
+    
+    # Special debug for 42865 entries
+    st.write("\nChecking 42865 entries:")
+    st.write("42865 entries in current_rates:")
+    st.write(current_rates[current_rates['Concatenated'].str.startswith('42865')])
     
     return current_rates
 
