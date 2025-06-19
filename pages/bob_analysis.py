@@ -1704,12 +1704,20 @@ def generate_pivots(df):
     
     # Rename columns to match expected format
     web_pivot = web_pivot.rename(columns={
+        'Clean_Affiliate_Code': 'Clean_Affiliate_Code',
         'Web_DIFM_Sales': 'Web DIFM Sales',
         'Web_DIY_Sales': 'Web DIY Sales',
         'DIFM_Web_Installs': 'DIFM Web Installs',
         'DIY_Web_Installs': 'DIY Web Installs'
     })
     
+    # Ensure all required columns exist
+    required_columns = ['Concatenated', 'Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs', 'DIY Web Installs']
+    for col in required_columns:
+        if col not in web_pivot.columns:
+            web_pivot[col] = 0
+            
+    st.write("DEBUG: Web pivot columns after creation:", web_pivot.columns.tolist())
     st.write(f"Web pivot created with {len(web_pivot)} rows")
     st.write("Sample of web pivot:")
     st.write(web_pivot.head(3))
@@ -1884,41 +1892,53 @@ def merge_and_compute(cake_df, web_pivot, phone_pivot, conversion_df, start_date
         final_df[col] = 0
     
     # Merge with web pivot data
-    st.write("DEBUG: Web pivot columns:", web_pivot.columns.tolist())
-    st.write("DEBUG: Final_df columns before merge:", final_df.columns.tolist())
+    st.write("\nDEBUG: Starting merge process")
+    st.write("Web pivot columns:", web_pivot.columns.tolist())
+    st.write("Final_df columns before merge:", final_df.columns.tolist())
     
-    # Check which columns are actually available in web_pivot
-    available_columns = ['Concatenated']
-    expected_columns = ['Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs', 'DIY Web Installs']
+    try:
+        # First ensure web_pivot has all required columns
+        required_web_columns = ['Concatenated', 'Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs', 'DIY Web Installs']
+        for col in required_web_columns:
+            if col not in web_pivot.columns:
+                st.warning(f"Adding missing column {col} to web_pivot")
+                web_pivot[col] = 0
+        
+        # Perform the merge
+        st.write("Attempting merge with columns:", required_web_columns)
+        final_df = final_df.merge(
+            web_pivot[required_web_columns],
+            left_on='Affiliate ID',
+            right_on='Concatenated',
+            how='left'
+        )
+        
+        # Drop the redundant Concatenated column if it exists
+        if 'Concatenated' in final_df.columns:
+            final_df = final_df.drop('Concatenated', axis=1)
+        
+        # Fill NaN values with 0 for numeric columns
+        numeric_columns = ['Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs', 'DIY Web Installs']
+        for col in numeric_columns:
+            if col in final_df.columns:
+                final_df[col] = final_df[col].fillna(0)
+        
+        st.write("Merge successful. Final columns:", final_df.columns.tolist())
+        
+    except Exception as e:
+        st.error(f"Error during merge: {str(e)}")
+        st.error("Attempting to continue with empty web metrics...")
+        # If merge fails, add empty columns
+        for col in ['Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs', 'DIY Web Installs']:
+            final_df[col] = 0
     
-    for col in expected_columns:
-        if col in web_pivot.columns:
-            available_columns.append(col)
-        else:
-            st.warning(f"Column '{col}' not found in web_pivot")
-    
-    st.write("DEBUG: Available columns for merge:", available_columns)
-    
-    final_df = final_df.merge(
-        web_pivot[available_columns],
-        left_on='Affiliate ID',
-        right_on='Concatenated',
-        how='left'
-    ).drop('Concatenated', axis=1)
-    
-    # Rename web columns to match final format (only if they exist)
-    column_mapping = {}
-    if 'Web DIFM Sales' in final_df.columns:
-        column_mapping['Web DIFM Sales'] = 'Web DIFM Sales'
-    if 'Web DIY Sales' in final_df.columns:
-        column_mapping['Web DIY Sales'] = 'DIY Web Sales'
-    if 'DIFM Web Installs' in final_df.columns:
-        column_mapping['DIFM Web Installs'] = 'DIFM Web Installs'
-    if 'DIY Web Installs' in final_df.columns:
-        column_mapping['DIY Web Installs'] = 'DIY Web Installs'
-    
-    if column_mapping:
-        final_df = final_df.rename(columns=column_mapping)
+    # Rename web columns to match final format
+    column_mapping = {
+        'Web DIY Sales': 'DIY Web Sales',
+        'DIFM Web Installs': 'DIFM Web Installs',
+        'DIY Web Installs': 'DIY Web Installs'
+    }
+    final_df = final_df.rename(columns=column_mapping)
     
     # Allocate phone metrics based on web activity
     final_df = allocate_phone_metrics(final_df, phone_pivot)
