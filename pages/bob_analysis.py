@@ -1771,15 +1771,13 @@ def clean_conversion(conversion_df):
     st.write("\nInitial Data Info:")
     st.write(f"Initial rows: {len(df)}")
     st.write("Initial columns:", df.columns.tolist())
-    st.write("\nFirst few rows of raw data:")
-    st.write(df.head())
     
     # Expected columns and their potential alternatives
     column_mappings = {
         'Affiliate ID': ['Affiliate ID', 'AffiliateID', 'Affiliate_ID', 'affiliate_id'],
         'Sub ID': ['Sub ID', 'SubID', 'Sub_ID', 'sub_id'],
         'Paid': ['Paid', 'Rate', 'Cost', 'Price'],
-        'Conversion Date': ['Conversion Date', 'ConversionDate', 'Date', 'conversion_date']
+        'Offer Name': ['Offer Name', 'OfferName', 'Offer_Name', 'offer_name']
     }
     
     # Map columns to standardized names
@@ -1793,82 +1791,60 @@ def clean_conversion(conversion_df):
                 break
         if not found:
             st.warning(f"Could not find column {standard_name} or its alternatives")
-            # Create empty column if missing
             df[standard_name] = None
     
-    st.write("\nColumns after standardization:", df.columns.tolist())
+    # 1. Remove rows containing "Medical Alert" in Offer Name
+    initial_rows = len(df)
+    df = df[~df['Offer Name'].str.contains('Medical Alert', case=False, na=False)]
+    st.write(f"\nRemoved {initial_rows - len(df)} rows containing 'Medical Alert'")
     
-    # Clean Sub ID - keep only if numeric
+    # 2. Clean Sub ID - remove values with letters
     df['Sub ID'] = df['Sub ID'].astype(str)
-    df['Original Sub ID'] = df['Sub ID']  # Keep original for comparison
     df['Sub ID'] = df['Sub ID'].apply(lambda x: x if x.isdigit() else '')
     
-    # Clean Affiliate ID
-    df['Affiliate ID'] = df['Affiliate ID'].astype(str)
-    
-    # Create Concatenated key in same format as main report
-    # Special rule: For PID 42865, always use 42865_ regardless of Sub ID
+    # 3. Create Concatenated column
     df['Concatenated'] = df.apply(
-        lambda r: '42865_' if r['Affiliate ID'] == '42865' else (
-            f"{r['Affiliate ID']}_{r['Sub ID']}" if r['Sub ID'] else f"{r['Affiliate ID']}_"
-        ),
+        lambda r: f"{r['Affiliate ID']}_{r['Sub ID']}" if r['Sub ID'] else f"{r['Affiliate ID']}_",
         axis=1
     )
     
     # Convert Paid to numeric, handling any currency symbols and commas
-    df['Original Paid'] = df['Paid']  # Keep original for comparison
     df['Paid'] = df['Paid'].astype(str).str.replace('$', '').str.replace(',', '')
     df['Paid'] = pd.to_numeric(df['Paid'], errors='coerce')
     
-    # Convert date
-    df['Original Date'] = df['Conversion Date']  # Keep original for comparison
-    df['Conversion Date'] = pd.to_datetime(df['Conversion Date'], errors='coerce')
+    # 4. Create Cake Pivot
+    cake_pivot = df.groupby('Concatenated').agg({
+        'Affiliate ID': 'mean',  # Average of Affiliate ID
+        'Concatenated': 'count',  # Count of occurrences
+        'Paid': 'sum'  # Sum of Paid values
+    }).rename(columns={
+        'Affiliate ID': 'PID',
+        'Concatenated': 'Leads',
+        'Paid': 'Cost'
+    }).reset_index()
     
-    # Sort by date descending to get most recent rates
-    df = df.sort_values('Conversion Date', ascending=False)
+    # Display Cake Pivot
+    st.write("\n### Cake Pivot")
+    st.write(f"Total rows in pivot: {len(cake_pivot)}")
+    st.write("Sample of Cake Pivot (first 10 rows):")
+    st.write(cake_pivot.head(10))
     
-    # Get most recent rate for each Concatenated ID
-    current_rates = df.groupby('Concatenated', as_index=False).agg({
-        'Paid': 'first',
-        'Conversion Date': 'first',
-        'Affiliate ID': 'first',
-        'Sub ID': 'first'
-    }).rename(columns={'Paid': 'Current Rate'})
-    
-    # Add download button for full cleaned data
-    st.write("\n### Download Cleaned Conversion Data")
-    
-    # Create Excel buffer
+    # Add download button for both full data and pivot
+    st.write("\n### Download Cleaned Data")
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        # Write full cleaned data
         df.to_excel(writer, sheet_name='Full Cleaned Data', index=False)
-        # Write current rates
-        current_rates.to_excel(writer, sheet_name='Current Rates', index=False)
+        cake_pivot.to_excel(writer, sheet_name='Cake Pivot', index=False)
     
     output.seek(0)
-    
     st.download_button(
-        label="Download Cleaned Conversion Data (Excel)",
+        label="Download Cleaned Data and Pivot (Excel)",
         data=output,
-        file_name="cleaned_conversion_data.xlsx",
+        file_name="cake_conversion_data.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
     
-    # Debug output
-    st.write("\n### Cleaning Summary")
-    st.write(f"Total rows processed: {len(df)}")
-    st.write(f"Total unique Concatenated IDs: {len(current_rates)}")
-    
-    st.write("\nSample of current rates (first 5 rows):")
-    st.write(current_rates.head())
-    
-    # Special debug for 42865 entries
-    st.write("\nChecking 42865 entries:")
-    st.write("42865 entries in current_rates:")
-    st.write(current_rates[current_rates['Concatenated'].str.startswith('42865')])
-    
-    return current_rates
+    return cake_pivot
 
 def merge_and_compute(cake_df, web_pivot, phone_pivot, conversion_df):
     """
