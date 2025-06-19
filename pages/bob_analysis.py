@@ -1228,9 +1228,22 @@ def show_bob_analysis():
             st.write("DEBUG: Starting data loading...")
             
             try:
-                athena_df = pd.read_csv(athena_file)
-                st.write("DEBUG: Successfully loaded Athena file")
-                st.write("Athena columns:", athena_df.columns.tolist())
+                # Try different encodings in order of likelihood
+                encodings_to_try = ['utf-8', 'latin1', 'cp1252', 'iso-8859-1']
+                for encoding in encodings_to_try:
+                    try:
+                        athena_df = pd.read_csv(athena_file, encoding=encoding)
+                        st.write(f"DEBUG: Successfully loaded Athena file with {encoding} encoding")
+                        st.write("Athena columns:", athena_df.columns.tolist())
+                        break
+                    except UnicodeDecodeError:
+                        continue
+                    except Exception as e:
+                        st.error(f"Error loading Athena file with {encoding} encoding: {str(e)}")
+                        continue
+                else:
+                    st.error("Could not load Athena file with any of the attempted encodings")
+                    return
             except Exception as e:
                 st.error(f"Error loading Athena file: {str(e)}")
                 return
