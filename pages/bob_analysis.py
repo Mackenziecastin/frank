@@ -15,16 +15,20 @@ TFN_SHEET_URL = "https://docs.google.com/spreadsheets/d/10BHN_-Wz_ZPmi7rezNtqiDP
 # Helper Functions
 # -------------------------------
 
-def clean_affiliate_code(code):
+def clean_affiliate_code(code, dnis=None):
     """
     Clean affiliate code by removing offerID prefix and keeping only numeric subID.
     Format: OfferID_PID_SubID -> PID_SubID (if SubID is numeric)
     or: OfferID_PID -> PID_
     
+    Special rule: For WEB0021011 entries with PID 42865, always return '42865_'
+    
     Parameters:
     ----------
     code : str
         The raw affiliate code to clean
+    dnis : str, optional
+        The DNIS value to check for WEB0021011
         
     Returns:
     -------
@@ -45,6 +49,10 @@ def clean_affiliate_code(code):
     # Extract PID (second part)
     pid = parts[1]
     if not pid: return ''
+    
+    # Special rule for WEB0021011 entries with PID 42865
+    if dnis == 'WEB0021011' and pid == '42865':
+        return '42865_'
     
     # If there's a subID (third part), check if it's numeric
     if len(parts) > 2:
@@ -548,7 +556,10 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
         st.write(f"Created Affiliate_Code from column '{campaign_column}'")
     
     # Clean affiliate code without dropping any rows
-    athena_df['Clean_Affiliate_Code'] = athena_df['Affiliate_Code'].apply(clean_affiliate_code)
+    athena_df['Clean_Affiliate_Code'] = athena_df.apply(
+        lambda row: clean_affiliate_code(row['Affiliate_Code'], row['Lead_DNIS']), 
+        axis=1
+    )
     
     # Extract PID from Clean_Affiliate_Code
     athena_df['PID_from_Affiliate'] = athena_df['Clean_Affiliate_Code'].apply(
