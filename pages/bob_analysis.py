@@ -1811,7 +1811,8 @@ def clean_conversion(conversion_df):
         'Affiliate ID': ['Affiliate ID', 'AffiliateID', 'Affiliate_ID', 'affiliate_id'],
         'Sub ID': ['Sub ID', 'SubID', 'Sub_ID', 'sub_id'],
         'Paid': ['Paid', 'Rate', 'Cost', 'Price'],
-        'Offer Name': ['Offer Name', 'OfferName', 'Offer_Name', 'offer_name']
+        'Offer Name': ['Offer Name', 'OfferName', 'Offer_Name', 'offer_name'],
+        'Affiliate Name': ['Affiliate Name', 'AffiliateName', 'Affiliate_Name', 'affiliate_name']
     }
     
     # Map columns to standardized names
@@ -1860,7 +1861,7 @@ def clean_conversion(conversion_df):
     
     # Show sample of cleaned data
     st.write("\nSample of cleaned data (first 10 rows):")
-    sample_cols = ['Affiliate ID', 'Original Sub ID', 'Sub ID', 'Concatenated', 'Paid', 'Offer Name']
+    sample_cols = ['Affiliate ID', 'Affiliate Name', 'Original Sub ID', 'Sub ID', 'Concatenated', 'Paid', 'Offer Name']
     st.write(df[sample_cols].head(10))
     
     # Special check for 42865
@@ -1893,6 +1894,7 @@ def clean_conversion(conversion_df):
     st.write("\n### Creating Cake Pivot")
     cake_pivot = df.groupby('Concatenated').agg({
         'Affiliate ID': 'mean',  # Average of Affiliate ID
+        'Affiliate Name': 'first',  # First Affiliate Name
         'Concatenated': 'count',  # Count of occurrences
         'Paid': 'sum'  # Sum of Paid values
     }).rename(columns={
@@ -1900,11 +1902,6 @@ def clean_conversion(conversion_df):
         'Concatenated': 'Leads',
         'Paid': 'Cost'
     }).reset_index()
-    
-    # 5. Add Affiliate Name column by matching PID
-    # Create a mapping from PID to Affiliate Name from the original data
-    affiliate_name_map = df.groupby('Affiliate ID')['Offer Name'].first().to_dict()
-    cake_pivot['Affiliate Name'] = cake_pivot['PID'].map(affiliate_name_map)
     
     # Reorder columns to put Affiliate Name first
     cake_pivot = cake_pivot[['Affiliate Name', 'Concatenated', 'PID', 'Leads', 'Cost']]
