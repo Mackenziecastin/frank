@@ -1130,7 +1130,7 @@ def show_bob_analysis():
             # Step 4-5: Merge and Compute Final Metrics
             st.write("DEBUG: Merging and computing metrics...")
             try:
-                final_df = merge_and_compute(cake_df, web_pivot, phone_pivot, conversion_df)
+                final_df = merge_and_compute(cake_df, web_pivot, phone_pivot, conversion_df, start_date, end_date)
                 st.write("DEBUG: Successfully computed metrics")
             except Exception as e:
                 st.error(f"Error computing metrics: {str(e)}")
@@ -1823,6 +1823,14 @@ def clean_conversion(conversion_df):
         'Paid': 'Cost'
     }).reset_index()
     
+    # 5. Add Affiliate Name column by matching PID
+    # Create a mapping from PID to Affiliate Name from the original data
+    affiliate_name_map = df.groupby('Affiliate ID')['Offer Name'].first().to_dict()
+    cake_pivot['Affiliate Name'] = cake_pivot['PID'].map(affiliate_name_map)
+    
+    # Reorder columns to put Affiliate Name first
+    cake_pivot = cake_pivot[['Affiliate Name', 'Concatenated', 'PID', 'Leads', 'Cost']]
+    
     # Display Cake Pivot
     st.write("\n### Cake Pivot")
     st.write(f"Total rows in pivot: {len(cake_pivot)}")
@@ -1846,39 +1854,61 @@ def clean_conversion(conversion_df):
     
     return cake_pivot
 
-def merge_and_compute(cake_df, web_pivot, phone_pivot, conversion_df):
+def merge_and_compute(cake_df, web_pivot, phone_pivot, conversion_df, start_date, end_date):
     """
     Merge web and phone pivots with conversion data and compute final metrics.
+    Create the final ADT Optimizations report.
     """
-    st.write("\nMerging pivots and computing metrics...")
+    st.write("\n### Creating ADT Optimizations Report")
     
-    # Start with web pivot as base
-    final_df = web_pivot.copy()
+    # Start with Cake Pivot as base and rename columns
+    final_df = cake_df.copy()
     
-    # Initialize phone metrics columns if they don't exist
-    phone_metrics = ['Phone DIFM Sales', 'Phone DIY Sales', 'DIFM Phone Installs']
-    for col in phone_metrics:
-        if col not in final_df.columns:
-            final_df[col] = 0
+    # Rename columns as specified
+    final_df = final_df.rename(columns={
+        'Concatenated': 'Affiliate ID',
+        'Leads': 'Leads',
+        'Cost': 'Cost'
+    })
+    
+    # Initialize all the new columns with 0
+    new_columns = [
+        'Web DIFM Sales', 'Phone DIFM Sales', 'Total DIFM Sales',
+        'DIFM Web Installs', 'DIFM Phone Installs', 'Total DIFM Installs',
+        'DIY Web Sales', 'DIY Phone Sales', 'Total DIY Sales',
+        'Revenue', 'Profit/Loss', 'Projected Installs', 'Projected Revenue',
+        'Projected Profit/Loss', 'Projected Margin', 'Current Rate', 'eCPL'
+    ]
+    
+    for col in new_columns:
+        final_df[col] = 0
+    
+    # Merge with web pivot data
+    final_df = final_df.merge(
+        web_pivot[['Concatenated', 'Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs', 'DIY Web Installs']],
+        left_on='Affiliate ID',
+        right_on='Concatenated',
+        how='left'
+    ).drop('Concatenated', axis=1)
+    
+    # Rename web columns to match final format
+    final_df = final_df.rename(columns={
+        'Web DIFM Sales': 'Web DIFM Sales',
+        'Web DIY Sales': 'DIY Web Sales',
+        'DIFM Web Installs': 'DIFM Web Installs',
+        'DIY Web Installs': 'DIY Web Installs'
+    })
     
     # Allocate phone metrics based on web activity
     final_df = allocate_phone_metrics(final_df, phone_pivot)
     
     # Calculate total metrics
     final_df['Total DIFM Sales'] = final_df['Web DIFM Sales'] + final_df['Phone DIFM Sales']
-    final_df['Total DIY Sales'] = final_df['Web DIY Sales'] + final_df['Phone DIY Sales']
     final_df['Total DIFM Installs'] = final_df['DIFM Web Installs'] + final_df['DIFM Phone Installs']
+    final_df['Total DIY Sales'] = final_df['DIY Web Sales'] + final_df['DIY Phone Sales']
     
-    # Merge with conversion data to get rates
-    final_df = final_df.merge(cake_df[['Concatenated', 'Current Rate']], 
-                            on='Concatenated', 
-                            how='left')
-    
-    # Fill missing rates with 0
-    final_df['Current Rate'] = final_df['Current Rate'].fillna(0)
-    
-    # Calculate cost (Leads * Rate)
-    final_df['Cost'] = final_df['Leads'] * final_df['Current Rate']
+    # Calculate Current Rate (Cost / Leads)
+    final_df['Current Rate'] = final_df['Cost'] / final_df['Leads'].replace(0, np.nan)
     
     # Calculate eCPL
     final_df['eCPL'] = final_df['Cost'] / final_df['Leads'].replace(0, np.nan)
@@ -1902,17 +1932,27 @@ def merge_and_compute(cake_df, web_pivot, phone_pivot, conversion_df):
     final_df['Projected Margin'] = (final_df['Projected Profit/Loss'] / final_df['Cost'].replace(0, np.nan)) * 100
     
     # Round numeric columns
-    numeric_cols = ['Cost', 'eCPL', 'Revenue', 'Profit/Loss', 'Projected Revenue', 
+    numeric_cols = ['Cost', 'Current Rate', 'eCPL', 'Revenue', 'Profit/Loss', 'Projected Revenue', 
                    'Projected Profit/Loss', 'Projected Margin']
     for col in numeric_cols:
         final_df[col] = final_df[col].round(2)
     
+    # Round integer columns
+    integer_cols = ['Web DIFM Sales', 'Phone DIFM Sales', 'Total DIFM Sales',
+                   'DIFM Web Installs', 'DIFM Phone Installs', 'Total DIFM Installs',
+                   'DIY Web Sales', 'DIY Phone Sales', 'Total DIY Sales',
+                   'Projected Installs']
+    for col in integer_cols:
+        final_df[col] = final_df[col].round(0).astype(int)
+    
     # Sort by projected revenue descending
     final_df = final_df.sort_values('Projected Revenue', ascending=False)
     
-    st.write(f"\nProcessed {len(final_df)} rows")
-    st.write("Sample of computed metrics (first 5 rows):")
-    st.write(final_df.head())
+    # Display the final report
+    st.write(f"\n### ADT Optimizations - {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+    st.write(f"Total rows: {len(final_df)}")
+    st.write("Final optimization report:")
+    st.dataframe(final_df, use_container_width=True)
     
     return final_df
 
