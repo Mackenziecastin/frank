@@ -1272,7 +1272,7 @@ def allocate_phone_metrics(cake_df, phone_pivot, athena_df=None):
             'DIFM Installs': int(phone_metrics_for_pid['DIFM Phone Installs'])
         })
         
-        # Step 1: Proportional Allocation
+        # Calculate total web metrics for this PID
         total_web_difm = float(pid_rows['Web DIFM Sales'].sum())
         total_web_diy = float(pid_rows['Web DIY Sales'].sum())
         total_web_installs = float(pid_rows['DIFM Web Installs'].sum())
@@ -1283,100 +1283,117 @@ def allocate_phone_metrics(cake_df, phone_pivot, athena_df=None):
             st.write(f"Total Web DIFM Sales: {total_web_difm}")
             st.write(f"Total Web DIY Sales: {total_web_diy}")
             st.write(f"Total DIFM Web Installs: {total_web_installs}")
-            
-            # Track allocations in detail
-            allocation_details = []
         
-        if total_web_difm > 0 or total_web_diy > 0 or total_web_installs > 0:
-            # Allocate proportionally
-            for idx in pid_rows.index:
-                row = pid_rows.loc[idx]
-                
-                # Allocate DIFM Sales
-                if total_web_difm > 0:
-                    allocated = int(round(
-                        float(phone_metrics_for_pid['Phone DIFM Sales']) * 
-                        (float(row['Web DIFM Sales']) / total_web_difm)
-                    ))
-                    cake_df.loc[idx, 'Phone DIFM Sales'] = allocated
-                
-                # Allocate DIY Sales
-                if total_web_diy > 0:
-                    allocated = int(round(
-                        float(phone_metrics_for_pid['Phone DIY Sales']) * 
-                        (float(row['Web DIY Sales']) / total_web_diy)
-                    ))
-                    cake_df.loc[idx, 'Phone DIY Sales'] = allocated
-                
-                # Allocate DIFM Installs
-                if total_web_installs > 0:
-                    allocated = int(round(
-                        float(phone_metrics_for_pid['DIFM Phone Installs']) * 
-                        (float(row['DIFM Web Installs']) / total_web_installs)
-                    ))
-                    cake_df.loc[idx, 'DIFM Phone Installs'] = allocated
-                    
-                    # Special debug for 42299
-                    if pid == '42299':
-                        allocation_details.append({
-                            'Concatenated': row['Concatenated'],
-                            'Web DIFM Installs': float(row['DIFM Web Installs']),
-                            'Proportion': float(row['DIFM Web Installs']) / total_web_installs,
-                            'Calculation': f"{float(phone_metrics_for_pid['DIFM Phone Installs'])} * {float(row['DIFM Web Installs']) / total_web_installs}",
-                            'Raw Value': float(phone_metrics_for_pid['DIFM Phone Installs']) * (float(row['DIFM Web Installs']) / total_web_installs),
-                            'Rounded': allocated,
-                        })
+        # Rule 1: If no web activity, allocate to subID with most leads
+        if total_web_difm == 0 and total_web_diy == 0 and total_web_installs == 0:
+            st.write("No web activity found - allocating to subID with most leads")
             
-            # Step 2: Fix Under-Allocated Totals
-            for metric, phone_metric in [
-                ('Phone DIFM Sales', 'Phone DIFM Sales'),
-                ('Phone DIY Sales', 'Phone DIY Sales'),
-                ('DIFM Phone Installs', 'DIFM Phone Installs')
-            ]:
-                total_allocated = int(cake_df.loc[pid_mask, metric].sum())
-                total_available = int(phone_metrics_for_pid[phone_metric])
-                
-                # Special debug for 42299
-                if pid == '42299' and metric == 'DIFM Phone Installs':
-                    st.write(f"\nDIFM Phone Installs allocation for 42299_:")
-                    st.write(f"Total DIFM Phone Installs in pivot: {total_available}")
-                    st.write(f"Total allocated in first pass: {total_allocated}")
-                    st.write("\nAllocation details by row:")
-                    st.write(pd.DataFrame(allocation_details))
-                
-                if total_allocated < total_available:
-                    remaining = total_available - total_allocated
-                    st.write(f"Under-allocated {metric}: {remaining} units remaining")
-                    
-                    # Sort by Leads or Web DIFM Sales
-                    sorted_idx = pid_rows.sort_values(['Web DIFM Sales', 'Leads'], 
-                                                    ascending=[False, False]).index
-                    
-                    # Special debug for 42299
-                    if pid == '42299' and metric == 'DIFM Phone Installs':
-                        st.write(f"\nDistributing {remaining} remaining DIFM Phone Installs")
-                        st.write("Sorted rows to receive remaining installs:")
-                        sorted_rows = pid_rows.loc[sorted_idx[:remaining], ['Concatenated', 'Web DIFM Sales', 'Leads']]
-                        st.write(sorted_rows)
-                    
-                    for idx in sorted_idx[:remaining]:
-                        cake_df.loc[idx, metric] += 1
-                        
-                        # Special debug for 42299
-                        if pid == '42299' and metric == 'DIFM Phone Installs':
-                            st.write(f"Added 1 to {cake_df.loc[idx, 'Concatenated']}")
-        
-        else:
-            # Step 3: Catch-All Attribution (No Web Activity)
-            st.write("No web activity found - using catch-all attribution")
-            
-            # Find row with highest Leads
+            # Find row with highest leads
             max_leads_idx = pid_rows['Leads'].idxmax()
             
             # Assign all phone metrics to this row
             cake_df.loc[max_leads_idx, 'Phone DIFM Sales'] = int(phone_metrics_for_pid['Phone DIFM Sales'])
             cake_df.loc[max_leads_idx, 'Phone DIY Sales'] = int(phone_metrics_for_pid['Phone DIY Sales'])
             cake_df.loc[max_leads_idx, 'DIFM Phone Installs'] = int(phone_metrics_for_pid['DIFM Phone Installs'])
+            
+            st.write(f"Allocated all phone metrics to {cake_df.loc[max_leads_idx, 'Concatenated']} (Leads: {cake_df.loc[max_leads_idx, 'Leads']})")
+        
+        else:
+            # Step 1: Proportional Allocation
+            allocation_details = []
+            
+            for idx in pid_rows.index:
+                row = pid_rows.loc[idx]
+                
+                # Allocate DIFM Sales
+                if total_web_difm > 0:
+                    allocated = float(phone_metrics_for_pid['Phone DIFM Sales']) * (float(row['Web DIFM Sales']) / total_web_difm)
+                    cake_df.loc[idx, 'Phone DIFM Sales'] = allocated
+                else:
+                    cake_df.loc[idx, 'Phone DIFM Sales'] = 0
+                
+                # Allocate DIY Sales
+                if total_web_diy > 0:
+                    allocated = float(phone_metrics_for_pid['Phone DIY Sales']) * (float(row['Web DIY Sales']) / total_web_diy)
+                    cake_df.loc[idx, 'Phone DIY Sales'] = allocated
+                else:
+                    cake_df.loc[idx, 'Phone DIY Sales'] = 0
+                
+                # Allocate DIFM Installs
+                if total_web_installs > 0:
+                    allocated = float(phone_metrics_for_pid['DIFM Phone Installs']) * (float(row['DIFM Web Installs']) / total_web_installs)
+                    cake_df.loc[idx, 'DIFM Phone Installs'] = allocated
+                else:
+                    cake_df.loc[idx, 'DIFM Phone Installs'] = 0
+                    
+                # Special debug for 42299
+                if pid == '42299':
+                    allocation_details.append({
+                        'Concatenated': row['Concatenated'],
+                        'Web DIFM Sales': float(row['Web DIFM Sales']),
+                        'Web DIY Sales': float(row['Web DIY Sales']),
+                        'DIFM Web Installs': float(row['DIFM Web Installs']),
+                        'Leads': row['Leads'],
+                        'Raw DIFM Sales': cake_df.loc[idx, 'Phone DIFM Sales'],
+                        'Raw DIY Sales': cake_df.loc[idx, 'Phone DIY Sales'],
+                        'Raw DIFM Installs': cake_df.loc[idx, 'DIFM Phone Installs']
+                    })
+            
+            # Step 2: Fix totals to match exactly (Rule 2)
+            for metric, phone_metric in [
+                ('Phone DIFM Sales', 'Phone DIFM Sales'),
+                ('Phone DIY Sales', 'Phone DIY Sales'),
+                ('DIFM Phone Installs', 'DIFM Phone Installs')
+            ]:
+                total_allocated = cake_df.loc[pid_mask, metric].sum()
+                total_available = float(phone_metrics_for_pid[phone_metric])
+                
+                # Special debug for 42299
+                if pid == '42299':
+                    st.write(f"\n{metric} allocation for 42299_:")
+                    st.write(f"Total {metric} in pivot: {total_available}")
+                    st.write(f"Total allocated (raw): {total_allocated}")
+                    st.write("\nAllocation details by row:")
+                    st.write(pd.DataFrame(allocation_details))
+                
+                if abs(total_allocated - total_available) > 0.01:  # Allow for small floating point differences
+                    st.write(f"Adjusting {metric} totals: allocated {total_allocated}, target {total_available}")
+                    
+                    # First, round all values to integers
+                    cake_df.loc[pid_mask, metric] = cake_df.loc[pid_mask, metric].round()
+                    
+                    # Recalculate total after rounding
+                    total_after_rounding = cake_df.loc[pid_mask, metric].sum()
+                    difference = total_available - total_after_rounding
+                    
+                    st.write(f"After rounding: {total_after_rounding}, difference: {difference}")
+                    
+                    if abs(difference) > 0.01:
+                        # Sort by leads (descending) to prioritize high-lead subIDs
+                        sorted_idx = pid_rows.sort_values('Leads', ascending=False).index
+                        
+                        if difference > 0:
+                            # Need to add more - add to highest lead subIDs
+                            st.write(f"Adding {difference} to highest lead subIDs")
+                            for idx in sorted_idx:
+                                if difference <= 0:
+                                    break
+                                cake_df.loc[idx, metric] += 1
+                                difference -= 1
+                        else:
+                            # Need to subtract - remove from lowest lead subIDs
+                            difference = abs(difference)
+                            st.write(f"Subtracting {difference} from lowest lead subIDs")
+                            for idx in sorted_idx[::-1]:  # Reverse order
+                                if difference <= 0:
+                                    break
+                                if cake_df.loc[idx, metric] > 0:
+                                    cake_df.loc[idx, metric] -= 1
+                                    difference -= 1
+                
+                # Final verification
+                final_total = cake_df.loc[pid_mask, metric].sum()
+                st.write(f"Final {metric} total: {final_total} (target: {total_available})")
         
         # Special debug for 42299
         if pid == '42299':
@@ -1932,17 +1949,13 @@ def merge_and_compute(cake_df, web_pivot, phone_pivot, conversion_df, start_date
     Merge web and phone pivots with conversion data and compute final metrics.
     Create the final ADT Optimizations report.
     """
-    st.write("\n### Creating ADT Optimizations Report")
+    st.write(f"\n### ADT Optimizations - {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
     
-    # Start with Cake Pivot as base and rename columns
+    # Start with Cake Pivot as base
     final_df = cake_df.copy()
     
-    # Rename columns as specified
-    final_df = final_df.rename(columns={
-        'Concatenated': 'Affiliate ID',
-        'Leads': 'Leads',
-        'Cost': 'Cost'
-    })
+    # Rename Concatenated to Affiliate ID
+    final_df = final_df.rename(columns={'Concatenated': 'Affiliate ID'})
     
     # Initialize all the new columns with 0
     new_columns = [
@@ -1957,10 +1970,7 @@ def merge_and_compute(cake_df, web_pivot, phone_pivot, conversion_df, start_date
         final_df[col] = 0
     
     # Merge with web pivot data
-    st.write("\nDEBUG: Starting merge process")
-    st.write("Web pivot columns:", web_pivot.columns.tolist())
-    st.write("Final_df columns before merge:", final_df.columns.tolist())
-    
+    st.write("\nMerging web pivot data...")
     try:
         # First ensure web_pivot has all required columns
         required_web_columns = ['Concatenated', 'Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs', 'DIY Web Installs']
@@ -1970,7 +1980,6 @@ def merge_and_compute(cake_df, web_pivot, phone_pivot, conversion_df, start_date
                 web_pivot[col] = 0
         
         # Perform the merge
-        st.write("Attempting merge with columns:", required_web_columns)
         final_df = final_df.merge(
             web_pivot[required_web_columns],
             left_on='Affiliate ID',
@@ -1988,58 +1997,83 @@ def merge_and_compute(cake_df, web_pivot, phone_pivot, conversion_df, start_date
             if col in final_df.columns:
                 final_df[col] = final_df[col].fillna(0)
         
-        st.write("Merge successful. Final columns:", final_df.columns.tolist())
+        st.write("Web pivot merge successful")
         
     except Exception as e:
-        st.error(f"Error during merge: {str(e)}")
+        st.error(f"Error during web merge: {str(e)}")
         st.error("Attempting to continue with empty web metrics...")
-        # If merge fails, add empty columns
         for col in ['Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs', 'DIY Web Installs']:
             final_df[col] = 0
     
-    # Rename web columns to match final format
-    column_mapping = {
-        'Web DIY Sales': 'DIY Web Sales',
-        'DIFM Web Installs': 'DIFM Web Installs',
-        'DIY Web Installs': 'DIY Web Installs'
-    }
-    final_df = final_df.rename(columns=column_mapping)
-    
     # Allocate phone metrics based on web activity
+    st.write("\nAllocating phone metrics...")
     final_df = allocate_phone_metrics(final_df, phone_pivot)
     
     # Calculate total metrics
+    st.write("\nCalculating total metrics...")
     final_df['Total DIFM Sales'] = final_df['Web DIFM Sales'] + final_df['Phone DIFM Sales']
     final_df['Total DIFM Installs'] = final_df['DIFM Web Installs'] + final_df['DIFM Phone Installs']
     final_df['Total DIY Sales'] = final_df['DIY Web Sales'] + final_df['DIY Phone Sales']
     
-    # Calculate Current Rate (Cost / Leads)
-    final_df['Current Rate'] = final_df['Cost'] / final_df['Leads'].replace(0, np.nan)
-    
-    # Calculate eCPL
-    final_df['eCPL'] = final_df['Cost'] / final_df['Leads'].replace(0, np.nan)
-    
-    # Calculate revenue ($1080 per DIFM install)
-    final_df['Revenue'] = final_df['Total DIFM Installs'] * 1080
+    # Calculate revenue (1080 per DIFM install + 300 per DIY sale)
+    final_df['Revenue'] = (final_df['Total DIFM Installs'] * 1080) + (final_df['Total DIY Sales'] * 300)
     
     # Calculate profit/loss
     final_df['Profit/Loss'] = final_df['Revenue'] - final_df['Cost']
     
-    # Calculate projected installs
-    final_df['Projected Installs'] = final_df.apply(calculate_projected_installs, axis=1)
+    # Calculate projected installs with different rates for specific PIDs
+    final_df['Projected Installs'] = final_df.apply(
+        lambda row: round(row['Total DIFM Sales'] * 0.55) if str(row['PID']) in ['42215', '4790'] 
+        else round(row['Total DIFM Sales'] * 0.60),
+        axis=1
+    )
     
-    # Calculate projected revenue ($1080 per projected install)
-    final_df['Projected Revenue'] = final_df['Projected Installs'] * 1080
+    # Calculate projected revenue (1080 per projected install + 300 per DIY sale)
+    final_df['Projected Revenue'] = (final_df['Projected Installs'] * 1080) + (final_df['Total DIY Sales'] * 300)
     
     # Calculate projected profit/loss
     final_df['Projected Profit/Loss'] = final_df['Projected Revenue'] - final_df['Cost']
     
     # Calculate projected margin
-    final_df['Projected Margin'] = (final_df['Projected Profit/Loss'] / final_df['Cost'].replace(0, np.nan)) * 100
+    final_df['Projected Margin'] = final_df.apply(
+        lambda row: (row['Projected Profit/Loss'] / row['Projected Revenue'] * 100) 
+        if row['Projected Revenue'] != 0 else -100,
+        axis=1
+    )
+    
+    # Get current rates from conversion report
+    st.write("\nGetting current rates...")
+    try:
+        # Convert Conversion Date to datetime
+        conversion_df['Conversion Date'] = pd.to_datetime(conversion_df['Conversion Date'], errors='coerce')
+        
+        # Group by Affiliate ID + Sub ID and get most recent rate
+        current_rates = (
+            conversion_df
+            .sort_values('Conversion Date', ascending=False)
+            .groupby(
+                conversion_df.apply(
+                    lambda r: f"{r['Affiliate ID']}_{r['Sub ID']}" if str(r['Sub ID']).strip() 
+                    else f"{r['Affiliate ID']}_",
+                    axis=1
+                )
+            )['Paid']
+            .first()
+        )
+        
+        # Map current rates to final_df
+        final_df['Current Rate'] = final_df['Affiliate ID'].map(current_rates).fillna(0)
+        
+    except Exception as e:
+        st.error(f"Error getting current rates: {str(e)}")
+        final_df['Current Rate'] = 0
+    
+    # Calculate eCPL
+    final_df['eCPL'] = final_df['Projected Revenue'] / final_df['Leads'].replace(0, np.nan)
     
     # Round numeric columns
     numeric_cols = ['Cost', 'Current Rate', 'eCPL', 'Revenue', 'Profit/Loss', 'Projected Revenue', 
-                   'Projected Profit/Loss', 'Projected Margin']
+                   'Projected Profit/Loss']
     for col in numeric_cols:
         final_df[col] = final_df[col].round(2)
     
@@ -2055,14 +2089,13 @@ def merge_and_compute(cake_df, web_pivot, phone_pivot, conversion_df, start_date
     final_df = final_df.sort_values('Projected Revenue', ascending=False)
     
     # Display the final report
-    st.write(f"\n### ADT Optimizations - {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
-    st.write(f"Total rows in report: {len(final_df)}")
+    st.write(f"\nTotal rows in report: {len(final_df)}")
     
     # Display column names for verification
     st.write("\nColumns in final report:")
     st.write(final_df.columns.tolist())
     
-    # Display the full report
+    # Display the full report with formatted columns
     st.write("\nFull Optimization Report:")
     st.dataframe(final_df.style.format({
         'Cost': '${:,.2f}',
@@ -2083,6 +2116,7 @@ def merge_and_compute(cake_df, web_pivot, phone_pivot, conversion_df, start_date
             'Total Cost',
             'Total DIFM Sales',
             'Total DIFM Installs',
+            'Total DIY Sales',
             'Total Revenue',
             'Total Projected Revenue'
         ],
@@ -2091,6 +2125,7 @@ def merge_and_compute(cake_df, web_pivot, phone_pivot, conversion_df, start_date
             f"${final_df['Cost'].sum():,.2f}",
             f"{final_df['Total DIFM Sales'].sum():,}",
             f"{final_df['Total DIFM Installs'].sum():,}",
+            f"{final_df['Total DIY Sales'].sum():,}",
             f"${final_df['Revenue'].sum():,.2f}",
             f"${final_df['Projected Revenue'].sum():,.2f}"
         ]
