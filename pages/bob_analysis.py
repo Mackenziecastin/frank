@@ -1808,5 +1808,91 @@ def clean_conversion(conversion_df):
     
     return current_rates
 
+def merge_and_compute(cake_df, web_pivot, phone_pivot, conversion_df):
+    """
+    Merge web and phone pivots with conversion data and compute final metrics.
+    
+    Parameters:
+    ----------
+    cake_df : pd.DataFrame
+        Cleaned conversion report with current rates
+    web_pivot : pd.DataFrame
+        Web metrics pivot table
+    phone_pivot : pd.DataFrame
+        Phone metrics pivot table
+    conversion_df : pd.DataFrame
+        Raw conversion report for additional data
+        
+    Returns:
+    -------
+    pd.DataFrame
+        Final report with all metrics computed
+    """
+    st.write("\nMerging pivots and computing metrics...")
+    
+    # Start with web pivot as base
+    final_df = web_pivot.copy()
+    
+    # Initialize phone metrics columns if they don't exist
+    phone_metrics = ['Phone DIFM Sales', 'Phone DIY Sales', 'DIFM Phone Installs']
+    for col in phone_metrics:
+        if col not in final_df.columns:
+            final_df[col] = 0
+    
+    # Allocate phone metrics based on web activity
+    final_df = allocate_phone_metrics(final_df, phone_pivot)
+    
+    # Calculate total metrics
+    final_df['Total DIFM Sales'] = final_df['Web DIFM Sales'] + final_df['Phone DIFM Sales']
+    final_df['Total DIY Sales'] = final_df['Web DIY Sales'] + final_df['Phone DIY Sales']
+    final_df['Total DIFM Installs'] = final_df['DIFM Web Installs'] + final_df['DIFM Phone Installs']
+    
+    # Merge with conversion data to get rates
+    final_df = final_df.merge(cake_df[['Concatenated', 'Current Rate']], 
+                            on='Concatenated', 
+                            how='left')
+    
+    # Fill missing rates with 0
+    final_df['Current Rate'] = final_df['Current Rate'].fillna(0)
+    
+    # Calculate cost (Leads * Rate)
+    final_df['Cost'] = final_df['Leads'] * final_df['Current Rate']
+    
+    # Calculate eCPL
+    final_df['eCPL'] = final_df['Cost'] / final_df['Leads'].replace(0, np.nan)
+    
+    # Calculate revenue ($1500 per DIFM install)
+    final_df['Revenue'] = final_df['Total DIFM Installs'] * 1500
+    
+    # Calculate profit/loss
+    final_df['Profit/Loss'] = final_df['Revenue'] - final_df['Cost']
+    
+    # Calculate projected installs
+    final_df['Projected Installs'] = final_df.apply(calculate_projected_installs, axis=1)
+    
+    # Calculate projected revenue
+    final_df['Projected Revenue'] = final_df['Projected Installs'] * 1500
+    
+    # Calculate projected profit/loss
+    final_df['Projected Profit/Loss'] = final_df['Projected Revenue'] - final_df['Cost']
+    
+    # Calculate projected margin
+    final_df['Projected Margin'] = (final_df['Projected Profit/Loss'] / final_df['Cost'].replace(0, np.nan)) * 100
+    
+    # Round numeric columns
+    numeric_cols = ['Cost', 'eCPL', 'Revenue', 'Profit/Loss', 'Projected Revenue', 
+                   'Projected Profit/Loss', 'Projected Margin']
+    for col in numeric_cols:
+        final_df[col] = final_df[col].round(2)
+    
+    # Sort by projected revenue descending
+    final_df = final_df.sort_values('Projected Revenue', ascending=False)
+    
+    st.write(f"\nProcessed {len(final_df)} rows")
+    st.write("Sample of computed metrics (first 5 rows):")
+    st.write(final_df.head())
+    
+    return final_df
+
 if __name__ == "__main__":
     show_bob_analysis()
