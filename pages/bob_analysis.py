@@ -2039,6 +2039,20 @@ def merge_and_compute(cake_df, web_pivot, phone_pivot, conversion_df, start_date
         else:
             st.warning("Web sales/install totals DO NOT match between web pivot and merged report!")
 
+        # Diagnostics: Find unmatched keys
+        final_affiliate_ids = set(final_df['Affiliate ID'].unique())
+        web_concat_ids = set(web_pivot['Concatenated'].unique())
+
+        missing_in_web = final_affiliate_ids - web_concat_ids
+        missing_in_final = web_concat_ids - final_affiliate_ids
+
+        st.write("Sample Affiliate IDs in final_df not in web_pivot:", list(missing_in_web)[:10])
+        st.write("Sample Concatenated in web_pivot not in final_df:", list(missing_in_final)[:10])
+        st.write(f"Count missing in web_pivot: {len(missing_in_web)}")
+        st.write(f"Count missing in final_df: {len(missing_in_final)}")
+        st.write("Sample Affiliate IDs in final_df:", list(final_affiliate_ids)[:10])
+        st.write("Sample Concatenated in web_pivot:", list(web_concat_ids)[:10])
+
     except Exception as e:
         st.error(f"Error during web merge: {str(e)}")
         st.error("Attempting to continue with empty web metrics...")
