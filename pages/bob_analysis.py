@@ -551,61 +551,86 @@ def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
         order_mask = athena_df['Ordr_Type'].str.upper().isin(['NEW', 'RESALE'])
         athena_df = athena_df[order_mask]
         st.write(f"Filtered for NEW/Resale orders: {before_order} -> {len(athena_df)} rows")
-    
+
+    # --- DATABASE LEADS CLEANUP AND MATCHBACK ---
+    st.write("\n### Cleaning and Matching Database Leads for Affiliate_Code fill-in")
+    leads_df = leads_df.copy()
+    # Remove subIDs with letters (set to blank, keep row)
+    if 'Subid' in leads_df.columns:
+        leads_df['Subid'] = leads_df['Subid'].astype(str)
+        leads_df['Subid'] = leads_df['Subid'].apply(lambda x: x if x.isdigit() else '')
+    # Create Concatenated column
+    if 'PID' in leads_df.columns and 'Subid' in leads_df.columns:
+        leads_df['Concatenated'] = leads_df.apply(
+            lambda r: f"{r['PID']}_{r['Subid']}" if r['Subid'] else f"{r['PID']}_", axis=1
+        )
+    # Clean phone numbers in leads_df
+    if 'Phone' in leads_df.columns:
+        leads_df['Clean_Phone'] = leads_df['Phone'].astype(str).apply(clean_phone_number)
+    else:
+        leads_df['Clean_Phone'] = ''
+    # Clean phone numbers in athena_df
+    athena_df['Clean_Primary_Phone'] = athena_df['Primary_Phone_Customer_ANI'].astype(str).apply(clean_phone_number) if 'Primary_Phone_Customer_ANI' in athena_df.columns else ''
+    # Fill in Affiliate_Code for blank+WEB rows using phone match
+    if 'Affiliate_Code' in athena_df.columns and 'Lead_DNIS' in athena_df.columns:
+        mask = (athena_df['Affiliate_Code'].isna() | (athena_df['Affiliate_Code'] == '')) & athena_df['Lead_DNIS'].str.contains('WEB', na=False)
+        st.write(f"Filling Affiliate_Code for {mask.sum()} rows using phone matchback from leads_df...")
+        phone_to_concat = dict(zip(leads_df['Clean_Phone'], leads_df['Concatenated']))
+        athena_df.loc[mask, 'Affiliate_Code'] = athena_df.loc[mask, 'Clean_Primary_Phone'].map(phone_to_concat)
+        st.write("Sample of filled Affiliate_Code values:")
+        st.write(athena_df.loc[mask, ['Clean_Primary_Phone', 'Affiliate_Code']].head())
+
     # Continue with the rest of the existing clean_athena function...
     # ... existing code for Lead_DNIS, Affiliate_Code, PID matching, etc. ...
-    
+
     # Check for WEB in the DNIS column (third column)
     dnis_column = athena_df.columns[2]  # WEB0021011 in the sample
     web_count = athena_df[athena_df[dnis_column].str.contains('WEB', na=False, case=False)].shape[0]
     st.write(f"\nFound {web_count} WEB records in column '{dnis_column}'")
-    
+
     # Set up required columns if they don't exist
     if 'Lead_DNIS' not in athena_df.columns:
         athena_df['Lead_DNIS'] = athena_df[dnis_column]
         st.write(f"Created Lead_DNIS from column '{dnis_column}'")
-    
+
     if 'Clean_Lead_DNIS' not in athena_df.columns:
         athena_df['Clean_Lead_DNIS'] = athena_df['Lead_DNIS'].astype(str).apply(clean_phone_number)
-    
+
     if 'Affiliate_Code' not in athena_df.columns:
         # Use the campaign ID column (7th column in sample) as Affiliate_Code
         campaign_column = athena_df.columns[6]
         athena_df['Affiliate_Code'] = athena_df[campaign_column]
         st.write(f"Created Affiliate_Code from column '{campaign_column}'")
-    
+
     # Clean affiliate code without dropping any rows
     athena_df['Clean_Affiliate_Code'] = athena_df.apply(
         lambda row: clean_affiliate_code(row['Affiliate_Code'], row['Lead_DNIS']), 
         axis=1
     )
-    
+
     # Extract PID from Clean_Affiliate_Code
     athena_df['PID_from_Affiliate'] = athena_df['Clean_Affiliate_Code'].apply(
         lambda x: x.split('_')[0] if isinstance(x, str) and '_' in x else None
     )
-    
+
     # Initialize PID column as None
     athena_df['PID'] = None
-    
+
     # Clean the TFN mapping
     cleaned_tfn_df = clean_tfn_mapping(tfn_df)
-    
+
     # Create TFN mapping
     tfn_map = dict(zip(cleaned_tfn_df['Clean_TFN'], cleaned_tfn_df['PID']))
-    
+
     # Only match PIDs for non-WEB records
     non_web_mask = ~athena_df['Lead_DNIS'].str.contains('WEB', na=False, case=False)
     for idx in athena_df[non_web_mask].index:
         clean_dnis = athena_df.loc[idx, 'Clean_Lead_DNIS']
         if clean_dnis in tfn_map:
             athena_df.loc[idx, 'PID'] = str(tfn_map[clean_dnis])
-    
+
     # For WEB records, we keep PID as None - they will be handled by the web pivot using PID_from_Affiliate
-    # Remove this line as we don't want to set PID for WEB records:
-    # web_mask = athena_df['Lead_DNIS'].str.contains('WEB', na=False, case=False)
-    # athena_df.loc[web_mask, 'PID'] = athena_df.loc[web_mask, 'PID_from_Affiliate']
-    
+
     # Track final row count
     final_count = len(athena_df)
     st.write(f"\nFinal row count: {final_count}")
