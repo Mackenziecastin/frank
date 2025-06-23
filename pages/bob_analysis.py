@@ -2019,6 +2019,26 @@ def merge_and_compute(cake_df, web_pivot, phone_pivot, conversion_df, start_date
 
         st.write("Web pivot merge successful")
 
+        # Debug: Compare web pivot totals to merged totals
+        web_totals = {
+            'Web DIFM Sales': web_pivot['Web DIFM Sales'].sum(),
+            'Web DIY Sales': web_pivot['Web DIY Sales'].sum(),
+            'DIFM Web Installs': web_pivot['DIFM Web Installs'].sum(),
+            'DIY Web Installs': web_pivot['DIY Web Installs'].sum()
+        }
+        merged_totals = {
+            'Web DIFM Sales': final_df['Web DIFM Sales'].sum(),
+            'Web DIY Sales': final_df['Web DIY Sales'].sum(),
+            'DIFM Web Installs': final_df['DIFM Web Installs'].sum(),
+            'DIY Web Installs': final_df['DIY Web Installs'].sum()
+        }
+        st.write("Web Pivot Totals:", web_totals)
+        st.write("Merged Report Web Totals:", merged_totals)
+        if web_totals == merged_totals:
+            st.success("Web sales/install totals match between web pivot and merged report!")
+        else:
+            st.warning("Web sales/install totals DO NOT match between web pivot and merged report!")
+
     except Exception as e:
         st.error(f"Error during web merge: {str(e)}")
         st.error("Attempting to continue with empty web metrics...")
