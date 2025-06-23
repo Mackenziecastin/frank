@@ -1264,7 +1264,9 @@ def allocate_phone_metrics(cake_df, phone_pivot, athena_df=None):
             st.write("\n42299_ rows in optimization table before allocation:")
             rows_42299 = cake_df[cake_df['PID'] == pid]
             st.write(f"Number of 42299_ rows: {len(rows_42299)}")
-            st.write(rows_42299[['Concatenated', 'PID', 'Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs']])
+            # Use Affiliate ID instead of Concatenated
+            display_cols = ['Affiliate ID', 'PID', 'Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs']
+            st.write(rows_42299[display_cols])
         
         # Get phone metrics for this PID
         phone_metrics_for_pid = phone_pivot.loc[pid]
@@ -1306,7 +1308,7 @@ def allocate_phone_metrics(cake_df, phone_pivot, athena_df=None):
             cake_df.loc[max_leads_idx, 'Phone DIY Sales'] = int(phone_metrics_for_pid['Phone DIY Sales'])
             cake_df.loc[max_leads_idx, 'DIFM Phone Installs'] = int(phone_metrics_for_pid['DIFM Phone Installs'])
             
-            st.write(f"Allocated all phone metrics to {cake_df.loc[max_leads_idx, 'Concatenated']} (Leads: {cake_df.loc[max_leads_idx, 'Leads']})")
+            st.write(f"Allocated all phone metrics to {cake_df.loc[max_leads_idx, 'Affiliate ID']} (Leads: {cake_df.loc[max_leads_idx, 'Leads']})")
         
         else:
             # Step 1: Proportional Allocation
@@ -1339,7 +1341,7 @@ def allocate_phone_metrics(cake_df, phone_pivot, athena_df=None):
                 # Special debug for 42299
                 if pid == '42299':
                     allocation_details.append({
-                        'Concatenated': row['Concatenated'],
+                        'Affiliate ID': row['Affiliate ID'],
                         'Web DIFM Sales': float(row['Web DIFM Sales']),
                         'Web DIY Sales': float(row['Web DIY Sales']),
                         'DIFM Web Installs': float(row['DIFM Web Installs']),
@@ -1408,7 +1410,7 @@ def allocate_phone_metrics(cake_df, phone_pivot, athena_df=None):
         # Special debug for 42299
         if pid == '42299':
             st.write("\nFinal allocation results for 42299_:")
-            st.write(cake_df[pid_mask][['Concatenated', 'Phone DIFM Sales', 'Phone DIY Sales', 'DIFM Phone Installs']])
+            st.write(cake_df[pid_mask][['Affiliate ID', 'Phone DIFM Sales', 'Phone DIY Sales', 'DIFM Phone Installs']])
             st.write(f"Total DIFM Phone Installs allocated: {cake_df.loc[pid_mask, 'DIFM Phone Installs'].sum()}")
     
     # Ensure all phone metrics are integers
