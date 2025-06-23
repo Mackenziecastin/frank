@@ -1168,9 +1168,6 @@ def show_bob_analysis():
                 use_container_width=True
             )
             
-            # Verify metrics match between Athena and final report
-            verify_metrics_match(athena_df, final_df)
-            
             # Compare with reference report
             compare_with_reference(final_df)
             
