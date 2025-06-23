@@ -1112,6 +1112,34 @@ def show_bob_analysis():
             try:
                 web_pivot, phone_pivot = generate_pivots(athena_df)
                 st.write("DEBUG: Successfully generated pivots")
+
+                # Add download button for web_pivot
+                import io
+                output_web = io.BytesIO()
+                with pd.ExcelWriter(output_web, engine='xlsxwriter') as writer:
+                    web_pivot.to_excel(writer, sheet_name='Web Pivot', index=False)
+                output_web.seek(0)
+                st.download_button(
+                    label="Download Web Pivot (Excel)",
+                    data=output_web,
+                    file_name="web_pivot.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+
+                # Add download button for phone_pivot
+                output_phone = io.BytesIO()
+                # phone_pivot may have index set to PID, so reset it for export
+                phone_pivot_export = phone_pivot.reset_index()
+                with pd.ExcelWriter(output_phone, engine='xlsxwriter') as writer:
+                    phone_pivot_export.to_excel(writer, sheet_name='Phone Pivot', index=False)
+                output_phone.seek(0)
+                st.download_button(
+                    label="Download Phone Pivot (Excel)",
+                    data=output_phone,
+                    file_name="phone_pivot.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+
             except Exception as e:
                 st.error(f"Error generating pivots: {str(e)}")
                 import traceback
