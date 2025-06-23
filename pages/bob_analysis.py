@@ -1150,7 +1150,7 @@ def show_bob_analysis():
             
             # Select columns for display
             display_columns = [
-                'Concatenated', 'PID', 'Leads', 'Cost', 'Current Rate',
+                'Affiliate ID', 'PID', 'Leads', 'Cost', 'Current Rate',
                 'Web DIFM Sales', 'Phone DIFM Sales', 'Total DIFM Sales',
                 'DIFM Web Installs', 'DIFM Phone Installs', 'Total DIFM Installs',
                 'Web DIY Sales', 'Phone DIY Sales', 'Total DIY Sales',
