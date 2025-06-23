@@ -1983,36 +1983,42 @@ def merge_and_compute(cake_df, web_pivot, phone_pivot, conversion_df, start_date
     for col in new_columns:
         final_df[col] = 0
     
+    # Ensure keys are string and stripped
+    final_df['Affiliate ID'] = final_df['Affiliate ID'].astype(str).str.strip()
+    web_pivot['Concatenated'] = web_pivot['Concatenated'].astype(str).str.strip()
+
+    # Drop web columns from final_df if they exist to avoid _x suffixes
+    for col in ['Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs', 'DIY Web Installs']:
+        if col in final_df.columns:
+            final_df = final_df.drop(columns=[col])
+
     # Merge with web pivot data
     st.write("\nMerging web pivot data...")
     try:
-        # First ensure web_pivot has all required columns
         required_web_columns = ['Concatenated', 'Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs', 'DIY Web Installs']
         for col in required_web_columns:
             if col not in web_pivot.columns:
                 st.warning(f"Adding missing column {col} to web_pivot")
                 web_pivot[col] = 0
-        
-        # Perform the merge using Affiliate ID
+
         final_df = final_df.merge(
             web_pivot[required_web_columns],
             left_on='Affiliate ID',
             right_on='Concatenated',
             how='left'
         )
-        
+
         # Drop the redundant Concatenated column if it exists
         if 'Concatenated' in final_df.columns:
             final_df = final_df.drop('Concatenated', axis=1)
-        
+
         # Fill NaN values with 0 for numeric columns
-        numeric_columns = ['Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs', 'DIY Web Installs']
-        for col in numeric_columns:
+        for col in ['Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs', 'DIY Web Installs']:
             if col in final_df.columns:
                 final_df[col] = final_df[col].fillna(0)
-        
+
         st.write("Web pivot merge successful")
-        
+
     except Exception as e:
         st.error(f"Error during web merge: {str(e)}")
         st.error("Attempting to continue with empty web metrics...")
