@@ -667,6 +667,25 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
     # Show total revenue after conversion
     st.write(f"Debug - Total Revenue after numeric conversion: ${merged_df['Revenue'].sum():.2f}")
     
+    # Validate that Bookings (Created Date-based) are not lower than Sales
+    try:
+        total_bookings = pd.to_numeric(merged_df['Bookings'], errors='coerce').fillna(0).sum()
+        total_sales = pd.to_numeric(merged_df['Sales'], errors='coerce').fillna(0).sum()
+        if total_bookings < total_sales:
+            st.warning(
+                f"Total Bookings ({int(total_bookings)}) are less than Total Sales ({int(total_sales)}). "
+                "Bookings are computed from Created Date prior to any Purchased Date filtering; please review input date windows."
+            )
+        # Surface sample partners where Bookings < Sales
+        partner_violations = merged_df[pd.to_numeric(merged_df['Bookings'], errors='coerce').fillna(0) < 
+                                       pd.to_numeric(merged_df['Sales'], errors='coerce').fillna(0)]
+        if not partner_violations.empty:
+            st.info(f"Partners with Bookings < Sales: {len(partner_violations)} (showing up to 10)")
+            st.dataframe(partner_violations[['partnerID', 'Bookings', 'Sales']].head(10))
+    except Exception as _e:
+        # Non-fatal; continue without blocking report generation
+        pass
+    
     # Remove rows with all zeros
     merged_df = merged_df[~((merged_df['Leads'] == 0) & 
                            (merged_df['Spend'] == 0) & 
