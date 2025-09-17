@@ -15,16 +15,20 @@ TFN_SHEET_URL = "https://docs.google.com/spreadsheets/d/10BHN_-Wz_ZPmi7rezNtqiDP
 # Helper Functions
 # -------------------------------
 
-def clean_affiliate_code(code):
+def clean_affiliate_code(code, dnis=None):
     """
     Clean affiliate code by removing offerID prefix and keeping only numeric subID.
     Format: OfferID_PID_SubID -> PID_SubID (if SubID is numeric)
     or: OfferID_PID -> PID_
     
+    Special rule: For WEB0021011 entries with PID 42865, always return '42865_'
+    
     Parameters:
     ----------
     code : str
         The raw affiliate code to clean
+    dnis : str, optional
+        The DNIS value to check for WEB0021011
         
     Returns:
     -------
@@ -45,6 +49,10 @@ def clean_affiliate_code(code):
     # Extract PID (second part)
     pid = parts[1]
     if not pid: return ''
+    
+    # Special rule for WEB0021011 entries with PID 42865
+    if dnis == 'WEB0021011' and pid == '42865':
+        return '42865_'
     
     # If there's a subID (third part), check if it's numeric
     if len(parts) > 2:
@@ -70,7 +78,26 @@ def proportional_allocation(row, web_val, total_web_val, total_phone_val):
         return 0
 
 def calculate_projected_installs(row):
-    pct = 0.5 if str(row['Concatenated']).startswith('4790') else 0.7
+    """
+    Calculate projected installs based on DIFM sales.
+    Default rate is 60%, except for PIDs 4790 and 42215 which use 55%.
+    
+    Parameters:
+    ----------
+    row : pd.Series
+        Row from the DataFrame containing 'Total DIFM Sales' and 'Concatenated'
+        
+    Returns:
+    -------
+    int
+        Projected number of installs
+    """
+    # Lower rate (55%) for specific PIDs
+    if str(row['PID']) in ['4790', '42215']:
+        pct = 0.55
+    else:
+        pct = 0.60
+    
     return int(round(row['Total DIFM Sales'] * pct))
 
 def get_current_rates(conversion_df):
@@ -421,486 +448,198 @@ def clean_phone(phone_str):
 def clean_athena(athena_df, tfn_df, leads_df, start_date, end_date):
     """
     Clean and process Athena data for analysis.
-    
-    Parameters:
-    ----------
-    athena_df : DataFrame
-        Raw Athena data
-    tfn_df : DataFrame
-        TFN mapping data
-    leads_df : DataFrame
-        Leads data
-    start_date : str or datetime
-        Start date for filtering
-    end_date : str or datetime
-        End date for filtering
-    
-    Returns:
-    -------
-    DataFrame
-        Cleaned Athena data with matched PIDs
     """
-    # Display column names for debugging
-    st.write("Available columns in Athena data:", athena_df.columns.tolist())
+    # Track row counts throughout processing
+    initial_count = len(athena_df)
+    st.write(f"\n### Row Count Tracking")
+    st.write(f"Initial row count: {initial_count}")
     
-    # Filter by date range
+    # Make a copy to avoid modifying the original
+    athena_df = athena_df.copy()
+    
+    # Display first few rows before any processing
+    st.write("\n### First 5 rows BEFORE processing:")
+    st.write(athena_df.head())
+    
+    # Display all column names and their data types at the start
+    st.write("\n### Athena File Column Analysis")
+    st.write("All columns in Athena file:")
+    for col in athena_df.columns:
+        st.write(f"- {col} (type: {athena_df[col].dtype})")
+    
+    # Check for required columns
+    required_cols = ['Lead_Creation_Date', 'Ln_of_Busn', 'DNIS_BUSN_SEG_CD', 'Sale_Date', 'Ordr_Type']
+    missing_cols = [col for col in required_cols if col not in athena_df.columns]
+    
+    if missing_cols:
+        st.warning(f"Missing required columns: {missing_cols}")
+        # Try to identify alternative columns
+        for missing_col in missing_cols:
+            if missing_col == 'Lead_Creation_Date':
+                date_cols = [col for col in athena_df.columns if 'date' in col.lower()]
+                if date_cols:
+                    athena_df['Lead_Creation_Date'] = athena_df[date_cols[0]]
+                    st.write(f"Using '{date_cols[0]}' as Lead_Creation_Date")
+            elif missing_col == 'Ln_of_Busn':
+                busn_cols = [col for col in athena_df.columns if 'busn' in col.lower() or 'business' in col.lower()]
+                if busn_cols:
+                    athena_df['Ln_of_Busn'] = athena_df[busn_cols[0]]
+                    st.write(f"Using '{busn_cols[0]}' as Ln_of_Busn")
+            elif missing_col == 'DNIS_BUSN_SEG_CD':
+                seg_cols = [col for col in athena_df.columns if 'seg' in col.lower()]
+                if seg_cols:
+                    athena_df['DNIS_BUSN_SEG_CD'] = athena_df[seg_cols[0]]
+                    st.write(f"Using '{seg_cols[0]}' as DNIS_BUSN_SEG_CD")
+            elif missing_col == 'Sale_Date':
+                sale_cols = [col for col in athena_df.columns if 'sale' in col.lower()]
+                if sale_cols:
+                    athena_df['Sale_Date'] = athena_df[sale_cols[0]]
+                    st.write(f"Using '{sale_cols[0]}' as Sale_Date")
+            elif missing_col == 'Ordr_Type':
+                order_cols = [col for col in athena_df.columns if 'order' in col.lower() or 'type' in col.lower()]
+                if order_cols:
+                    athena_df['Ordr_Type'] = athena_df[order_cols[0]]
+                    st.write(f"Using '{order_cols[0]}' as Ordr_Type")
+    
+    # Convert Lead_Creation_Date to datetime
+    if 'Lead_Creation_Date' in athena_df.columns:
+        before_count = len(athena_df)
+        athena_df['Lead_Creation_Date'] = pd.to_datetime(athena_df['Lead_Creation_Date'], errors='coerce')
+        after_count = len(athena_df)
+        if after_count != before_count:
+            st.error(f"Lost {before_count - after_count} rows during date conversion!")
+    
+    # Apply date range filter if dates are provided
     if start_date and end_date:
-        st.write(f"Filtering data between {start_date} and {end_date}")
-        
+        before_filter = len(athena_df)
         # Convert to datetime if they're strings
         if isinstance(start_date, str):
             start_date = pd.to_datetime(start_date)
         if isinstance(end_date, str):
             end_date = pd.to_datetime(end_date)
-        
-        # Specifically use Lead_Creation_Date as requested
-        if 'Lead_Creation_Date' in athena_df.columns:
-            date_column = 'Lead_Creation_Date'
-            st.write(f"Using '{date_column}' as the date filter column")
             
-            try:
-                # Convert the date column to datetime
-                athena_df[date_column] = pd.to_datetime(athena_df[date_column], errors='coerce')
-                # Filter by date range
-                athena_df = athena_df[(athena_df[date_column] >= start_date) & (athena_df[date_column] <= end_date)]
-                st.write(f"Records after date filtering: {len(athena_df)}")
-            except Exception as e:
-                st.warning(f"Error converting date column '{date_column}': {str(e)}. Using all data.")
-        else:
-            # Fall back to other date columns if Lead_Creation_Date is not available
-            st.warning("Lead_Creation_Date column not found. Trying alternative date columns.")
-            
-            date_column = None
-            date_column_candidates = ['Date', 'date', 'created_date', 'Created_Date', 'lead_date']
-            
-            for col in date_column_candidates:
-                if col in athena_df.columns:
-                    date_column = col
-                    st.write(f"Using '{date_column}' as the date filter column")
-                    break
-            
-            if date_column is None:
-                # Look for any column with 'date' in the name
-                date_cols = [col for col in athena_df.columns if 'date' in col.lower()]
-                if date_cols:
-                    date_column = date_cols[0]
-                    st.write(f"Using '{date_column}' as the date filter column")
-                else:
-                    st.warning("No date column found for filtering. Using all data.")
-            
-            # Filter the dataframe if a date column was found
-            if date_column:
-                try:
-                    # Convert the date column to datetime
-                    athena_df[date_column] = pd.to_datetime(athena_df[date_column], errors='coerce')
-                    # Filter by date range
-                    athena_df = athena_df[(athena_df[date_column] >= start_date) & (athena_df[date_column] <= end_date)]
-                    st.write(f"Records after date filtering: {len(athena_df)}")
-                except Exception as e:
-                    st.warning(f"Error converting date column '{date_column}': {str(e)}. Using all data.")
+        # Create date mask
+        date_mask = (athena_df['Lead_Creation_Date'] >= start_date) & (athena_df['Lead_Creation_Date'] <= end_date)
+        athena_df = athena_df[date_mask]
+        st.write(f"Filtered by date range: {before_filter} -> {len(athena_df)} rows")
+    else:
+        st.warning("No date range provided. Please specify start_date and end_date.")
+        return None
     
-    # FILTER OUT HEALTH BUSINESS LINES
-    # 1. Filter out any "Health" rows in the Ln_of_Busn column
+    # Filter out Health business lines
     if 'Ln_of_Busn' in athena_df.columns:
-        health_count = athena_df[athena_df['Ln_of_Busn'].str.contains('Health', na=False, case=False)].shape[0]
-        st.write(f"Filtering out {health_count} Health business line records")
+        before_health = len(athena_df)
         athena_df = athena_df[~athena_df['Ln_of_Busn'].str.contains('Health', na=False, case=False)]
-    else:
-        st.warning("Ln_of_Busn column not found - cannot filter Health business lines")
-        # Try to find similar columns
-        business_cols = [col for col in athena_df.columns if 'busn' in col.lower() or 'business' in col.lower() or 'line' in col.lower()]
-        if business_cols:
-            st.write(f"Similar columns that might contain business line info: {business_cols}")
-            
-    # 2. Filter out any US: Health rows in the DNIS_BUSN_SEG_CD column
+        st.write(f"Filtered Health business lines: {before_health} -> {len(athena_df)} rows")
+    
+    # Filter out Health DNIS segments
     if 'DNIS_BUSN_SEG_CD' in athena_df.columns:
-        health_segment_count = athena_df[athena_df['DNIS_BUSN_SEG_CD'].str.contains('Health', na=False, case=False)].shape[0]
-        st.write(f"Filtering out {health_segment_count} Health DNIS business segment records")
+        before_dnis = len(athena_df)
         athena_df = athena_df[~athena_df['DNIS_BUSN_SEG_CD'].str.contains('Health', na=False, case=False)]
+        st.write(f"Filtered Health DNIS segments: {before_dnis} -> {len(athena_df)} rows")
+    
+    # Filter out blanks in Sale_Date
+    if 'Sale_Date' in athena_df.columns:
+        before_sale = len(athena_df)
+        athena_df = athena_df[athena_df['Sale_Date'].notna()]
+        st.write(f"Filtered blank Sale_Dates: {before_sale} -> {len(athena_df)} rows")
+    
+    # Filter for NEW and Resale in Ordr_Type
+    if 'Ordr_Type' in athena_df.columns:
+        before_order = len(athena_df)
+        # Create case-insensitive pattern for variations of "NEW" and "Resale"
+        order_mask = athena_df['Ordr_Type'].str.upper().isin(['NEW', 'RESALE'])
+        athena_df = athena_df[order_mask]
+        st.write(f"Filtered for NEW/Resale orders: {before_order} -> {len(athena_df)} rows")
+
+    # --- DATABASE LEADS CLEANUP AND MATCHBACK ---
+    st.write("\n### Cleaning and Matching Database Leads for Affiliate_Code fill-in")
+    leads_df = leads_df.copy()
+    # Remove subIDs with letters (set to blank, keep row)
+    if 'Subid' in leads_df.columns:
+        leads_df['Subid'] = leads_df['Subid'].astype(str)
+        leads_df['Subid'] = leads_df['Subid'].apply(lambda x: x if x.isdigit() else '')
+    # Create Concatenated column
+    if 'PID' in leads_df.columns and 'Subid' in leads_df.columns:
+        leads_df['Concatenated'] = leads_df.apply(
+            lambda r: f"{r['PID']}_{r['Subid']}" if r['Subid'] else f"{r['PID']}_", axis=1
+        )
+    # Clean phone numbers in leads_df
+    if 'Phone' in leads_df.columns:
+        leads_df['Clean_Phone'] = leads_df['Phone'].astype(str).apply(clean_phone_number)
     else:
-        st.warning("DNIS_BUSN_SEG_CD column not found - cannot filter Health DNIS segments")
-        # Try to find similar columns
-        segment_cols = [col for col in athena_df.columns if 'dnis' in col.lower() or 'segment' in col.lower() or 'seg' in col.lower()]
-        if segment_cols:
-            st.write(f"Similar columns that might contain DNIS segment info: {segment_cols}")
-    
-    # Additional check for any columns containing "Health"
-    for col in athena_df.columns:
-        if 'health' in col.lower():
-            st.write(f"Found potential health-related column: {col}")
-            if athena_df[col].dtype == object:  # Only check string columns
-                health_values = athena_df[athena_df[col].str.contains('Health', na=False, case=False)]
-                if len(health_values) > 0:
-                    st.write(f"Column {col} contains {len(health_values)} rows with 'Health' value")
-                    # Show sample
-                    st.write(f"Sample of health values in {col}:")
-                    st.write(health_values[col].value_counts().head(5))
-    
-    # Look for HLTHDRA001 in the DNIS values
-    if 'Lead_DNIS' in athena_df.columns:
-        hlth_dnis = athena_df[athena_df['Lead_DNIS'].str.contains('HLTH', na=False, case=False)]
-        if len(hlth_dnis) > 0:
-            st.error(f"Found {len(hlth_dnis)} records with HLTH in the DNIS. These will be filtered out.")
-            st.write("Sample of HLTH DNIS values:")
-            st.write(hlth_dnis['Lead_DNIS'].head(5))
-            # Filter out these records
-            athena_df = athena_df[~athena_df['Lead_DNIS'].str.contains('HLTH', na=False, case=False)]
-    
-    # Verify Lead_DNIS exists
+        leads_df['Clean_Phone'] = ''
+    # Clean phone numbers in athena_df
+    athena_df['Clean_Primary_Phone'] = athena_df['Primary_Phone_Customer_ANI'].astype(str).apply(clean_phone_number) if 'Primary_Phone_Customer_ANI' in athena_df.columns else ''
+    # Fill in Affiliate_Code for blank+WEB rows using phone match
+    if 'Affiliate_Code' in athena_df.columns and 'Lead_DNIS' in athena_df.columns:
+        mask = (athena_df['Affiliate_Code'].isna() | (athena_df['Affiliate_Code'] == '')) & athena_df['Lead_DNIS'].str.contains('WEB', na=False)
+        st.write(f"Filling Affiliate_Code for {mask.sum()} rows using phone matchback from leads_df...")
+        phone_to_concat = dict(zip(leads_df['Clean_Phone'], leads_df['Concatenated']))
+        athena_df.loc[mask, 'Affiliate_Code'] = athena_df.loc[mask, 'Clean_Primary_Phone'].map(phone_to_concat)
+        st.write("Sample of filled Affiliate_Code values:")
+        st.write(athena_df.loc[mask, ['Clean_Primary_Phone', 'Affiliate_Code']].head())
+
+    # Continue with the rest of the existing clean_athena function...
+    # ... existing code for Lead_DNIS, Affiliate_Code, PID matching, etc. ...
+
+    # Check for WEB in the DNIS column (third column)
+    dnis_column = athena_df.columns[2]  # WEB0021011 in the sample
+    web_count = athena_df[athena_df[dnis_column].str.contains('WEB', na=False, case=False)].shape[0]
+    st.write(f"\nFound {web_count} WEB records in column '{dnis_column}'")
+
+    # Set up required columns if they don't exist
     if 'Lead_DNIS' not in athena_df.columns:
-        st.error("Critical column 'Lead_DNIS' not found in the data! Available columns:")
-        st.write(athena_df.columns.tolist())
-        # Try to find a similar column
-        dnis_candidates = [col for col in athena_df.columns if 'dnis' in col.lower() or 'phone' in col.lower() or 'number' in col.lower()]
-        if dnis_candidates:
-            st.write(f"Found potential Lead_DNIS columns: {dnis_candidates}")
-            # Rename the first candidate to Lead_DNIS
-            athena_df = athena_df.rename(columns={dnis_candidates[0]: 'Lead_DNIS'})
-            st.write(f"Using '{dnis_candidates[0]}' as the Lead_DNIS column")
-        else:
-            st.error("No suitable column found for Lead_DNIS. PID matching will not work!")
-            # Add a dummy Lead_DNIS column to prevent errors
-            athena_df['Lead_DNIS'] = "Unknown"
-    
-    # Ensure Lead_DNIS is a string
-    athena_df['Lead_DNIS'] = athena_df['Lead_DNIS'].astype(str)
-    
-    # Clean phone numbers in Lead_DNIS for consistent matching
-    athena_df['Clean_Lead_DNIS'] = athena_df['Lead_DNIS'].apply(clean_phone_number)
-    
-    # Clean affiliate code and do matchback from database report
+        athena_df['Lead_DNIS'] = athena_df[dnis_column]
+        st.write(f"Created Lead_DNIS from column '{dnis_column}'")
+
+    if 'Clean_Lead_DNIS' not in athena_df.columns:
+        athena_df['Clean_Lead_DNIS'] = athena_df['Lead_DNIS'].astype(str).apply(clean_phone_number)
+
     if 'Affiliate_Code' not in athena_df.columns:
-        st.error("Critical column 'Affiliate_Code' not found in the data!")
-        # Try to find a similar column
-        aff_candidates = [col for col in athena_df.columns if 'affil' in col.lower() or 'code' in col.lower()]
-        if aff_candidates:
-            st.write(f"Found potential Affiliate_Code columns: {aff_candidates}")
-            # Rename the first candidate to Affiliate_Code
-            athena_df = athena_df.rename(columns={aff_candidates[0]: 'Affiliate_Code'})
-            st.write(f"Using '{aff_candidates[0]}' as the Affiliate_Code column")
-        else:
-            st.error("No suitable column found for Affiliate_Code!")
-            # Add a dummy Affiliate_Code column to prevent errors
-            athena_df['Affiliate_Code'] = "Unknown"
-    
-    # Display sample of Lead_DNIS and Affiliate_Code
-    st.write("Sample data (first 5 rows):")
-    st.write(athena_df[['Lead_DNIS', 'Affiliate_Code']].head(5))
-    
-    # Check for INSTALL_METHOD column
-    if 'INSTALL_METHOD' not in athena_df.columns:
-        st.warning("INSTALL_METHOD column not found. Some analysis functions may not work properly.")
-        # Try to find a similar column
-        install_candidates = [col for col in athena_df.columns if 'install' in col.lower() or 'method' in col.lower()]
-        if install_candidates:
-            st.write(f"Found potential INSTALL_METHOD columns: {install_candidates}")
-            # Rename the first candidate to INSTALL_METHOD
-            athena_df = athena_df.rename(columns={install_candidates[0]: 'INSTALL_METHOD'})
-            st.write(f"Using '{install_candidates[0]}' as the INSTALL_METHOD column")
-        else:
-            # Add a dummy INSTALL_METHOD column
-            athena_df['INSTALL_METHOD'] = "Unknown"
-    
-    # AFFILIATE CODE CLEANING PROCESS - No rows should be filtered out
-    st.write("\n### Affiliate Code Cleaning Process")
-    # Apply clean_affiliate_code function to create Clean_Affiliate_Code
-    athena_df['Clean_Affiliate_Code'] = athena_df['Affiliate_Code'].apply(clean_affiliate_code)
-    
-    # Count different types of affiliate codes
-    null_affiliates = athena_df['Clean_Affiliate_Code'].isna().sum()
-    empty_affiliates = (athena_df['Clean_Affiliate_Code'] == "").sum()
-    cake_affiliates = (athena_df['Clean_Affiliate_Code'] == "CAKE").sum()
-    st.write(f"Affiliate Code Stats (for information only, NO rows filtered):")
-    st.write(f"  - Null affiliate codes: {null_affiliates}")
-    st.write(f"  - Empty affiliate codes: {empty_affiliates}")
-    st.write(f"  - CAKE affiliate codes: {cake_affiliates}")
-    
-    # Extract PID directly from Clean_Affiliate_Code
+        # Use the campaign ID column (7th column in sample) as Affiliate_Code
+        campaign_column = athena_df.columns[6]
+        athena_df['Affiliate_Code'] = athena_df[campaign_column]
+        st.write(f"Created Affiliate_Code from column '{campaign_column}'")
+
+    # Clean affiliate code without dropping any rows
+    athena_df['Clean_Affiliate_Code'] = athena_df.apply(
+        lambda row: clean_affiliate_code(row['Affiliate_Code'], row['Lead_DNIS']), 
+        axis=1
+    )
+
+    # Extract PID from Clean_Affiliate_Code
     athena_df['PID_from_Affiliate'] = athena_df['Clean_Affiliate_Code'].apply(
         lambda x: x.split('_')[0] if isinstance(x, str) and '_' in x else None
     )
-    
-    # MATCHBACK FROM DATABASE REPORT
-    # Prepare leads_df for matching
-    if leads_df is not None:
-        st.write("\n### Matchback from Database Report")
-        st.write(f"Database leads file contains {len(leads_df)} records")
-        
-        # Check for required columns in leads_df
-        required_cols = ['Subid', 'PID', 'Phone']
-        missing_cols = [col for col in required_cols if col not in leads_df.columns]
-        
-        if missing_cols:
-            st.warning(f"Missing columns in Database Leads file: {missing_cols}")
-            # Try to find similar columns
-            for missing_col in missing_cols:
-                if missing_col.lower() == 'subid':
-                    subid_candidates = [col for col in leads_df.columns if 'sub' in col.lower() or 'id' in col.lower()]
-                    if subid_candidates:
-                        st.write(f"Found potential Subid columns: {subid_candidates}")
-                        leads_df = leads_df.rename(columns={subid_candidates[0]: 'Subid'})
-                elif missing_col.lower() == 'pid':
-                    pid_candidates = [col for col in leads_df.columns if 'pid' in col.lower() or 'partner' in col.lower()]
-                    if pid_candidates:
-                        st.write(f"Found potential PID columns: {pid_candidates}")
-                        leads_df = leads_df.rename(columns={pid_candidates[0]: 'PID'})
-                elif missing_col.lower() == 'phone':
-                    phone_candidates = [col for col in leads_df.columns if 'phone' in col.lower() or 'number' in col.lower() or 'tfn' in col.lower()]
-                    if phone_candidates:
-                        st.write(f"Found potential Phone columns: {phone_candidates}")
-                        leads_df = leads_df.rename(columns={phone_candidates[0]: 'Phone'})
-        
-        # Check if we now have all required columns
-        if all(col in leads_df.columns for col in required_cols):
-            # Clean up PID and Subid values in leads_df
-            leads_df['PID'] = leads_df['PID'].astype(str)
-            leads_df['Subid'] = leads_df['Subid'].astype(str)
-            
-            # Clean phone numbers in leads_df
-            leads_df['Clean_Phone'] = leads_df['Phone'].astype(str).apply(clean_phone_number)
-            
-            # Create a mapping from phone to PID and Subid
-            phone_to_pid_subid = {}
-            for _, row in leads_df.iterrows():
-                if not pd.isna(row['Clean_Phone']) and row['Clean_Phone'] != '':
-                    # Store as tuple (PID, Subid)
-                    # Ensure subID is numeric
-                    subid = row['Subid'] if not pd.isna(row['Subid']) and str(row['Subid']).isdigit() else ''
-                    phone_to_pid_subid[row['Clean_Phone']] = (
-                        str(row['PID']), 
-                        subid
-                    )
-            
-            st.write(f"Created phone-to-PID mapping with {len(phone_to_pid_subid)} entries")
-            
-            # Display sample of the mapping
-            sample_entries = list(phone_to_pid_subid.items())[:5]
-            st.write("Sample phone-to-PID mappings:")
-            for phone, (pid, subid) in sample_entries:
-                st.write(f"  {phone} -> PID: {pid}, SubID: {subid}")
-            
-            # Match missing or empty affiliate codes using phone numbers
-            missing_affiliate_mask = (athena_df['Affiliate_Code'].isna()) | (athena_df['Affiliate_Code'] == '')
-            matchable_phone_mask = athena_df['Clean_Lead_DNIS'].isin(phone_to_pid_subid.keys())
-            
-            # Find records with both missing affiliate codes and matchable phones
-            matchable_records = missing_affiliate_mask & matchable_phone_mask
-            st.write(f"Found {matchable_records.sum()} records with missing affiliate codes but matchable phones")
-            
-            # Apply the matchback
-            matched_count = 0
-            for idx in athena_df[matchable_records].index:
-                phone = athena_df.loc[idx, 'Clean_Lead_DNIS']
-                if phone in phone_to_pid_subid:
-                    pid, subid = phone_to_pid_subid[phone]
-                    if subid:
-                        # If we have a valid subID, include it
-                        athena_df.loc[idx, 'Affiliate_Code'] = f"{pid}_{subid}"
-                        athena_df.loc[idx, 'Clean_Affiliate_Code'] = f"{pid}_{subid}"
-                    else:
-                        # Otherwise just use PID_
-                        athena_df.loc[idx, 'Affiliate_Code'] = f"{pid}_"
-                        athena_df.loc[idx, 'Clean_Affiliate_Code'] = f"{pid}_"
-                        
-                    # Set PID_from_Affiliate for use in later matching
-                    athena_df.loc[idx, 'PID_from_Affiliate'] = pid
-                    matched_count += 1
-            
-            st.write(f"Successfully added affiliate codes to {matched_count} records")
-            
-            # Update counts after matchback
-            null_affiliates_after = athena_df['Clean_Affiliate_Code'].isna().sum()
-            empty_affiliates_after = (athena_df['Clean_Affiliate_Code'] == "").sum()
-            st.write(f"Affiliate Code Stats after matchback:")
-            st.write(f"  - Null affiliate codes: {null_affiliates_after} (was {null_affiliates})")
-            st.write(f"  - Empty affiliate codes: {empty_affiliates_after} (was {empty_affiliates})")
-        else:
-            st.error(f"Could not find all required columns in Database Leads file. Matchback process skipped.")
-            st.write(f"Available columns: {', '.join(leads_df.columns)}")
-    else:
-        st.warning("No Database Leads file provided. Skipping affiliate code matchback process.")
-    
-    # Count records with "WEB" in Lead_DNIS
-    web_count = athena_df[athena_df['Lead_DNIS'].str.contains('WEB', na=False, case=False)].shape[0]
-    st.write(f"Records with 'WEB' in Lead_DNIS: {web_count}")
-    
-    # Initialize PID column
+
+    # Initialize PID column as None
     athena_df['PID'] = None
-    
-    # Clean the TFN mapping to ensure consistent phone formats
+
+    # Clean the TFN mapping
     cleaned_tfn_df = clean_tfn_mapping(tfn_df)
-    
-    # Create TFN mapping from clean TFN to PID
+
+    # Create TFN mapping
     tfn_map = dict(zip(cleaned_tfn_df['Clean_TFN'], cleaned_tfn_df['PID']))
-    st.write(f"Final TFN mapping contains {len(tfn_map)} entries")
-    
-    # Display first 10 entries of the TFN mapping for inspection
-    st.write("First 10 entries in TFN mapping:")
-    for i, (k, v) in enumerate(tfn_map.items()):
-        if i < 10:
-            st.write(f"  {k} -> {v}")
-    
-    # For non-WEB records, try to match PIDs
+
+    # Only match PIDs for non-WEB records
     non_web_mask = ~athena_df['Lead_DNIS'].str.contains('WEB', na=False, case=False)
-    non_web_count = non_web_mask.sum()
-    st.write(f"Non-WEB records to match: {non_web_count}")
-    
-    # Do another check for HLTHDRA001 in the cleaned DNIS values
-    hlth_dnis = athena_df[athena_df['Clean_Lead_DNIS'].str.contains('HLTH', na=False, case=False)]
-    if len(hlth_dnis) > 0:
-        st.error(f"Found {len(hlth_dnis)} records with HLTH in the cleaned DNIS. These will be filtered out.")
-        # Filter out these records
-        athena_df = athena_df[~athena_df['Clean_Lead_DNIS'].str.contains('HLTH', na=False, case=False)]
-        non_web_mask = ~athena_df['Lead_DNIS'].str.contains('WEB', na=False, case=False)
-        non_web_count = non_web_mask.sum()
-        st.write(f"Non-WEB records after filtering HLTH: {non_web_count}")
-    
-    # Debugging: Check for critical phone numbers in the data
-    critical_numbers = {
-        '8446778720': '4790',
-        '8005717438': '42299',
-        '8009734275': '42038'
-    }
-    
-    for phone, expected_pid in critical_numbers.items():
-        clean_phone = clean_phone_number(phone)
-        mask = athena_df['Clean_Lead_DNIS'] == clean_phone
-        count = mask.sum()
-        st.write(f"Critical phone {phone} (cleaned: {clean_phone}) found in {count} records")
-        
-        # If found, show a sample
-        if count > 0:
-            st.write("Sample records with this number:")
-            st.write(athena_df[mask][['Lead_DNIS', 'Clean_Lead_DNIS', 'Affiliate_Code']].head(3))
-    
-    # Sample a few non-web records for debugging
-    if non_web_count > 0:
-        sample_records = athena_df[non_web_mask].sample(min(5, non_web_count))
-        st.write("Sample of non-WEB records for debugging:")
-        for i, (idx, row) in enumerate(sample_records.iterrows()):
-            original_dnis = row['Lead_DNIS']
-            cleaned_dnis = row['Clean_Lead_DNIS']
-            in_map = cleaned_dnis in tfn_map
-            mapped_to = tfn_map.get(cleaned_dnis, "Not found") if in_map else "N/A"
-            
-            st.write(f"Record {i+1}:")
-            st.write(f"  - Original DNIS: {original_dnis}")
-            st.write(f"  - Cleaned DNIS: {cleaned_dnis}")
-            st.write(f"  - In TFN map: {in_map}")
-            st.write(f"  - Maps to PID: {mapped_to}")
-            st.write(f"  - PID from Affiliate Code: {row['PID_from_Affiliate']}")
-    
-    # Direct matching using Clean_Lead_DNIS
-    match_count = 0
-    unmatched_sample = []
-    matched_rows = []
-    
-    # Try multiple matching approaches, with preference given to TFN mapping
-    for idx, row in athena_df[non_web_mask].iterrows():
-        clean_dnis = row['Clean_Lead_DNIS']
-        matched = False
-        
-        # Approach 1: Direct match using Clean_Lead_DNIS to TFN mapping
+    for idx in athena_df[non_web_mask].index:
+        clean_dnis = athena_df.loc[idx, 'Clean_Lead_DNIS']
         if clean_dnis in tfn_map:
-            pid = str(tfn_map[clean_dnis])
-            athena_df.at[idx, 'PID'] = pid
-            match_count += 1
-            matched = True
-            matched_rows.append(idx)
+            athena_df.loc[idx, 'PID'] = str(tfn_map[clean_dnis])
+
+    # For WEB records, we keep PID as None - they will be handled by the web pivot using PID_from_Affiliate
+
+    # Track final row count
+    final_count = len(athena_df)
+    st.write(f"\nFinal row count: {final_count}")
+    if final_count != initial_count:
+        st.warning(f"Row count changed during processing: {initial_count} -> {final_count}")
         
-        # Approach 2: If the DNIS is one of our critical numbers, use the known PID
-        elif any(clean_phone_number(phone) == clean_dnis for phone in critical_numbers.keys()):
-            for phone, pid in critical_numbers.items():
-                if clean_phone_number(phone) == clean_dnis:
-                    athena_df.at[idx, 'PID'] = pid
-                    match_count += 1
-                    matched = True
-                    matched_rows.append(idx)
-                    break
-        
-        # Approach 3: Try matching by last 7 digits
-        elif len(clean_dnis) >= 7:
-            last_digits = clean_dnis[-7:]
-            for tfn, pid in tfn_map.items():
-                if len(tfn) >= 7 and tfn[-7:] == last_digits:
-                    athena_df.at[idx, 'PID'] = str(pid)
-                    match_count += 1
-                    matched = True
-                    matched_rows.append(idx)
-                    break
-        
-        # Approach 4: Use PID from Affiliate_Code if available and ONLY for non-WEB DNIS
-        # This is only for non-WEB records as we're already iterating through non_web_mask
-        elif row['PID_from_Affiliate'] is not None:
-            athena_df.at[idx, 'PID'] = str(row['PID_from_Affiliate'])
-            match_count += 1
-            matched = True
-            matched_rows.append(idx)
-        
-        if not matched:
-            # Collect a sample of unmatched records for debugging
-            if len(unmatched_sample) < 5:
-                unmatched_sample.append({
-                    'Lead_DNIS': row['Lead_DNIS'],
-                    'Clean_DNIS': clean_dnis,
-                    'Affiliate_Code': row['Affiliate_Code'],
-                    'PID_from_Affiliate': row['PID_from_Affiliate']
-                })
-    
-    # Check if any PIDs were set
-    st.write(f"Successfully matched {match_count} out of {non_web_count} non-WEB records")
-    
-    # Show sample of matched records for confirmation
-    if matched_rows:
-        st.write("Sample of 5 matched records:")
-        sample_df = athena_df.loc[matched_rows[:5], ['Lead_DNIS', 'Clean_Lead_DNIS', 'PID', 'Affiliate_Code']]
-        st.write(sample_df)
-    
-    # Display sample of unmatched records for debugging
-    if unmatched_sample:
-        st.write("Sample of unmatched records:")
-        st.write(pd.DataFrame(unmatched_sample))
-    
-    # Direct debug output of PID column after matching
-    st.write("\n### Direct inspection of PID column after matching")
-    st.write(f"PID column non-null count: {athena_df['PID'].notna().sum()}")
-    st.write(f"PID column unique values: {athena_df['PID'].nunique()}")
-    
-    # Show PID value counts
-    if athena_df['PID'].notna().sum() > 0:
-        pid_counts = athena_df['PID'].value_counts().reset_index()
-        pid_counts.columns = ['PID', 'Count']
-        st.write("PID value counts:")
-        st.write(pid_counts.head(10))
-    
-    # Force PIDs for critical numbers as a last resort
-    if athena_df['PID'].notna().sum() == 0:
-        st.error("No PIDs were matched! Using forced PID assignment as last resort.")
-        
-        # Assign PIDs directly to critical numbers
-        for phone, expected_pid in critical_numbers.items():
-            clean_phone = clean_phone_number(phone)
-            mask = athena_df['Clean_Lead_DNIS'] == clean_phone
-            athena_df.loc[mask, 'PID'] = expected_pid
-            st.write(f"Forced PID {expected_pid} for {mask.sum()} records with phone {phone}")
-        
-        # For records with WEB in the DNIS, extract PID from Affiliate_Code
-        web_mask = athena_df['Lead_DNIS'].str.contains('WEB', na=False, case=False)
-        athena_df.loc[web_mask, 'PID'] = athena_df.loc[web_mask, 'PID_from_Affiliate']
-        st.write(f"Set PID from Affiliate_Code for {web_mask.sum()} WEB records")
-        
-        # Check if any PIDs were set
-        st.write(f"After forced assignment, PID column non-null count: {athena_df['PID'].notna().sum()}")
-    
-    # Special debug for DNIS that maps to PID 42038
-    mask_42038 = athena_df['Lead_DNIS'].str.contains('8009734275', na=False)
-    if mask_42038.sum() > 0:
-        dnis_42038 = athena_df[mask_42038]
-        st.write(f"Found {len(dnis_42038)} records with DNIS 8009734275")
-        st.write(dnis_42038[['Lead_DNIS', 'PID', 'INSTALL_METHOD']])
-    
-    # Analyze records by PID
-    analyze_records_by_pid(athena_df)
+    # Display first few rows after processing
+    st.write("\n### First 5 rows AFTER processing:")
+    st.write(athena_df.head())
     
     return athena_df
 
@@ -1189,12 +928,9 @@ def show_bob_analysis():
         return
     
     # Convert dates to datetime
-    # Start date is automatically set to 00:00:00 of the selected day
     start_date = pd.Timestamp(start_date)
-    # Ensure the end date includes the entire day (up to 23:59:59)
     end_date = pd.Timestamp(end_date) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)
     
-    # Display the exact date range being used for analysis
     st.info(f"Analyzing leads created from {start_date.strftime('%Y-%m-%d %H:%M:%S')} to {end_date.strftime('%Y-%m-%d %H:%M:%S')}")
     
     # File uploaders in three columns
@@ -1224,13 +960,42 @@ def show_bob_analysis():
     
     if athena_file and cake_conversion_file and database_leads_file:
         try:
-            # Load and process data with debugging
             st.write("DEBUG: Starting data loading...")
             
             try:
-                athena_df = pd.read_csv(athena_file)
-                st.write("DEBUG: Successfully loaded Athena file")
-                st.write("Athena columns:", athena_df.columns.tolist())
+                # Try different encodings in order of likelihood
+                encodings_to_try = ['utf-8', 'latin1', 'cp1252', 'iso-8859-1']
+                for encoding in encodings_to_try:
+                    try:
+                        # Read the first few lines to check the structure
+                        athena_peek = pd.read_csv(athena_file, nrows=5, encoding=encoding)
+                        st.write("First 5 rows with automatic header detection:")
+                        st.write(athena_peek)
+                        
+                        # Reset file pointer
+                        athena_file.seek(0)
+                        
+                        # Now read the file without assuming first row is header
+                        athena_df = pd.read_csv(athena_file, header=None, encoding=encoding)
+                        
+                        # Set the column names to be the first row
+                        athena_df.columns = athena_df.iloc[0]
+                        
+                        # Now we can safely drop the first row since we've used it as headers
+                        athena_df = athena_df.iloc[1:].reset_index(drop=True)
+                        
+                        st.write("DEBUG: Successfully loaded Athena file with {encoding} encoding")
+                        st.write("First 5 rows after proper loading:")
+                        st.write(athena_df.head())
+                        break
+                    except UnicodeDecodeError:
+                        continue
+                    except Exception as e:
+                        st.error(f"Error loading Athena file with {encoding} encoding: {str(e)}")
+                        continue
+                else:
+                    st.error("Could not load Athena file with any of the attempted encodings")
+                    return
             except Exception as e:
                 st.error(f"Error loading Athena file: {str(e)}")
                 return
@@ -1372,6 +1137,34 @@ def show_bob_analysis():
             try:
                 web_pivot, phone_pivot = generate_pivots(athena_df)
                 st.write("DEBUG: Successfully generated pivots")
+
+                # Add download button for web_pivot
+                import io
+                output_web = io.BytesIO()
+                with pd.ExcelWriter(output_web, engine='xlsxwriter') as writer:
+                    web_pivot.to_excel(writer, sheet_name='Web Pivot', index=False)
+                output_web.seek(0)
+                st.download_button(
+                    label="Download Web Pivot (Excel)",
+                    data=output_web,
+                    file_name="web_pivot.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+
+                # Add download button for phone_pivot
+                output_phone = io.BytesIO()
+                # phone_pivot may have index set to PID, so reset it for export
+                phone_pivot_export = phone_pivot.reset_index()
+                with pd.ExcelWriter(output_phone, engine='xlsxwriter') as writer:
+                    phone_pivot_export.to_excel(writer, sheet_name='Phone Pivot', index=False)
+                output_phone.seek(0)
+                st.download_button(
+                    label="Download Phone Pivot (Excel)",
+                    data=output_phone,
+                    file_name="phone_pivot.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+
             except Exception as e:
                 st.error(f"Error generating pivots: {str(e)}")
                 import traceback
@@ -1387,10 +1180,19 @@ def show_bob_analysis():
                 st.error(f"Error cleaning conversion report: {str(e)}")
                 return
             
-            # Step 4-5: Merge and Compute Final Metrics
+            # Step 4: Allocate phone metrics (moved before merge)
+            st.write("DEBUG: Allocating phone metrics...")
+            try:
+                cake_df = allocate_phone_metrics(cake_df, phone_pivot, athena_df)
+                st.write("DEBUG: Successfully allocated phone metrics")
+            except Exception as e:
+                st.error(f"Error allocating phone metrics: {str(e)}")
+                return
+            
+            # Step 5: Merge and Compute Final Metrics
             st.write("DEBUG: Merging and computing metrics...")
             try:
-                final_df = merge_and_compute(cake_df, web_pivot, phone_pivot, conversion_df)
+                final_df = merge_and_compute(cake_df, web_pivot, phone_pivot, conversion_df, start_date, end_date)
                 st.write("DEBUG: Successfully computed metrics")
             except Exception as e:
                 st.error(f"Error computing metrics: {str(e)}")
@@ -1401,7 +1203,7 @@ def show_bob_analysis():
             
             # Select columns for display
             display_columns = [
-                'Concatenated', 'PID', 'Leads', 'Cost', 'Current Rate',
+                'Affiliate Name', 'Affiliate ID', 'PID', 'Leads', 'Cost', 'Current Rate',
                 'Web DIFM Sales', 'Phone DIFM Sales', 'Total DIFM Sales',
                 'DIFM Web Installs', 'DIFM Phone Installs', 'Total DIFM Installs',
                 'Web DIY Sales', 'Phone DIY Sales', 'Total DIY Sales',
@@ -1418,9 +1220,6 @@ def show_bob_analysis():
                 display_df.sort_values('Projected Revenue', ascending=False),
                 use_container_width=True
             )
-            
-            # Verify metrics match between Athena and final report
-            verify_metrics_match(athena_df, final_df)
             
             # Compare with reference report
             compare_with_reference(final_df)
@@ -1461,9 +1260,16 @@ def show_bob_analysis():
             import traceback
             st.error(f"Full traceback:\n{traceback.format_exc()}")
 
-def allocate_phone_metrics(cake_df, phone_df, athena_df=None):
+def allocate_phone_metrics(cake_df, phone_pivot, athena_df=None):
     """Allocate phone metrics to subIDs based on web activity."""
     st.write("\n### Phone Attribution Debug")
+    
+    # Initialize web columns if they don't exist
+    web_columns = ['Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs', 'DIY Web Installs']
+    for col in web_columns:
+        if col not in cake_df.columns:
+            cake_df[col] = 0
+            st.write(f"Initialized missing column: {col}")
     
     # If athena_df not provided, try to get it from session state
     if athena_df is None and 'athena_df' in st.session_state:
@@ -1473,20 +1279,27 @@ def allocate_phone_metrics(cake_df, phone_df, athena_df=None):
     # Convert phone metrics to integers
     phone_metrics = ['Phone DIFM Sales', 'Phone DIY Sales', 'DIFM Phone Installs']
     for metric in phone_metrics:
-        cake_df[metric] = 0  # Initialize all phone metrics to 0
+        if metric not in cake_df.columns:
+            cake_df[metric] = 0
+        else:
+            cake_df[metric] = 0  # Reset to 0
+    
+    # Determine which column name to use for affiliate ID
+    affiliate_id_col = 'Affiliate ID' if 'Affiliate ID' in cake_df.columns else 'Concatenated'
+    st.write(f"Using column '{affiliate_id_col}' for affiliate identification")
     
     # Debug specific affiliate that has discrepancies
     st.write("\n### Debugging 42299_ Phone DIFM Installs")
     
     # Group by PID to handle each partner's phone metrics
-    for pid in phone_df.index.unique():
+    for pid in phone_pivot.index.unique():
         if pd.isna(pid) or pid == '': continue
         
         # Special debug for 42299
         if pid == '42299':
             st.write(f"\n--- Detailed Debug for PID {pid} ---")
             st.write("Phone pivot data for this PID:")
-            st.write(phone_df.loc[pid])
+            st.write(phone_pivot.loc[pid])
             
             # Check raw Athena data for this PID
             st.write("\nRaw Athena data counts for this PID:")
@@ -1505,10 +1318,12 @@ def allocate_phone_metrics(cake_df, phone_df, athena_df=None):
             st.write("\n42299_ rows in optimization table before allocation:")
             rows_42299 = cake_df[cake_df['PID'] == pid]
             st.write(f"Number of 42299_ rows: {len(rows_42299)}")
-            st.write(rows_42299[['Concatenated', 'PID', 'Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs']])
+            # Use the correct column name
+            display_cols = [affiliate_id_col, 'PID', 'Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs']
+            st.write(rows_42299[display_cols])
         
         # Get phone metrics for this PID
-        phone_metrics_for_pid = phone_df.loc[pid]
+        phone_metrics_for_pid = phone_pivot.loc[pid]
         
         # Get all rows for this PID in cake_df
         pid_mask = cake_df['PID'] == pid
@@ -1523,7 +1338,7 @@ def allocate_phone_metrics(cake_df, phone_df, athena_df=None):
             'DIFM Installs': int(phone_metrics_for_pid['DIFM Phone Installs'])
         })
         
-        # Step 1: Proportional Allocation
+        # Calculate total web metrics for this PID
         total_web_difm = float(pid_rows['Web DIFM Sales'].sum())
         total_web_diy = float(pid_rows['Web DIY Sales'].sum())
         total_web_installs = float(pid_rows['DIFM Web Installs'].sum())
@@ -1534,105 +1349,122 @@ def allocate_phone_metrics(cake_df, phone_df, athena_df=None):
             st.write(f"Total Web DIFM Sales: {total_web_difm}")
             st.write(f"Total Web DIY Sales: {total_web_diy}")
             st.write(f"Total DIFM Web Installs: {total_web_installs}")
-            
-            # Track allocations in detail
-            allocation_details = []
         
-        if total_web_difm > 0 or total_web_diy > 0 or total_web_installs > 0:
-            # Allocate proportionally
-            for idx in pid_rows.index:
-                row = pid_rows.loc[idx]
-                
-                # Allocate DIFM Sales
-                if total_web_difm > 0:
-                    allocated = int(round(
-                        float(phone_metrics_for_pid['Phone DIFM Sales']) * 
-                        (float(row['Web DIFM Sales']) / total_web_difm)
-                    ))
-                    cake_df.loc[idx, 'Phone DIFM Sales'] = allocated
-                
-                # Allocate DIY Sales
-                if total_web_diy > 0:
-                    allocated = int(round(
-                        float(phone_metrics_for_pid['Phone DIY Sales']) * 
-                        (float(row['Web DIY Sales']) / total_web_diy)
-                    ))
-                    cake_df.loc[idx, 'Phone DIY Sales'] = allocated
-                
-                # Allocate DIFM Installs
-                if total_web_installs > 0:
-                    allocated = int(round(
-                        float(phone_metrics_for_pid['DIFM Phone Installs']) * 
-                        (float(row['DIFM Web Installs']) / total_web_installs)
-                    ))
-                    cake_df.loc[idx, 'DIFM Phone Installs'] = allocated
-                    
-                    # Special debug for 42299
-                    if pid == '42299':
-                        allocation_details.append({
-                            'Concatenated': row['Concatenated'],
-                            'Web DIFM Installs': float(row['DIFM Web Installs']),
-                            'Proportion': float(row['DIFM Web Installs']) / total_web_installs,
-                            'Calculation': f"{float(phone_metrics_for_pid['DIFM Phone Installs'])} * {float(row['DIFM Web Installs']) / total_web_installs}",
-                            'Raw Value': float(phone_metrics_for_pid['DIFM Phone Installs']) * (float(row['DIFM Web Installs']) / total_web_installs),
-                            'Rounded': allocated,
-                        })
+        # Rule 1: If no web activity, allocate to subID with most leads
+        if total_web_difm == 0 and total_web_diy == 0 and total_web_installs == 0:
+            st.write("No web activity found - allocating to subID with most leads")
             
-            # Step 2: Fix Under-Allocated Totals
-            for metric, phone_metric in [
-                ('Phone DIFM Sales', 'Phone DIFM Sales'),
-                ('Phone DIY Sales', 'Phone DIY Sales'),
-                ('DIFM Phone Installs', 'DIFM Phone Installs')
-            ]:
-                total_allocated = int(cake_df.loc[pid_mask, metric].sum())
-                total_available = int(phone_metrics_for_pid[phone_metric])
-                
-                # Special debug for 42299
-                if pid == '42299' and metric == 'DIFM Phone Installs':
-                    st.write(f"\nDIFM Phone Installs allocation for 42299_:")
-                    st.write(f"Total DIFM Phone Installs in pivot: {total_available}")
-                    st.write(f"Total allocated in first pass: {total_allocated}")
-                    st.write("\nAllocation details by row:")
-                    st.write(pd.DataFrame(allocation_details))
-                
-                if total_allocated < total_available:
-                    remaining = total_available - total_allocated
-                    st.write(f"Under-allocated {metric}: {remaining} units remaining")
-                    
-                    # Sort by Leads or Web DIFM Sales
-                    sorted_idx = pid_rows.sort_values(['Web DIFM Sales', 'Leads'], 
-                                                    ascending=[False, False]).index
-                    
-                    # Special debug for 42299
-                    if pid == '42299' and metric == 'DIFM Phone Installs':
-                        st.write(f"\nDistributing {remaining} remaining DIFM Phone Installs")
-                        st.write("Sorted rows to receive remaining installs:")
-                        sorted_rows = pid_rows.loc[sorted_idx[:remaining], ['Concatenated', 'Web DIFM Sales', 'Leads']]
-                        st.write(sorted_rows)
-                    
-                    for idx in sorted_idx[:remaining]:
-                        cake_df.loc[idx, metric] += 1
-                        
-                        # Special debug for 42299
-                        if pid == '42299' and metric == 'DIFM Phone Installs':
-                            st.write(f"Added 1 to {cake_df.loc[idx, 'Concatenated']}")
-        
-        else:
-            # Step 3: Catch-All Attribution (No Web Activity)
-            st.write("No web activity found - using catch-all attribution")
-            
-            # Find row with highest Leads
+            # Find row with highest leads
             max_leads_idx = pid_rows['Leads'].idxmax()
             
             # Assign all phone metrics to this row
             cake_df.loc[max_leads_idx, 'Phone DIFM Sales'] = int(phone_metrics_for_pid['Phone DIFM Sales'])
             cake_df.loc[max_leads_idx, 'Phone DIY Sales'] = int(phone_metrics_for_pid['Phone DIY Sales'])
             cake_df.loc[max_leads_idx, 'DIFM Phone Installs'] = int(phone_metrics_for_pid['DIFM Phone Installs'])
+            
+            st.write(f"Allocated all phone metrics to {cake_df.loc[max_leads_idx, affiliate_id_col]} (Leads: {cake_df.loc[max_leads_idx, 'Leads']})")
+        
+        else:
+            # Step 1: Proportional Allocation
+            allocation_details = []
+            
+            for idx in pid_rows.index:
+                row = pid_rows.loc[idx]
+                
+                # Allocate DIFM Sales
+                if total_web_difm > 0:
+                    allocated = float(phone_metrics_for_pid['Phone DIFM Sales']) * (float(row['Web DIFM Sales']) / total_web_difm)
+                    cake_df.loc[idx, 'Phone DIFM Sales'] = allocated
+                else:
+                    cake_df.loc[idx, 'Phone DIFM Sales'] = 0
+                
+                # Allocate DIY Sales
+                if total_web_diy > 0:
+                    allocated = float(phone_metrics_for_pid['Phone DIY Sales']) * (float(row['Web DIY Sales']) / total_web_diy)
+                    cake_df.loc[idx, 'Phone DIY Sales'] = allocated
+                else:
+                    cake_df.loc[idx, 'Phone DIY Sales'] = 0
+                
+                # Allocate DIFM Installs
+                if total_web_installs > 0:
+                    allocated = float(phone_metrics_for_pid['DIFM Phone Installs']) * (float(row['DIFM Web Installs']) / total_web_installs)
+                    cake_df.loc[idx, 'DIFM Phone Installs'] = allocated
+                else:
+                    cake_df.loc[idx, 'DIFM Phone Installs'] = 0
+                    
+                # Special debug for 42299
+                if pid == '42299':
+                    allocation_details.append({
+                        'Affiliate ID': row[affiliate_id_col],
+                        'Web DIFM Sales': float(row['Web DIFM Sales']),
+                        'Web DIY Sales': float(row['Web DIY Sales']),
+                        'DIFM Web Installs': float(row['DIFM Web Installs']),
+                        'Leads': row['Leads'],
+                        'Raw DIFM Sales': cake_df.loc[idx, 'Phone DIFM Sales'],
+                        'Raw DIY Sales': cake_df.loc[idx, 'Phone DIY Sales'],
+                        'Raw DIFM Installs': cake_df.loc[idx, 'DIFM Phone Installs']
+                    })
+            
+            # Step 2: Fix totals to match exactly (Rule 2)
+            for metric, phone_metric in [
+                ('Phone DIFM Sales', 'Phone DIFM Sales'),
+                ('Phone DIY Sales', 'Phone DIY Sales'),
+                ('DIFM Phone Installs', 'DIFM Phone Installs')
+            ]:
+                total_allocated = cake_df.loc[pid_mask, metric].sum()
+                total_available = float(phone_metrics_for_pid[phone_metric])
+                
+                # Special debug for 42299
+                if pid == '42299':
+                    st.write(f"\n{metric} allocation for 42299_:")
+                    st.write(f"Total {metric} in pivot: {total_available}")
+                    st.write(f"Total allocated (raw): {total_allocated}")
+                    st.write("\nAllocation details by row:")
+                    st.write(pd.DataFrame(allocation_details))
+                
+                if abs(total_allocated - total_available) > 0.01:  # Allow for small floating point differences
+                    st.write(f"Adjusting {metric} totals: allocated {total_allocated}, target {total_available}")
+                    
+                    # First, round all values to integers
+                    cake_df.loc[pid_mask, metric] = cake_df.loc[pid_mask, metric].round()
+                    
+                    # Recalculate total after rounding
+                    total_after_rounding = cake_df.loc[pid_mask, metric].sum()
+                    difference = total_available - total_after_rounding
+                    
+                    st.write(f"After rounding: {total_after_rounding}, difference: {difference}")
+                    
+                    if abs(difference) > 0.01:
+                        # Sort by leads (descending) to prioritize high-lead subIDs
+                        sorted_idx = pid_rows.sort_values('Leads', ascending=False).index
+                        
+                        if difference > 0:
+                            # Need to add more - add to highest lead subIDs
+                            st.write(f"Adding {difference} to highest lead subIDs")
+                            for idx in sorted_idx:
+                                if difference <= 0:
+                                    break
+                                cake_df.loc[idx, metric] += 1
+                                difference -= 1
+                        else:
+                            # Need to subtract - remove from lowest lead subIDs
+                            difference = abs(difference)
+                            st.write(f"Subtracting {difference} from lowest lead subIDs")
+                            for idx in sorted_idx[::-1]:  # Reverse order
+                                if difference <= 0:
+                                    break
+                                if cake_df.loc[idx, metric] > 0:
+                                    cake_df.loc[idx, metric] -= 1
+                                    difference -= 1
+                
+                # Final verification
+                final_total = cake_df.loc[pid_mask, metric].sum()
+                st.write(f"Final {metric} total: {final_total} (target: {total_available})")
         
         # Special debug for 42299
         if pid == '42299':
             st.write("\nFinal allocation results for 42299_:")
-            st.write(cake_df[pid_mask][['Concatenated', 'Phone DIFM Sales', 'Phone DIY Sales', 'DIFM Phone Installs']])
+            st.write(cake_df[pid_mask][[affiliate_id_col, 'Phone DIFM Sales', 'Phone DIY Sales', 'DIFM Phone Installs']])
             st.write(f"Total DIFM Phone Installs allocated: {cake_df.loc[pid_mask, 'DIFM Phone Installs'].sum()}")
     
     # Ensure all phone metrics are integers
@@ -1644,6 +1476,23 @@ def allocate_phone_metrics(cake_df, phone_df, athena_df=None):
     pid_mask = cake_df['PID'] == pid
     st.write(f"\nFinal check for {pid}:")
     st.write(f"Total DIFM Phone Installs for {pid}: {cake_df.loc[pid_mask, 'DIFM Phone Installs'].sum()}")
+    
+    # Display final allocation summary for all PIDs
+    st.write("\n### Final Phone Attribution Summary")
+    summary_data = []
+    for pid in phone_pivot.index.unique():
+        if pd.isna(pid) or pid == '': continue
+        pid_mask = cake_df['PID'] == pid
+        summary_data.append({
+            'PID': pid,
+            'Total Phone DIFM Sales': cake_df.loc[pid_mask, 'Phone DIFM Sales'].sum(),
+            'Total Phone DIY Sales': cake_df.loc[pid_mask, 'Phone DIY Sales'].sum(),
+            'Total DIFM Phone Installs': cake_df.loc[pid_mask, 'DIFM Phone Installs'].sum()
+        })
+    
+    summary_df = pd.DataFrame(summary_data)
+    st.write("Attribution summary by PID:")
+    st.write(summary_df)
     
     return cake_df
 
@@ -1964,12 +1813,20 @@ def generate_pivots(df):
     
     # Rename columns to match expected format
     web_pivot = web_pivot.rename(columns={
+        'Clean_Affiliate_Code': 'Clean_Affiliate_Code',
         'Web_DIFM_Sales': 'Web DIFM Sales',
         'Web_DIY_Sales': 'Web DIY Sales',
         'DIFM_Web_Installs': 'DIFM Web Installs',
         'DIY_Web_Installs': 'DIY Web Installs'
     })
     
+    # Ensure all required columns exist
+    required_columns = ['Concatenated', 'Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs', 'DIY Web Installs']
+    for col in required_columns:
+        if col not in web_pivot.columns:
+            web_pivot[col] = 0
+            
+    st.write("DEBUG: Web pivot columns after creation:", web_pivot.columns.tolist())
     st.write(f"Web pivot created with {len(web_pivot)} rows")
     st.write("Sample of web pivot:")
     st.write(web_pivot.head(3))
@@ -2016,6 +1873,360 @@ def generate_pivots(df):
     st.write(f"Total Phone Installs: {total_phone_installs}")
     
     return web_pivot, phone_pivot
+
+def clean_conversion(conversion_df):
+    """
+    Clean and process the Cake Conversion report.
+    """
+    st.write("\n### Cleaning Conversion Report")
+    st.write("Starting conversion report cleaning process...")
+    
+    # Make a copy to avoid modifying the original
+    df = conversion_df.copy()
+    
+    # Display initial data info
+    st.write("\nInitial Data Info:")
+    st.write(f"Initial rows: {len(df)}")
+    st.write("Initial columns:", df.columns.tolist())
+    
+    # Expected columns and their potential alternatives
+    column_mappings = {
+        'Affiliate ID': ['Affiliate ID', 'AffiliateID', 'Affiliate_ID', 'affiliate_id'],
+        'Sub ID': ['Sub ID', 'SubID', 'Sub_ID', 'sub_id'],
+        'Paid': ['Paid', 'Rate', 'Cost', 'Price'],
+        'Offer Name': ['Offer Name', 'OfferName', 'Offer_Name', 'offer_name'],
+        'Affiliate Name': ['Affiliate Name', 'AffiliateName', 'Affiliate_Name', 'affiliate_name']
+    }
+    
+    # Map columns to standardized names
+    for standard_name, alternatives in column_mappings.items():
+        found = False
+        for alt in alternatives:
+            if alt in df.columns:
+                if alt != standard_name:
+                    df = df.rename(columns={alt: standard_name})
+                found = True
+                break
+        if not found:
+            st.warning(f"Could not find column {standard_name} or its alternatives")
+            df[standard_name] = None
+    
+    # 1. Remove rows containing "Medical Alert" in Offer Name
+    initial_rows = len(df)
+    df = df[~df['Offer Name'].str.contains('Medical Alert', case=False, na=False)]
+    st.write(f"\nRemoved {initial_rows - len(df)} rows containing 'Medical Alert'")
+    
+    # Store original Sub ID for comparison
+    df['Original Sub ID'] = df['Sub ID']
+    
+    # 2. Clean Sub ID - remove values with letters and handle special case for 42865
+    df['Sub ID'] = df['Sub ID'].astype(str)
+    df['Sub ID'] = df.apply(lambda row: '' if str(row['Affiliate ID']) == '42865' else 
+                           (row['Sub ID'] if row['Sub ID'].isdigit() else ''), axis=1)
+    
+    # Count how many subIDs were removed for 42865
+    pid_42865_count = len(df[df['Affiliate ID'] == '42865'])
+    st.write(f"\nRemoved subIDs from {pid_42865_count} rows with PID 42865")
+    
+    # 3. Create Concatenated column
+    df['Concatenated'] = df.apply(
+        lambda r: f"{r['Affiliate ID']}_{r['Sub ID']}" if r['Sub ID'] else f"{r['Affiliate ID']}_",
+        axis=1
+    )
+    
+    # Convert Paid to numeric, handling any currency symbols and commas
+    df['Paid'] = df['Paid'].astype(str).str.replace('$', '').str.replace(',', '')
+    df['Paid'] = pd.to_numeric(df['Paid'], errors='coerce')
+    
+    # Add download button for cleaned data before pivot creation
+    st.write("\n### Download Cleaned Conversion Data")
+    st.write("Review the cleaned data before pivot creation:")
+    
+    # Show sample of cleaned data
+    st.write("\nSample of cleaned data (first 10 rows):")
+    sample_cols = ['Affiliate ID', 'Affiliate Name', 'Original Sub ID', 'Sub ID', 'Concatenated', 'Paid', 'Offer Name']
+    st.write(df[sample_cols].head(10))
+    
+    # Special check for 42865
+    st.write("\nVerifying PID 42865 entries:")
+    pid_42865_df = df[df['Affiliate ID'] == '42865']
+    st.write(f"Found {len(pid_42865_df)} entries for PID 42865")
+    if not pid_42865_df.empty:
+        st.write("Sample of PID 42865 entries:")
+        st.write(pid_42865_df[sample_cols].head())
+        
+        # Verify all 42865 entries have no subID
+        has_subid = pid_42865_df[pid_42865_df['Sub ID'] != '']
+        if not has_subid.empty:
+            st.error(f"Found {len(has_subid)} entries for PID 42865 that still have subIDs!")
+    
+    # Create download button for cleaned data
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, sheet_name='Cleaned Conversion Data', index=False)
+    
+    output.seek(0)
+    st.download_button(
+        label="Download Cleaned Conversion Data (Excel)",
+        data=output,
+        file_name="cleaned_conversion_data.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    
+    # 4. Create Cake Pivot
+    st.write("\n### Creating Cake Pivot")
+    cake_pivot = df.groupby('Concatenated').agg({
+        'Affiliate ID': 'mean',  # Average of Affiliate ID
+        'Affiliate Name': 'first',  # First Affiliate Name
+        'Concatenated': 'count',  # Count of occurrences
+        'Paid': 'sum'  # Sum of Paid values
+    }).rename(columns={
+        'Affiliate ID': 'PID',
+        'Concatenated': 'Leads',
+        'Paid': 'Cost'
+    }).reset_index()
+    
+    # Reorder columns to put Affiliate Name first
+    cake_pivot = cake_pivot[['Affiliate Name', 'Concatenated', 'PID', 'Leads', 'Cost']]
+    
+    # Display Cake Pivot
+    st.write("\n### Cake Pivot")
+    st.write(f"Total rows in pivot: {len(cake_pivot)}")
+    st.write("Sample of Cake Pivot (first 10 rows):")
+    st.write(cake_pivot.head(10))
+    
+    # Add download button for pivot
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        cake_pivot.to_excel(writer, sheet_name='Cake Pivot', index=False)
+    
+    output.seek(0)
+    st.download_button(
+        label="Download Cake Pivot (Excel)",
+        data=output,
+        file_name="cake_pivot.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    
+    return cake_pivot
+
+def merge_and_compute(cake_df, web_pivot, phone_pivot, conversion_df, start_date, end_date):
+    """
+    Merge web and phone pivots with conversion data and compute final metrics.
+    Create the final ADT Optimizations report.
+    """
+    st.write(f"\n### ADT Optimizations - {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+    
+    # Start with Cake Pivot as base
+    final_df = cake_df.copy()
+    
+    # Rename Concatenated to Affiliate ID if it still exists
+    if 'Concatenated' in final_df.columns:
+        final_df = final_df.rename(columns={'Concatenated': 'Affiliate ID'})
+    
+    # Initialize all the new columns with 0
+    new_columns = [
+        'Web DIFM Sales', 'Phone DIFM Sales', 'Total DIFM Sales',
+        'DIFM Web Installs', 'DIFM Phone Installs', 'Total DIFM Installs',
+        'DIY Web Sales', 'DIY Phone Sales', 'Total DIY Sales',
+        'Revenue', 'Profit/Loss', 'Projected Installs', 'Projected Revenue',
+        'Projected Profit/Loss', 'Projected Margin', 'Current Rate', 'eCPL'
+    ]
+    
+    for col in new_columns:
+        final_df[col] = 0
+    
+    # Ensure keys are string and stripped
+    final_df['Affiliate ID'] = final_df['Affiliate ID'].astype(str).str.strip()
+    web_pivot['Concatenated'] = web_pivot['Concatenated'].astype(str).str.strip()
+
+    # Drop web columns from final_df if they exist to avoid _x suffixes
+    for col in ['Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs', 'DIY Web Installs']:
+        if col in final_df.columns:
+            final_df = final_df.drop(columns=[col])
+
+    # Merge with web pivot data
+    st.write("\nMerging web pivot data...")
+    try:
+        required_web_columns = ['Concatenated', 'Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs', 'DIY Web Installs']
+        for col in required_web_columns:
+            if col not in web_pivot.columns:
+                st.warning(f"Adding missing column {col} to web_pivot")
+                web_pivot[col] = 0
+
+        final_df = final_df.merge(
+            web_pivot[required_web_columns],
+            left_on='Affiliate ID',
+            right_on='Concatenated',
+            how='left'
+        )
+
+        # Drop the redundant Concatenated column if it exists
+        if 'Concatenated' in final_df.columns:
+            final_df = final_df.drop('Concatenated', axis=1)
+
+        # Fill NaN values with 0 for numeric columns
+        for col in ['Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs', 'DIY Web Installs']:
+            if col in final_df.columns:
+                final_df[col] = final_df[col].fillna(0)
+
+        st.write("Web pivot merge successful")
+
+        # Debug: Compare web pivot totals to merged totals
+        web_totals = {
+            'Web DIFM Sales': web_pivot['Web DIFM Sales'].sum(),
+            'Web DIY Sales': web_pivot['Web DIY Sales'].sum(),
+            'DIFM Web Installs': web_pivot['DIFM Web Installs'].sum(),
+            'DIY Web Installs': web_pivot['DIY Web Installs'].sum()
+        }
+        merged_totals = {
+            'Web DIFM Sales': final_df['Web DIFM Sales'].sum(),
+            'Web DIY Sales': final_df['Web DIY Sales'].sum(),
+            'DIFM Web Installs': final_df['DIFM Web Installs'].sum(),
+            'DIY Web Installs': final_df['DIY Web Installs'].sum()
+        }
+        st.write("Web Pivot Totals:", web_totals)
+        st.write("Merged Report Web Totals:", merged_totals)
+        if web_totals == merged_totals:
+            st.success("Web sales/install totals match between web pivot and merged report!")
+        else:
+            st.warning("Web sales/install totals DO NOT match between web pivot and merged report!")
+
+        # Diagnostics: Find unmatched keys
+        final_affiliate_ids = set(final_df['Affiliate ID'].unique())
+        web_concat_ids = set(web_pivot['Concatenated'].unique())
+
+        missing_in_web = final_affiliate_ids - web_concat_ids
+        missing_in_final = web_concat_ids - final_affiliate_ids
+
+        st.write("Sample Affiliate IDs in final_df not in web_pivot:", list(missing_in_web)[:10])
+        st.write("Sample Concatenated in web_pivot not in final_df:", list(missing_in_final)[:10])
+        st.write(f"Count missing in web_pivot: {len(missing_in_web)}")
+        st.write(f"Count missing in final_df: {len(missing_in_final)}")
+        st.write("Sample Affiliate IDs in final_df:", list(final_affiliate_ids)[:10])
+        st.write("Sample Concatenated in web_pivot:", list(web_concat_ids)[:10])
+
+    except Exception as e:
+        st.error(f"Error during web merge: {str(e)}")
+        st.error("Attempting to continue with empty web metrics...")
+        for col in ['Web DIFM Sales', 'Web DIY Sales', 'DIFM Web Installs', 'DIY Web Installs']:
+            final_df[col] = 0
+    
+    # Allocate phone metrics based on web activity
+    st.write("\nAllocating phone metrics...")
+    final_df = allocate_phone_metrics(final_df, phone_pivot)
+    
+    # Calculate total metrics
+    st.write("\nCalculating total metrics...")
+    final_df['Total DIFM Sales'] = final_df['Web DIFM Sales'] + final_df['Phone DIFM Sales']
+    final_df['Total DIFM Installs'] = final_df['DIFM Web Installs'] + final_df['DIFM Phone Installs']
+    final_df['Total DIY Sales'] = final_df['DIY Web Sales'] + final_df['DIY Phone Sales']
+    
+    # Calculate revenue (1080 per DIFM install + 300 per DIY sale)
+    final_df['Revenue'] = (final_df['Total DIFM Installs'] * 1080) + (final_df['Total DIY Sales'] * 300)
+    
+    # Calculate profit/loss
+    final_df['Profit/Loss'] = final_df['Revenue'] - final_df['Cost']
+    
+    # Calculate projected installs with different rates for specific PIDs
+    final_df['Projected Installs'] = final_df.apply(
+        lambda row: round(row['Total DIFM Sales'] * 0.55) if str(row['PID']) in ['42215', '4790'] 
+        else round(row['Total DIFM Sales'] * 0.60),
+        axis=1
+    )
+    
+    # Calculate projected revenue (1080 per projected install + 300 per DIY sale)
+    final_df['Projected Revenue'] = (final_df['Projected Installs'] * 1080) + (final_df['Total DIY Sales'] * 300)
+    
+    # Calculate projected profit/loss
+    final_df['Projected Profit/Loss'] = final_df['Projected Revenue'] - final_df['Cost']
+    
+    # Calculate projected margin
+    final_df['Projected Margin'] = final_df.apply(
+        lambda row: (row['Projected Profit/Loss'] / row['Projected Revenue'] * 100) 
+        if row['Projected Revenue'] != 0 else -100,
+        axis=1
+    )
+    
+    # Get current rates from conversion report
+    st.write("\nGetting current rates...")
+    try:
+        # Convert Conversion Date to datetime
+        conversion_df['Conversion Date'] = pd.to_datetime(conversion_df['Conversion Date'], errors='coerce')
+        
+        # Group by Affiliate ID + Sub ID and get most recent rate
+        current_rates = (
+            conversion_df
+            .sort_values('Conversion Date', ascending=False)
+            .groupby(
+                conversion_df.apply(
+                    lambda r: f"{r['Affiliate ID']}_{r['Sub ID']}" if str(r['Sub ID']).strip() 
+                    else f"{r['Affiliate ID']}_",
+                    axis=1
+                )
+            )['Paid']
+            .first()
+        )
+        
+        # Map current rates to final_df
+        final_df['Current Rate'] = final_df['Affiliate ID'].map(current_rates).fillna(0)
+        
+    except Exception as e:
+        st.error(f"Error getting current rates: {str(e)}")
+        final_df['Current Rate'] = 0
+    
+    # Calculate eCPL
+    final_df['eCPL'] = final_df['Projected Revenue'] / final_df['Leads'].replace(0, np.nan)
+    
+    # Round numeric columns
+    numeric_cols = ['Cost', 'Current Rate', 'eCPL', 'Revenue', 'Profit/Loss', 'Projected Revenue', 
+                   'Projected Profit/Loss']
+    for col in numeric_cols:
+        final_df[col] = final_df[col].round(2)
+    
+    # Round integer columns
+    integer_cols = ['Web DIFM Sales', 'Phone DIFM Sales', 'Total DIFM Sales',
+                   'DIFM Web Installs', 'DIFM Phone Installs', 'Total DIFM Installs',
+                   'DIY Web Sales', 'DIY Phone Sales', 'Total DIY Sales',
+                   'Projected Installs']
+    for col in integer_cols:
+        final_df[col] = final_df[col].round(0).astype(int)
+    
+    # Sort by projected revenue descending
+    final_df = final_df.sort_values('Projected Revenue', ascending=False)
+    
+    # Display the final report
+    st.write(f"\nTotal rows in report: {len(final_df)}")
+    
+    # Display column names for verification
+    st.write("\nColumns in final report:")
+    st.write(final_df.columns.tolist())
+    
+    # Display summary totals
+    st.write("\n### Summary Totals")
+    summary = pd.DataFrame({
+        'Metric': [
+            'Total Leads',
+            'Total Cost',
+            'Total DIFM Sales',
+            'Total DIFM Installs',
+            'Total DIY Sales',
+            'Total Revenue',
+            'Total Projected Revenue'
+        ],
+        'Value': [
+            f"{final_df['Leads'].sum():,}",
+            f"${final_df['Cost'].sum():,.2f}",
+            f"{final_df['Total DIFM Sales'].sum():,}",
+            f"{final_df['Total DIFM Installs'].sum():,}",
+            f"{final_df['Total DIY Sales'].sum():,}",
+            f"${final_df['Revenue'].sum():,.2f}",
+            f"${final_df['Projected Revenue'].sum():,.2f}"
+        ]
+    })
+    st.table(summary)
+    
+    return final_df
 
 if __name__ == "__main__":
     show_bob_analysis()

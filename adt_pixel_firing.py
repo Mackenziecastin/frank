@@ -138,9 +138,28 @@ def clean_data(df, file_path):
             logging.info(f"DNIS {dnis}: {count} records")
         
         df_after_date['Lead_DNIS'] = df_after_date['Lead_DNIS'].fillna('')
-        dnis_filter = (df_after_date['Lead_DNIS'] == 'WEB0021011')
-        df_after_lead_dnis = df_after_date[dnis_filter]
-        logging.info(f"After filtering for Lead_DNIS 'WEB0021011': {len(df_after_lead_dnis)} records")
+        
+        # Filter for all allowed DNIS values and keep track separately
+        web_dnis_codes = ['WEB0021011', 'WEB0021042', 'WEB0021044', 'WEB0021008']
+        phone_dnis_codes = ['8669765334']
+        
+        web_dnis_filter = df_after_date['Lead_DNIS'].isin(web_dnis_codes)
+        phone_dnis_filter = df_after_date['Lead_DNIS'].isin(phone_dnis_codes)
+        
+        df_web_dnis = df_after_date[web_dnis_filter].copy()
+        df_phone_dnis = df_after_date[phone_dnis_filter].copy()
+        
+        # Add a column to track the source for pixel firing
+        df_web_dnis['pixel_source'] = 'web'
+        df_phone_dnis['pixel_source'] = 'phone'
+        
+        # Combine the dataframes
+        df_after_lead_dnis = pd.concat([df_web_dnis, df_phone_dnis])
+        
+        logging.info(f"After filtering for Lead_DNIS:")
+        logging.info(f"  Web DNIS codes {web_dnis_codes}: {len(df_web_dnis)} records")
+        logging.info(f"  Phone DNIS codes {phone_dnis_codes}: {len(df_phone_dnis)} records")
+        logging.info(f"  Total: {len(df_after_lead_dnis)} records")
         
         # Check Order Types before filtering
         unique_order_types = df_after_lead_dnis['Ordr_Type'].unique()
@@ -179,14 +198,21 @@ def clean_data(df, file_path):
             logging.info(f"  Order Type: {row['Ordr_Type']}")
             logging.info(f"  Sale Date: {row['Sale_Date']}")
             logging.info(f"  Lead DNIS: {row['Lead_DNIS']}")
+            logging.info(f"  Pixel Source: {row['pixel_source']}")
         
-        # Count DIFM and DIY records
-        difm_count = len(difm_records)
-        diy_count = len(diy_records)
+        # Count DIFM and DIY records by source
+        web_difm_count = len(difm_records[difm_records['pixel_source'] == 'web'])
+        web_diy_count = len(diy_records[diy_records['pixel_source'] == 'web'])
+        phone_difm_count = len(difm_records[difm_records['pixel_source'] == 'phone'])
+        phone_diy_count = len(diy_records[diy_records['pixel_source'] == 'phone'])
         
         logging.info(f"\nFinal counts:")
-        logging.info(f"DIFM Sales: {difm_count}")
-        logging.info(f"DIY Sales: {diy_count}")
+        logging.info(f"WEB0021011 (speedtrkzone.com):")
+        logging.info(f"  DIFM Sales: {web_difm_count}")
+        logging.info(f"  DIY Sales: {web_diy_count}")
+        logging.info(f"8669765334 (trkfocus.com):")
+        logging.info(f"  DIFM Sales: {phone_difm_count}")
+        logging.info(f"  DIY Sales: {phone_diy_count}")
         
         # Drop the temporary date string column
         filtered_df = filtered_df.drop('Sale_Date_Str', axis=1)
@@ -196,16 +222,46 @@ def clean_data(df, file_path):
         logging.error(f"Error cleaning data: {str(e)}")
         raise
 
-def fire_pixel(transaction_id, install_method, sale_date):
+# DNIS to pixel configuration mapping
+DNIS_PIXEL_CONFIG = {
+    'WEB0021011': {
+        'url': 'https://speedtrkzone.com/m.ashx',
+        'campaigns': {'DIFM': '91149', 'DIY': '91162'}
+    },
+    '8669765334': {
+        'url': 'https://trkfocus.com/m.ashx',
+        'campaigns': {'DIFM': '93166', 'DIY': '93168'}
+    },
+    'WEB0021042': {
+        'url': 'https://trkfocus.com/m.ashx',
+        'campaigns': {'DIFM': '95377', 'DIY': '95378'}
+    },
+    'WEB0021044': {
+        'url': 'https://trkfocus.com/m.ashx',
+        'campaigns': {'DIFM': '95379', 'DIY': '95380'}
+    },
+    'WEB0021008': {
+        'url': 'https://trkfocus.com/m.ashx',
+        'campaigns': {'DIFM': '95385', 'DIY': '95386'}
+    }
+}
+
+def fire_pixel(transaction_id, install_method, sale_date, dnis_code):
     """
-    Fire the pixel for a given transaction ID, install method, and sale date
+    Fire the pixel for a given transaction ID, install method, sale date, and DNIS code
     """
     try:
-        # Base URL
-        pixel_url = "https://speedtrkzone.com/m.ashx"
+        # Get pixel configuration for this DNIS code
+        if dnis_code not in DNIS_PIXEL_CONFIG:
+            logging.error(f"Unknown DNIS code: {dnis_code}")
+            return False
+            
+        config = DNIS_PIXEL_CONFIG[dnis_code]
+        pixel_url = config['url']
         
-        # Set campaign ID based on install method (DIFM: 91149, DIY: 91162)
-        campaign_id = "91149" if "DIFM" in str(install_method).upper() else "91162"
+        # Set campaign ID based on install method
+        install_type = 'DIFM' if 'DIFM' in str(install_method).upper() else 'DIY'
+        campaign_id = config['campaigns'][install_type]
         
         # Set the time to noon on the sale date
         pixel_datetime = sale_date.replace(hour=12, minute=0, second=0)
@@ -226,12 +282,13 @@ def fire_pixel(transaction_id, install_method, sale_date):
         response = requests.get(pixel_url, params=params)
         response.raise_for_status()
         
-        logging.info(f"Fired {install_method} pixel successfully - Transaction ID: {transaction_id}")
+        logging.info(f"Fired {install_type} pixel for {dnis_code} successfully - Transaction ID: {transaction_id}")
         return True
         
     except Exception as e:
-        logging.error(f"Failed to fire {install_method} pixel - Transaction ID: {transaction_id} - Error: {str(e)}")
+        logging.error(f"Failed to fire {install_type} pixel for {dnis_code} - Transaction ID: {transaction_id} - Error: {str(e)}")
         return False
+
 
 def process_adt_report(file_path):
     """
@@ -275,37 +332,55 @@ def process_adt_report(file_path):
             logging.info("No qualifying sales found to process.")
             return
         
-        # Count DIFM and DIY sales
-        difm_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIFM', case=False, na=False)]
-        diy_records = filtered_df[filtered_df['INSTALL_METHOD'].str.contains('DIY', case=False, na=False)]
+        # Initialize success counters by DNIS code
+        success_counters = {}
+        total_counters = {}
         
-        difm_count = len(difm_records)
-        diy_count = len(diy_records)
+        # Initialize counters for all DNIS codes
+        for dnis_code in DNIS_PIXEL_CONFIG.keys():
+            success_counters[dnis_code] = {'DIFM': 0, 'DIY': 0}
+            total_counters[dnis_code] = {'DIFM': 0, 'DIY': 0}
         
-        logging.info(f"\nFound {difm_count} DIFM and {diy_count} DIY sales to process")
-        
-        # Fire pixels
-        successful_difm = 0
-        successful_diy = 0
-        
-        # Process DIFM sales
-        for _, row in difm_records.iterrows():
+        # Process each record
+        for _, row in filtered_df.iterrows():
             transaction_id = f"ADT_{row['Sale_Date'].strftime('%Y%m%d')}_{uuid.uuid4().hex[:8]}"
-            if fire_pixel(transaction_id, "DIFM", row['Sale_Date']):
-                successful_difm += 1
+            dnis_code = row['Lead_DNIS']
+            is_difm = 'DIFM' in str(row['INSTALL_METHOD']).upper()
+            install_type = 'DIFM' if is_difm else 'DIY'
+            
+            # Count total records for this DNIS/install type combination
+            total_counters[dnis_code][install_type] += 1
+            
+            # Fire pixel using the new unified function
+            if fire_pixel(transaction_id, install_type, row['Sale_Date'], dnis_code):
+                success_counters[dnis_code][install_type] += 1
         
-        # Process DIY sales
-        for _, row in diy_records.iterrows():
-            transaction_id = f"ADT_{row['Sale_Date'].strftime('%Y%m%d')}_{uuid.uuid4().hex[:8]}"
-            if fire_pixel(transaction_id, "DIY", row['Sale_Date']):
-                successful_diy += 1
-        
-        # Log summary
+        # Log summary by DNIS code
         logging.info("\n=== Summary ===")
         logging.info(f"File processed successfully with encoding: {successful_encoding}")
-        logging.info(f"DIFM pixels fired successfully: {successful_difm} out of {difm_count}")
-        logging.info(f"DIY pixels fired successfully: {successful_diy} out of {diy_count}")
-        logging.info(f"Total pixels fired: {successful_difm + successful_diy} out of {difm_count + diy_count}")
+        
+        total_successful = 0
+        total_processed = 0
+        
+        for dnis_code in DNIS_PIXEL_CONFIG.keys():
+            config = DNIS_PIXEL_CONFIG[dnis_code]
+            difm_success = success_counters[dnis_code]['DIFM']
+            diy_success = success_counters[dnis_code]['DIY']
+            difm_total = total_counters[dnis_code]['DIFM']
+            diy_total = total_counters[dnis_code]['DIY']
+            
+            if difm_total > 0 or diy_total > 0:  # Only show DNIS codes that had records
+                logging.info(f"\n{dnis_code} ({config['url']}):")
+                if difm_total > 0:
+                    logging.info(f"  DIFM pixels fired successfully: {difm_success} out of {difm_total}")
+                if diy_total > 0:
+                    logging.info(f"  DIY pixels fired successfully: {diy_success} out of {diy_total}")
+                
+                total_successful += difm_success + diy_success
+                total_processed += difm_total + diy_total
+        
+        logging.info(f"\nTotal pixels fired: {total_successful}")
+        logging.info(f"Total records processed: {total_processed}")
         
     except Exception as e:
         logging.error(f"Error processing ADT report: {str(e)}")
