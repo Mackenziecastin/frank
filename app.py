@@ -184,18 +184,31 @@ def show_main_page():
                         st.warning(f"Note: Affiliate data contains {extra_days} additional day(s) beyond {full_end_date.strftime('%Y-%m-%d')}. These dates have been excluded for consistency with Advanced Action data.")
                     
                 # Create pivot tables and reports
+                # Additionally, compute Bookings based on Created Date ranges only
+                # Prepare Created Date filtered dataframes for Bookings
+                affiliate_df_full_bookings = affiliate_df_processed[
+                    (affiliate_df_processed['Created Date'].dt.date >= full_start_date.date()) &
+                    (affiliate_df_processed['Created Date'].dt.date <= full_end_date.date())
+                ]
+                affiliate_df_matured_bookings = affiliate_df_processed[
+                    (affiliate_df_processed['Created Date'].dt.date >= matured_start_date.date()) &
+                    (affiliate_df_processed['Created Date'].dt.date <= matured_end_date.date())
+                ]
+
                 # Full report
                 affiliate_pivot_full = create_affiliate_pivot(affiliate_df_full)
+                affiliate_bookings_pivot_full = create_affiliate_bookings_pivot(affiliate_df_full_bookings)
                 advanced_pivot_full = create_advanced_pivot(advanced_df_full)
                 optimization_report_full = create_optimization_report(
-                    affiliate_pivot_full, advanced_pivot_full, partner_list_df
+                    affiliate_pivot_full, advanced_pivot_full, partner_list_df, affiliate_bookings_pivot_full
                 )
                 
                 # Matured report
                 affiliate_pivot_matured = create_affiliate_pivot(affiliate_df_matured)
+                affiliate_bookings_pivot_matured = create_affiliate_bookings_pivot(affiliate_df_matured_bookings)
                 advanced_pivot_matured = create_advanced_pivot(advanced_df_matured)
                 optimization_report_matured = create_optimization_report(
-                    affiliate_pivot_matured, advanced_pivot_matured, partner_list_df
+                    affiliate_pivot_matured, advanced_pivot_matured, partner_list_df, affiliate_bookings_pivot_matured
                 )
                 
                 # Show preview of both reports
@@ -490,6 +503,36 @@ def create_affiliate_pivot(df):
     
     return pivot
 
+def create_affiliate_bookings_pivot(df):
+    """Create bookings-only pivot based on Created Date window.
+    
+    Sums 'Booked Count' by 'partnerID'. This ignores Purchased Date entirely
+    and is intended to be used to override the Bookings column in the final report.
+    """
+    if df is None or len(df) == 0:
+        return pd.DataFrame({
+            'partnerID': [],
+            'Bookings': []
+        })
+    # Ensure columns exist
+    if 'Booked Count' not in df.columns:
+        # Create zero bookings if column is missing
+        temp = df.copy()
+        temp['Booked Count'] = 0
+        df = temp
+    # Clean numeric
+    bookings_series = df['Booked Count'].astype(str)
+    bookings_series = bookings_series.str.replace('$', '', regex=False)
+    bookings_series = bookings_series.str.replace(',', '', regex=False)
+    bookings_series = bookings_series.str.replace('"', '', regex=False)
+    df['Booked Count'] = pd.to_numeric(bookings_series, errors='coerce').fillna(0)
+    # Group
+    pivot = df.groupby('partnerID').agg({
+        'Booked Count': 'sum'
+    }).reset_index()
+    pivot = pivot.rename(columns={'Booked Count': 'Bookings'})
+    return pivot
+
 def create_advanced_pivot(df):
     """Create pivot table for Advanced Action data.
     
@@ -519,7 +562,7 @@ def create_advanced_pivot(df):
     
     return pivot
 
-def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=None):
+def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=None, bookings_pivot=None):
     """Create the final optimization report by combining pivot tables.
     
     As per instructions, columns should be:
@@ -588,6 +631,20 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
         on='partnerID',
         how='outer'
     ).fillna(0)
+
+    # If a bookings pivot based on Created Date is provided, merge and override Bookings
+    if bookings_pivot is not None and not bookings_pivot.empty:
+        st.write("Debug - Using Created Date-based bookings pivot")
+        merged_df = pd.merge(
+            merged_df,
+            bookings_pivot.rename(columns={'Bookings': 'Bookings_CreatedDate'}),
+            on='partnerID',
+            how='left'
+        )
+        merged_df['Bookings_CreatedDate'] = pd.to_numeric(merged_df['Bookings_CreatedDate'], errors='coerce').fillna(0)
+        # Override Bookings with Created Date-based values
+        merged_df['Bookings'] = merged_df['Bookings_CreatedDate']
+        merged_df = merged_df.drop(columns=['Bookings_CreatedDate'])
     
     # Debug merged dataframe
     st.write("Debug - Merged dataframe columns:", list(merged_df.columns))
