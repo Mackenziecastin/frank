@@ -869,7 +869,7 @@ def load_module_reliably(module_path):
 def main():
     # Create the navigation
     st.sidebar.title("Navigation")
-    page = st.sidebar.radio("Go to", ["Frank (LaserAway)", "Bob (ADT)", "ADT Pixel Firing", "Brinks Optimization Report"])
+    page = st.sidebar.radio("Go to", ["Frank (LaserAway)", "Bob (ADT)", "ADT Pixel Firing", "Brinks Optimization Report", "Vivint Optimization Report"])
     
     if page == "Frank (LaserAway)":
         show_main_page()
@@ -896,6 +896,14 @@ def main():
             st.warning("- Indentation errors") 
             st.warning("- Using undefined variables")
             st.warning("- Incorrect function parameters")
+    elif page == "Vivint Optimization Report":
+        try:
+            vivint_module = load_module_reliably("vivint_optimization")
+            vivint_module.show_vivint_optimization()
+        except Exception as e:
+            st.error("Failed to load the Vivint Optimization Report page.")
+            st.error("If you've made recent changes to the code, there might be a syntax error.")
+            st.error(f"Error details: {str(e)}")
 
 # This is outside the main function
 if __name__ == "__main__":
