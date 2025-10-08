@@ -221,70 +221,40 @@ def show_main_page():
                     st.subheader(f"Preview of {treatment} - Matured Optimization Report (Excluding Last 7 Days)")
                     st.dataframe(treatment_reports[treatment]['matured'])
                 
-                # Create download buttons for each treatment
-                for treatment in unique_treatments:
-                    st.subheader(f"Download Reports for {treatment}")
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        excel_data = to_excel_download_treatment(
-                            treatment_reports[treatment]['affiliate_full'], advanced_df_full, 
-                            treatment_reports[treatment]['full'], treatment
-                        )
-                        st.download_button(
-                            label=f"Download {treatment} - Full Report",
-                            data=excel_data,
-                            file_name=f"{treatment.replace(' ', '_')}_optimization_report_full_{full_end_date.strftime('%Y%m%d')}.xlsx",
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                        )
-                    
-                    with col2:
-                        excel_data_matured = to_excel_download_treatment(
-                            treatment_reports[treatment]['affiliate_matured'], advanced_df_matured, 
-                            treatment_reports[treatment]['matured'], treatment
-                        )
-                        st.download_button(
-                            label=f"Download {treatment} - Matured Report",
-                            data=excel_data_matured,
-                            file_name=f"{treatment.replace(' ', '_')}_optimization_report_matured_{matured_end_date.strftime('%Y%m%d')}.xlsx",
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                        )
+                # Create combined report for the combined sheet
+                combined_full, combined_matured = create_combined_report(treatment_reports, unique_treatments)
                 
-                # Create combined report if there are multiple treatments
-                if len(unique_treatments) > 1 and 'All Treatments' not in unique_treatments:
-                    st.subheader("Combined Report (All Treatments)")
-                    combined_full, combined_matured = create_combined_report(treatment_reports, unique_treatments)
-                    
-                    st.write("Preview of Combined Full Report:")
-                    st.dataframe(combined_full)
-                    
-                    st.write("Preview of Combined Matured Report:")
-                    st.dataframe(combined_matured)
-                    
-                    # Download buttons for combined report
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        excel_data_combined = to_excel_download_combined(
-                            combined_full, advanced_df_full, "Combined Full Report"
-                        )
-                        st.download_button(
-                            label="Download Combined Full Report",
-                            data=excel_data_combined,
-                            file_name=f"combined_optimization_report_full_{full_end_date.strftime('%Y%m%d')}.xlsx",
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                        )
-                    
-                    with col2:
-                        excel_data_combined_matured = to_excel_download_combined(
-                            combined_matured, advanced_df_matured, "Combined Matured Report"
-                        )
-                        st.download_button(
-                            label="Download Combined Matured Report",
-                            data=excel_data_combined_matured,
-                            file_name=f"combined_optimization_report_matured_{matured_end_date.strftime('%Y%m%d')}.xlsx",
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                        )
+                # Show preview of combined reports
+                st.subheader("Preview of Combined Full Report (All Treatments)")
+                st.dataframe(combined_full)
+                
+                st.subheader("Preview of Combined Matured Report (All Treatments)")
+                st.dataframe(combined_matured)
+                
+                # Create download buttons for the 2 main reports with multiple sheets
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    excel_data_full = to_excel_download_multi_sheet(
+                        treatment_reports, unique_treatments, advanced_df_full, combined_full, "Full"
+                    )
+                    st.download_button(
+                        label="Download Full Report (All Treatments)",
+                        data=excel_data_full,
+                        file_name=f"partner_optimization_report_full_{full_end_date.strftime('%Y%m%d')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+                
+                with col2:
+                    excel_data_matured = to_excel_download_multi_sheet(
+                        treatment_reports, unique_treatments, advanced_df_matured, combined_matured, "Matured"
+                    )
+                    st.download_button(
+                        label="Download Matured Report (All Treatments)",
+                        data=excel_data_matured,
+                        file_name=f"partner_optimization_report_matured_{matured_end_date.strftime('%Y%m%d')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
             else:
                 missing_columns = []
                 if 'Created Date' not in affiliate_df_processed.columns:
@@ -322,19 +292,23 @@ def show_main_page():
                     st.subheader(f"Preview of {treatment} - Optimization Report (No Date Filtering)")
                     st.dataframe(treatment_reports_no_date[treatment]['full'])
                 
-                # Create download buttons for each treatment
-                for treatment in unique_treatments:
-                    st.subheader(f"Download Report for {treatment}")
-                    excel_data = to_excel_download_treatment(
-                        treatment_reports_no_date[treatment]['affiliate'], advanced_df_processed, 
-                        treatment_reports_no_date[treatment]['full'], treatment
-                    )
-                    st.download_button(
-                        label=f"Download {treatment} Report",
-                        data=excel_data,
-                        file_name=f"{treatment.replace(' ', '_')}_optimization_report.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    )
+                # Create combined report for the combined sheet
+                combined_no_date, _ = create_combined_report(treatment_reports_no_date, unique_treatments)
+                
+                # Show preview of combined report
+                st.subheader("Preview of Combined Report (All Treatments - No Date Filtering)")
+                st.dataframe(combined_no_date)
+                
+                # Create download button for the single report with multiple sheets
+                excel_data = to_excel_download_multi_sheet(
+                    treatment_reports_no_date, unique_treatments, advanced_df_processed, combined_no_date, "Full"
+                )
+                st.download_button(
+                    label="Download Report (All Treatments)",
+                    data=excel_data,
+                    file_name="partner_optimization_report.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
             
         except Exception as e:
             st.error(f"An error occurred while processing the files: {str(e)}")
@@ -987,6 +961,62 @@ def to_excel_download_combined(df_optimization, df_advanced, report_type):
                 worksheet.set_column(col_idx, col_idx, 15, percent_format)
             else:
                 worksheet.set_column(col_idx, col_idx, 15)  # Default width
+    
+    return output.getvalue()
+
+def to_excel_download_multi_sheet(treatment_reports, unique_treatments, advanced_df, combined_report, report_type):
+    """Convert multiple treatment reports to Excel file with multiple sheets."""
+    output = BytesIO()
+    
+    # Use xlsxwriter engine instead of openpyxl for formatting support
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        # Write combined report first
+        combined_sheet_name = f"Combined - {report_type} Report"
+        combined_report.to_excel(writer, sheet_name=combined_sheet_name, index=False)
+        
+        # Write each treatment report to its own sheet
+        for treatment in unique_treatments:
+            if treatment == 'All Treatments':
+                continue  # Skip the "All Treatments" as it's already the combined data
+                
+            sheet_name = f"{treatment} - {report_type} Report"
+            treatment_reports[treatment][report_type.lower()].to_excel(writer, sheet_name=sheet_name, index=False)
+        
+        # Write advanced action data to its own sheet
+        advanced_sheet_name = f"Advanced Action Data - {report_type}"
+        advanced_df.to_excel(writer, sheet_name=advanced_sheet_name, index=False)
+        
+        # Get the xlsxwriter workbook object
+        workbook = writer.book
+        
+        # Define formats
+        money_format = workbook.add_format({'num_format': '$#,##0.00'})
+        integer_format = workbook.add_format({'num_format': '0'})
+        percent_format = workbook.add_format({'num_format': '0.0%'})
+        
+        # Apply formats to all optimization report sheets
+        for sheet_name in writer.sheets:
+            if "Report" in sheet_name:
+                worksheet = writer.sheets[sheet_name]
+                
+                # Get the dataframe for this sheet to determine column types
+                if sheet_name == combined_sheet_name:
+                    df = combined_report
+                else:
+                    # Find the treatment for this sheet
+                    treatment = sheet_name.replace(f" - {report_type} Report", "")
+                    df = treatment_reports[treatment][report_type.lower()]
+                
+                # Apply formats to specific columns
+                for col_idx, col_name in enumerate(df.columns):
+                    if col_name in ['Spend', 'Revenue', 'ROAS', 'eCPL at $1.50']:
+                        worksheet.set_column(col_idx, col_idx, 15, money_format)
+                    elif col_name in ['Leads', 'Bookings', 'Sales']:
+                        worksheet.set_column(col_idx, col_idx, 15, integer_format)
+                    elif col_name in ['Lead to Sale']:
+                        worksheet.set_column(col_idx, col_idx, 15, percent_format)
+                    else:
+                        worksheet.set_column(col_idx, col_idx, 15)  # Default width
     
     return output.getvalue()
 
