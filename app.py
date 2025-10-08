@@ -59,9 +59,20 @@ def show_main_page():
                 st.error("Failed to process Advanced Action file. Please check if it contains a 'Landing Page URL' column.")
                 st.stop()
             
+            # Check for treatments column and get unique treatments
+            unique_treatments = get_unique_treatments(affiliate_df_processed)
+            if unique_treatments:
+                st.info(f"Found treatments column with {len(unique_treatments)} unique treatments: {', '.join(unique_treatments)}")
+            else:
+                st.warning("No 'treatments' column found in affiliate data. Will process all data together.")
+                unique_treatments = ['All Treatments']  # Default treatment for backward compatibility
+            
             # Show preview of processed data
             st.subheader("Preview of Processed Affiliate Data")
-            st.dataframe(affiliate_df_processed[['Click URL', 'PID', 'SUBID', 'partnerID']].head())
+            preview_cols = ['Click URL', 'PID', 'SUBID', 'partnerID']
+            if 'treatments' in affiliate_df_processed.columns:
+                preview_cols.append('treatments')
+            st.dataframe(affiliate_df_processed[preview_cols].head())
             
             st.subheader("Preview of Processed Advanced Action Data")
             st.dataframe(advanced_df_processed[['Landing Page URL', 'PID', 'SUBID', 'partnerID']].head())
@@ -195,53 +206,85 @@ def show_main_page():
                     (affiliate_df_processed['Created Date'].dt.date <= matured_end_date.date())
                 ]
 
-                # Full report
-                affiliate_pivot_full = create_affiliate_pivot(affiliate_df_full)
-                affiliate_bookings_pivot_full = create_affiliate_bookings_pivot(affiliate_df_full_bookings)
-                advanced_pivot_full = create_advanced_pivot(advanced_df_full)
-                optimization_report_full = create_optimization_report(
-                    affiliate_pivot_full, advanced_pivot_full, partner_list_df, affiliate_bookings_pivot_full
+                # Generate treatment-specific reports
+                treatment_reports = generate_treatment_reports(
+                    affiliate_df_full, affiliate_df_matured, advanced_df_full, advanced_df_matured,
+                    affiliate_df_full_bookings, affiliate_df_matured_bookings,
+                    partner_list_df, unique_treatments, full_end_date, matured_end_date
                 )
                 
-                # Matured report
-                affiliate_pivot_matured = create_affiliate_pivot(affiliate_df_matured)
-                affiliate_bookings_pivot_matured = create_affiliate_bookings_pivot(affiliate_df_matured_bookings)
-                advanced_pivot_matured = create_advanced_pivot(advanced_df_matured)
-                optimization_report_matured = create_optimization_report(
-                    affiliate_pivot_matured, advanced_pivot_matured, partner_list_df, affiliate_bookings_pivot_matured
-                )
+                # Show preview of reports for each treatment
+                for treatment in unique_treatments:
+                    st.subheader(f"Preview of {treatment} - Full Optimization Report")
+                    st.dataframe(treatment_reports[treatment]['full'])
+                    
+                    st.subheader(f"Preview of {treatment} - Matured Optimization Report (Excluding Last 7 Days)")
+                    st.dataframe(treatment_reports[treatment]['matured'])
                 
-                # Show preview of both reports
-                st.subheader("Preview of Full Optimization Report")
-                st.dataframe(optimization_report_full)
+                # Create download buttons for each treatment
+                for treatment in unique_treatments:
+                    st.subheader(f"Download Reports for {treatment}")
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        excel_data = to_excel_download_treatment(
+                            treatment_reports[treatment]['affiliate_full'], advanced_df_full, 
+                            treatment_reports[treatment]['full'], treatment
+                        )
+                        st.download_button(
+                            label=f"Download {treatment} - Full Report",
+                            data=excel_data,
+                            file_name=f"{treatment.replace(' ', '_')}_optimization_report_full_{full_end_date.strftime('%Y%m%d')}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        )
+                    
+                    with col2:
+                        excel_data_matured = to_excel_download_treatment(
+                            treatment_reports[treatment]['affiliate_matured'], advanced_df_matured, 
+                            treatment_reports[treatment]['matured'], treatment
+                        )
+                        st.download_button(
+                            label=f"Download {treatment} - Matured Report",
+                            data=excel_data_matured,
+                            file_name=f"{treatment.replace(' ', '_')}_optimization_report_matured_{matured_end_date.strftime('%Y%m%d')}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        )
                 
-                st.subheader("Preview of Matured Optimization Report (Excluding Last 7 Days)")
-                st.dataframe(optimization_report_matured)
-                
-                # Create download buttons for both reports
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    excel_data = to_excel_download(
-                        affiliate_df_full, advanced_df_full, optimization_report_full
-                    )
-                    st.download_button(
-                        label="Download Full Report",
-                        data=excel_data,
-                        file_name=f"partner_optimization_report_full_{full_end_date.strftime('%Y%m%d')}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    )
-                
-                with col2:
-                    excel_data_matured = to_excel_download(
-                        affiliate_df_matured, advanced_df_matured, optimization_report_matured
-                    )
-                    st.download_button(
-                        label="Download Matured Report",
-                        data=excel_data_matured,
-                        file_name=f"partner_optimization_report_matured_{matured_end_date.strftime('%Y%m%d')}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    )
+                # Create combined report if there are multiple treatments
+                if len(unique_treatments) > 1 and 'All Treatments' not in unique_treatments:
+                    st.subheader("Combined Report (All Treatments)")
+                    combined_full, combined_matured = create_combined_report(treatment_reports, unique_treatments)
+                    
+                    st.write("Preview of Combined Full Report:")
+                    st.dataframe(combined_full)
+                    
+                    st.write("Preview of Combined Matured Report:")
+                    st.dataframe(combined_matured)
+                    
+                    # Download buttons for combined report
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        excel_data_combined = to_excel_download_combined(
+                            combined_full, advanced_df_full, "Combined Full Report"
+                        )
+                        st.download_button(
+                            label="Download Combined Full Report",
+                            data=excel_data_combined,
+                            file_name=f"combined_optimization_report_full_{full_end_date.strftime('%Y%m%d')}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        )
+                    
+                    with col2:
+                        excel_data_combined_matured = to_excel_download_combined(
+                            combined_matured, advanced_df_matured, "Combined Matured Report"
+                        )
+                        st.download_button(
+                            label="Download Combined Matured Report",
+                            data=excel_data_combined_matured,
+                            file_name=f"combined_optimization_report_matured_{matured_end_date.strftime('%Y%m%d')}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        )
             else:
                 missing_columns = []
                 if 'Created Date' not in affiliate_df_processed.columns:
@@ -253,19 +296,45 @@ def show_main_page():
                 st.write("Affiliate Leads columns:", ", ".join(affiliate_df_processed.columns))
                 st.write("Advanced Action columns:", ", ".join(advanced_df_processed.columns))
                 
-                # Show only the full report if date columns are missing
-                st.subheader("Preview of Full Optimization Report (without date filtering)")
-                st.dataframe(optimization_report_full)
+                # Generate treatment-specific reports without date filtering
+                treatment_reports_no_date = {}
                 
-                excel_data = to_excel_download(
-                    affiliate_df_full, advanced_df_full, optimization_report_full
-                )
-                st.download_button(
-                    label="Download Full Report",
-                    data=excel_data,
-                    file_name="partner_optimization_report.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
+                for treatment in unique_treatments:
+                    st.write(f"\n### Processing {treatment} (No Date Filtering)")
+                    
+                    # Filter data by treatment
+                    affiliate_treatment = filter_data_by_treatment(affiliate_df_processed, treatment)
+                    
+                    # Create pivot tables for this treatment
+                    affiliate_pivot = create_affiliate_pivot(affiliate_treatment)
+                    advanced_pivot = create_advanced_pivot(advanced_df_processed)
+                    optimization_report = create_optimization_report(
+                        affiliate_pivot, advanced_pivot, partner_list_df, None
+                    )
+                    
+                    treatment_reports_no_date[treatment] = {
+                        'full': optimization_report,
+                        'affiliate': affiliate_treatment
+                    }
+                
+                # Show preview of reports for each treatment
+                for treatment in unique_treatments:
+                    st.subheader(f"Preview of {treatment} - Optimization Report (No Date Filtering)")
+                    st.dataframe(treatment_reports_no_date[treatment]['full'])
+                
+                # Create download buttons for each treatment
+                for treatment in unique_treatments:
+                    st.subheader(f"Download Report for {treatment}")
+                    excel_data = to_excel_download_treatment(
+                        treatment_reports_no_date[treatment]['affiliate'], advanced_df_processed, 
+                        treatment_reports_no_date[treatment]['full'], treatment
+                    )
+                    st.download_button(
+                        label=f"Download {treatment} Report",
+                        data=excel_data,
+                        file_name=f"{treatment.replace(' ', '_')}_optimization_report.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
             
         except Exception as e:
             st.error(f"An error occurred while processing the files: {str(e)}")
@@ -309,6 +378,84 @@ def extract_pid_subid(after_3d_value):
     except:
         return "", ""
 
+def get_unique_treatments(df):
+    """Get unique treatments from the treatments column if it exists."""
+    if 'treatments' in df.columns:
+        treatments = df['treatments'].dropna().unique()
+        treatments = [str(t).strip() for t in treatments if str(t).strip() != '']
+        return sorted(treatments)
+    return []
+
+def filter_data_by_treatment(df, treatment):
+    """Filter dataframe by treatment. If treatment is 'All Treatments', return all data."""
+    if treatment == 'All Treatments' or 'treatments' not in df.columns:
+        return df
+    return df[df['treatments'] == treatment]
+
+def generate_treatment_reports(affiliate_df_full, affiliate_df_matured, advanced_df_full, advanced_df_matured, 
+                             affiliate_df_full_bookings, affiliate_df_matured_bookings, 
+                             partner_list_df, unique_treatments, full_end_date, matured_end_date):
+    """Generate optimization reports for each treatment and a combined report."""
+    treatment_reports = {}
+    
+    # Generate reports for each treatment
+    for treatment in unique_treatments:
+        st.write(f"\n### Processing {treatment}")
+        
+        # Filter data by treatment
+        affiliate_full_treatment = filter_data_by_treatment(affiliate_df_full, treatment)
+        affiliate_matured_treatment = filter_data_by_treatment(affiliate_df_matured, treatment)
+        affiliate_full_bookings_treatment = filter_data_by_treatment(affiliate_df_full_bookings, treatment)
+        affiliate_matured_bookings_treatment = filter_data_by_treatment(affiliate_df_matured_bookings, treatment)
+        
+        # Advanced data doesn't have treatments, so we use it as-is for all treatments
+        # (assuming advanced data applies to all treatments)
+        
+        # Create pivot tables for this treatment
+        affiliate_pivot_full = create_affiliate_pivot(affiliate_full_treatment)
+        affiliate_bookings_pivot_full = create_affiliate_bookings_pivot(affiliate_full_bookings_treatment)
+        advanced_pivot_full = create_advanced_pivot(advanced_df_full)
+        optimization_report_full = create_optimization_report(
+            affiliate_pivot_full, advanced_pivot_full, partner_list_df, affiliate_bookings_pivot_full
+        )
+        
+        affiliate_pivot_matured = create_affiliate_pivot(affiliate_matured_treatment)
+        affiliate_bookings_pivot_matured = create_affiliate_bookings_pivot(affiliate_matured_bookings_treatment)
+        advanced_pivot_matured = create_advanced_pivot(advanced_df_matured)
+        optimization_report_matured = create_optimization_report(
+            affiliate_pivot_matured, advanced_pivot_matured, partner_list_df, affiliate_bookings_pivot_matured
+        )
+        
+        treatment_reports[treatment] = {
+            'full': optimization_report_full,
+            'matured': optimization_report_matured,
+            'affiliate_full': affiliate_full_treatment,
+            'affiliate_matured': affiliate_matured_treatment
+        }
+    
+    return treatment_reports
+
+def create_combined_report(treatment_reports, unique_treatments):
+    """Create a combined report that includes all treatments."""
+    combined_full = pd.DataFrame()
+    combined_matured = pd.DataFrame()
+    
+    for treatment in unique_treatments:
+        if treatment == 'All Treatments':
+            continue  # Skip the "All Treatments" as it's already the combined data
+            
+        # Add treatment column to distinguish data
+        full_report = treatment_reports[treatment]['full'].copy()
+        matured_report = treatment_reports[treatment]['matured'].copy()
+        
+        full_report['Treatment'] = treatment
+        matured_report['Treatment'] = treatment
+        
+        combined_full = pd.concat([combined_full, full_report], ignore_index=True)
+        combined_matured = pd.concat([combined_matured, matured_report], ignore_index=True)
+    
+    return combined_full, combined_matured
+
 def process_dataframe(df, url_column):
     """Process dataframe to add PID, SUBID, and partnerID columns."""
     # Make a copy to avoid modifying the original
@@ -344,12 +491,7 @@ def process_dataframe(df, url_column):
         st.error(f"Could not find {expected_type} column. Available columns are: {available_columns}")
         return None
     
-    # Filter out rows where URL contains "coolsculpting"
-    coolsculpting_count = df[df[actual_column].str.contains('coolsculpting', case=False, na=False)].shape[0]
-    if coolsculpting_count > 0:
-        st.info(f"Filtered out {coolsculpting_count} rows containing 'coolsculpting' in the URL.")
-    
-    df = df[~df[actual_column].str.contains('coolsculpting', case=False, na=False)]
+    # Note: Removed coolsculpting filtering - now using treatments column instead
     
     # Create new columns
     df['After_3D'] = df[actual_column].apply(extract_values_after_3d)
@@ -760,6 +902,75 @@ def to_excel_download(df_affiliate, df_advanced, df_optimization):
         # Get the xlsxwriter workbook and worksheet objects
         workbook = writer.book
         worksheet = writer.sheets['Optimization Report']
+        
+        # Define formats
+        money_format = workbook.add_format({'num_format': '$#,##0.00'})
+        integer_format = workbook.add_format({'num_format': '0'})
+        percent_format = workbook.add_format({'num_format': '0.0%'})
+        
+        # Apply formats to specific columns
+        for col_idx, col_name in enumerate(df_optimization.columns):
+            if col_name in ['Spend', 'Revenue', 'ROAS', 'eCPL at $1.50']:
+                worksheet.set_column(col_idx, col_idx, 15, money_format)
+            elif col_name in ['Leads', 'Bookings', 'Sales']:
+                worksheet.set_column(col_idx, col_idx, 15, integer_format)
+            elif col_name in ['Lead to Sale']:
+                worksheet.set_column(col_idx, col_idx, 15, percent_format)
+            else:
+                worksheet.set_column(col_idx, col_idx, 15)  # Default width
+    
+    return output.getvalue()
+
+def to_excel_download_treatment(df_affiliate, df_advanced, df_optimization, treatment):
+    """Convert dataframes to Excel file for download with treatment-specific naming."""
+    output = BytesIO()
+    
+    # Use xlsxwriter engine instead of openpyxl for formatting support
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        # Write each dataframe to a different sheet with treatment-specific names
+        sheet_name_affiliate = f'{treatment} - Affiliate Data'
+        sheet_name_advanced = f'{treatment} - Advanced Action Data'
+        sheet_name_optimization = f'{treatment} - Optimization Report'
+        
+        df_affiliate.to_excel(writer, sheet_name=sheet_name_affiliate, index=False)
+        df_advanced.to_excel(writer, sheet_name=sheet_name_advanced, index=False)
+        df_optimization.to_excel(writer, sheet_name=sheet_name_optimization, index=False)
+        
+        # Get the xlsxwriter workbook and worksheet objects
+        workbook = writer.book
+        worksheet = writer.sheets[sheet_name_optimization]
+        
+        # Define formats
+        money_format = workbook.add_format({'num_format': '$#,##0.00'})
+        integer_format = workbook.add_format({'num_format': '0'})
+        percent_format = workbook.add_format({'num_format': '0.0%'})
+        
+        # Apply formats to specific columns
+        for col_idx, col_name in enumerate(df_optimization.columns):
+            if col_name in ['Spend', 'Revenue', 'ROAS', 'eCPL at $1.50']:
+                worksheet.set_column(col_idx, col_idx, 15, money_format)
+            elif col_name in ['Leads', 'Bookings', 'Sales']:
+                worksheet.set_column(col_idx, col_idx, 15, integer_format)
+            elif col_name in ['Lead to Sale']:
+                worksheet.set_column(col_idx, col_idx, 15, percent_format)
+            else:
+                worksheet.set_column(col_idx, col_idx, 15)  # Default width
+    
+    return output.getvalue()
+
+def to_excel_download_combined(df_optimization, df_advanced, report_type):
+    """Convert combined dataframes to Excel file for download."""
+    output = BytesIO()
+    
+    # Use xlsxwriter engine instead of openpyxl for formatting support
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        # Write each dataframe to a different sheet
+        df_optimization.to_excel(writer, sheet_name=report_type, index=False)
+        df_advanced.to_excel(writer, sheet_name='Advanced Action Data', index=False)
+        
+        # Get the xlsxwriter workbook and worksheet objects
+        workbook = writer.book
+        worksheet = writer.sheets[report_type]
         
         # Define formats
         money_format = workbook.add_format({'num_format': '$#,##0.00'})
