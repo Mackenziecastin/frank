@@ -685,23 +685,31 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
     if 'Revenue' in renamed_affiliate.columns:
         st.write(f"Debug - Total Revenue in renamed affiliate: ${renamed_affiliate['Revenue'].sum():.2f}")
     
-    # Merge the pivot tables
-    merged_df = pd.merge(
-        advanced_pivot,
-        renamed_affiliate,
-        on='partnerID',
-        how='outer'
-    ).fillna(0)
+    # Debug specific partner ID 42865
+    partner_42865 = renamed_affiliate[renamed_affiliate['partnerID'] == '42865']
+    if not partner_42865.empty:
+        st.write("Debug - Partner 42865 data from affiliate pivot:")
+        st.dataframe(partner_42865)
+    else:
+        st.write("Debug - Partner 42865 not found in affiliate pivot")
+        st.write("Available partnerIDs:", renamed_affiliate['partnerID'].unique()[:10])
     
-    # If affiliate data has Leads column, use that instead of advanced action leads
-    if 'Leads' in renamed_affiliate.columns:
-        # Override leads from advanced action with leads from affiliate data
-        merged_df['Leads'] = merged_df['Leads_y'] if 'Leads_y' in merged_df.columns else merged_df['Leads']
-        # Drop the advanced action leads column if it exists
-        if 'Leads_x' in merged_df.columns:
-            merged_df = merged_df.drop(columns=['Leads_x'])
-        if 'Leads_y' in merged_df.columns:
-            merged_df = merged_df.drop(columns=['Leads_y'])
+    # Start with affiliate data as the base (since it has the correct leads and bookings)
+    merged_df = renamed_affiliate.copy()
+    
+    # Add spend data from advanced action data
+    if not advanced_pivot.empty:
+        # Merge only the spend data from advanced action
+        spend_data = advanced_pivot[['partnerID', 'Spend']].copy()
+        merged_df = pd.merge(
+            merged_df,
+            spend_data,
+            on='partnerID',
+            how='left'
+        ).fillna(0)
+    else:
+        # If no advanced action data, create spend column with zeros
+        merged_df['Spend'] = 0
 
     # If a bookings pivot based on Created Date is provided, merge and override Bookings
     if bookings_pivot is not None and not bookings_pivot.empty:
@@ -719,6 +727,14 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
     
     # Debug merged dataframe
     st.write("Debug - Merged dataframe columns:", list(merged_df.columns))
+    
+    # Debug specific partner ID 42865 after merge
+    partner_42865_final = merged_df[merged_df['partnerID'] == '42865']
+    if not partner_42865_final.empty:
+        st.write("Debug - Partner 42865 data after merge:")
+        st.dataframe(partner_42865_final)
+    else:
+        st.write("Debug - Partner 42865 not found after merge")
     
     # Ensure all required columns exist
     required_columns = ['Leads', 'Spend', 'Bookings', 'Sales', 'Revenue']
