@@ -195,31 +195,56 @@ def show_main_page():
                         st.warning(f"Note: Affiliate data contains {extra_days} additional day(s) beyond {full_end_date.strftime('%Y-%m-%d')}. These dates have been excluded for consistency with Advanced Action data.")
                     
                 # Create pivot tables and reports
-                # Additionally, compute Bookings based on Created Date ranges only
-                # Prepare Created Date filtered dataframes for Bookings
-                affiliate_df_full_bookings = affiliate_df_processed[
+                # IMPORTANT: Leads & Bookings use Created Date, Sales & Revenue use Purchased Date
+                
+                # For Leads & Bookings: Filter by Created Date
+                st.write("### Debug - Filtering for Leads & Bookings (Created Date)")
+                affiliate_df_full_leads_bookings = affiliate_df_processed[
                     (affiliate_df_processed['Created Date'].dt.date >= full_start_date.date()) &
                     (affiliate_df_processed['Created Date'].dt.date <= full_end_date.date())
-                ]
-                affiliate_df_matured_bookings = affiliate_df_processed[
-                    (affiliate_df_processed['Created Date'].dt.date >= matured_start_date.date()) &
-                    (affiliate_df_processed['Created Date'].dt.date <= matured_end_date.date())
-                ]
-
-                # Full report (same as before)
-                affiliate_pivot_full = create_affiliate_pivot(affiliate_df_full)
-                affiliate_bookings_pivot_full = create_affiliate_bookings_pivot(affiliate_df_full_bookings)
+                ].copy()
+                st.write(f"Records with Created Date in range: {len(affiliate_df_full_leads_bookings)}")
+                st.write(f"Total Booked Count (Created Date): {affiliate_df_full_leads_bookings['Booked Count'].sum()}")
+                
+                # For Sales & Revenue: Use the already filtered data (by Purchased Date if available)
+                st.write("### Debug - Data for Sales & Revenue")
+                st.write(f"Records in affiliate_df_full: {len(affiliate_df_full)}")
+                st.write(f"Total Transaction Count: {affiliate_df_full['Transaction Count'].sum()}")
+                st.write(f"Total Net Sales Amount: ${affiliate_df_full['Net Sales Amount'].sum():.2f}")
+                
+                # Create separate pivots for each metric
+                # Leads & Bookings pivot (from Created Date data)
+                affiliate_leads_bookings_pivot_full = create_affiliate_bookings_pivot(affiliate_df_full_leads_bookings)
+                
+                # Sales & Revenue pivot (from Purchased Date data)
+                affiliate_sales_pivot_full = create_affiliate_pivot(affiliate_df_full)
+                
+                # Advanced pivot for Spend
                 advanced_pivot_full = create_advanced_pivot(advanced_df_full)
+                
+                # Create optimization report using both pivots
                 optimization_report_full = create_optimization_report(
-                    affiliate_pivot_full, advanced_pivot_full, partner_list_df, affiliate_bookings_pivot_full
+                    affiliate_sales_pivot_full, advanced_pivot_full, partner_list_df, affiliate_leads_bookings_pivot_full
                 )
                 
-                # Matured report (same as before)
-                affiliate_pivot_matured = create_affiliate_pivot(affiliate_df_matured)
-                affiliate_bookings_pivot_matured = create_affiliate_bookings_pivot(affiliate_df_matured_bookings)
+                # Matured report - same logic as full report
+                st.write("### Debug - Matured Report Filtering")
+                
+                # For Leads & Bookings: Filter by Created Date
+                affiliate_df_matured_leads_bookings = affiliate_df_processed[
+                    (affiliate_df_processed['Created Date'].dt.date >= matured_start_date.date()) &
+                    (affiliate_df_processed['Created Date'].dt.date <= matured_end_date.date())
+                ].copy()
+                st.write(f"Matured - Records with Created Date in range: {len(affiliate_df_matured_leads_bookings)}")
+                st.write(f"Matured - Total Booked Count (Created Date): {affiliate_df_matured_leads_bookings['Booked Count'].sum()}")
+                
+                # Create separate pivots
+                affiliate_leads_bookings_pivot_matured = create_affiliate_bookings_pivot(affiliate_df_matured_leads_bookings)
+                affiliate_sales_pivot_matured = create_affiliate_pivot(affiliate_df_matured)
                 advanced_pivot_matured = create_advanced_pivot(advanced_df_matured)
+                
                 optimization_report_matured = create_optimization_report(
-                    affiliate_pivot_matured, advanced_pivot_matured, partner_list_df, affiliate_bookings_pivot_matured
+                    affiliate_sales_pivot_matured, advanced_pivot_matured, partner_list_df, affiliate_leads_bookings_pivot_matured
                 )
                 
                 # Show preview of both reports
@@ -530,33 +555,68 @@ def create_affiliate_pivot(df):
     return pivot
 
 def create_affiliate_bookings_pivot(df):
-    """Create bookings-only pivot based on Created Date window.
+    """Create leads and bookings pivot based on Created Date window.
     
-    Sums 'Booked Count' by 'partnerID'. This ignores Purchased Date entirely
-    and is intended to be used to override the Bookings column in the final report.
+    Sums 'Unique Leads' and 'Booked Count' by 'partnerID'. This ignores Purchased Date entirely
+    and is intended to provide Leads and Bookings from Created Date filtered data.
     """
     if df is None or len(df) == 0:
         return pd.DataFrame({
             'partnerID': [],
+            'Leads': [],
             'Bookings': []
         })
-    # Ensure columns exist
+    
+    # Ensure Booked Count column exists
     if 'Booked Count' not in df.columns:
-        # Create zero bookings if column is missing
-        temp = df.copy()
-        temp['Booked Count'] = 0
-        df = temp
-    # Clean numeric
+        df = df.copy()
+        df['Booked Count'] = 0
+    
+    # Ensure Unique Leads column exists (check various names)
+    leads_col = None
+    for col in ['Unique Leads', 'Leads', 'Lead Count', 'Total Leads', 'Unique Lead Count']:
+        if col in df.columns:
+            leads_col = col
+            break
+    
+    if leads_col is None:
+        st.warning("No leads column found in Created Date data. Creating Unique Leads with 0s.")
+        df = df.copy()
+        df['Unique Leads'] = 0
+        leads_col = 'Unique Leads'
+    elif leads_col != 'Unique Leads':
+        df = df.copy()
+        df['Unique Leads'] = df[leads_col]
+        leads_col = 'Unique Leads'
+    
+    # Clean numeric columns
     bookings_series = df['Booked Count'].astype(str)
     bookings_series = bookings_series.str.replace('$', '', regex=False)
     bookings_series = bookings_series.str.replace(',', '', regex=False)
     bookings_series = bookings_series.str.replace('"', '', regex=False)
     df['Booked Count'] = pd.to_numeric(bookings_series, errors='coerce').fillna(0)
-    # Group
+    
+    leads_series = df['Unique Leads'].astype(str)
+    leads_series = leads_series.str.replace('$', '', regex=False)
+    leads_series = leads_series.str.replace(',', '', regex=False)
+    leads_series = leads_series.str.replace('"', '', regex=False)
+    df['Unique Leads'] = pd.to_numeric(leads_series, errors='coerce').fillna(0)
+    
+    # Group by partnerID and sum both metrics
     pivot = df.groupby('partnerID').agg({
+        'Unique Leads': 'sum',
         'Booked Count': 'sum'
     }).reset_index()
-    pivot = pivot.rename(columns={'Booked Count': 'Bookings'})
+    
+    pivot = pivot.rename(columns={
+        'Unique Leads': 'Leads',
+        'Booked Count': 'Bookings'
+    })
+    
+    st.write(f"Debug - Leads & Bookings pivot created: {len(pivot)} partners")
+    st.write(f"Debug - Total Leads from Created Date: {pivot['Leads'].sum()}")
+    st.write(f"Debug - Total Bookings from Created Date: {pivot['Bookings'].sum()}")
+    
     return pivot
 
 def create_advanced_pivot(df):
@@ -658,19 +718,32 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
         how='outer'
     ).fillna(0)
 
-    # If a bookings pivot based on Created Date is provided, merge and override Bookings
+    # If a bookings pivot based on Created Date is provided, merge and override Leads and Bookings
     if bookings_pivot is not None and not bookings_pivot.empty:
-        st.write("Debug - Using Created Date-based bookings pivot")
+        st.write("Debug - Using Created Date-based Leads & Bookings pivot")
+        st.write(f"Debug - Columns in bookings_pivot: {list(bookings_pivot.columns)}")
+        
+        # Merge the Created Date based Leads and Bookings
         merged_df = pd.merge(
             merged_df,
-            bookings_pivot.rename(columns={'Bookings': 'Bookings_CreatedDate'}),
+            bookings_pivot.rename(columns={'Leads': 'Leads_CreatedDate', 'Bookings': 'Bookings_CreatedDate'}),
             on='partnerID',
             how='left'
         )
+        
+        # Convert to numeric
+        merged_df['Leads_CreatedDate'] = pd.to_numeric(merged_df['Leads_CreatedDate'], errors='coerce').fillna(0)
         merged_df['Bookings_CreatedDate'] = pd.to_numeric(merged_df['Bookings_CreatedDate'], errors='coerce').fillna(0)
-        # Override Bookings with Created Date-based values
+        
+        # Override both Leads and Bookings with Created Date-based values
+        merged_df['Leads'] = merged_df['Leads_CreatedDate']
         merged_df['Bookings'] = merged_df['Bookings_CreatedDate']
-        merged_df = merged_df.drop(columns=['Bookings_CreatedDate'])
+        
+        # Drop temporary columns
+        merged_df = merged_df.drop(columns=['Leads_CreatedDate', 'Bookings_CreatedDate'])
+        
+        st.write(f"Debug - After override - Total Leads: {merged_df['Leads'].sum()}")
+        st.write(f"Debug - After override - Total Bookings: {merged_df['Bookings'].sum()}")
     
     # Debug merged dataframe
     st.write("Debug - Merged dataframe columns:", list(merged_df.columns))
