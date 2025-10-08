@@ -712,11 +712,12 @@ def create_optimization_report_v2(leads_bookings_pivot, sales_revenue_pivot, adv
             affiliate_name_col = None
             
             for col in partner_list.columns:
-                if col.lower().strip() in ['partner id', 'partnerid', 'partner_id']:
+                col_lower = col.lower().strip()
+                if col_lower in ['partner id', 'partnerid', 'partner_id', 'id', 'partner', 'pid', 'sub id', 'subid']:
                     partner_id_col = col
-                elif 'account manager' in col.lower() or 'media buyer' in col.lower():
+                elif 'account manager' in col_lower or 'media buyer' in col_lower:
                     account_manager_col = col
-                elif 'affiliate name' in col.lower() or 'partner name' in col.lower():
+                elif 'affiliate name' in col_lower or 'partner name' in col_lower:
                     affiliate_name_col = col
             
             if partner_id_col and (account_manager_col or affiliate_name_col):
