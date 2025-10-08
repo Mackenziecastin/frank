@@ -206,20 +206,24 @@ def show_main_page():
                     (affiliate_df_processed['Created Date'].dt.date <= matured_end_date.date())
                 ]
 
-                # Full report - use the SAME data source for leads, bookings, and sales
-                # This ensures consistency - all metrics come from the same filtered dataset
-                affiliate_pivot_full = create_affiliate_pivot(affiliate_df_full)
+                # Full report - create TWO separate pivots:
+                # 1. Leads & Bookings from Created Date filtered data
+                # 2. Sales & Revenue from Purchased Date filtered data
+                affiliate_leads_bookings_pivot_full = create_affiliate_pivot(affiliate_df_full_bookings, filter_by_created_date=True)
+                affiliate_sales_revenue_pivot_full = create_affiliate_pivot(affiliate_df_full, filter_by_created_date=False)
                 advanced_pivot_full = create_advanced_pivot(advanced_df_full)
-                optimization_report_full = create_optimization_report(
-                    affiliate_pivot_full, advanced_pivot_full, partner_list_df, None
+                optimization_report_full = create_optimization_report_v2(
+                    affiliate_leads_bookings_pivot_full, affiliate_sales_revenue_pivot_full, advanced_pivot_full, partner_list_df
                 )
                 
-                # Matured report - use the SAME data source for leads, bookings, and sales
-                # This ensures consistency - all metrics come from the same filtered dataset
-                affiliate_pivot_matured = create_affiliate_pivot(affiliate_df_matured)
+                # Matured report - create TWO separate pivots:
+                # 1. Leads & Bookings from Created Date filtered data
+                # 2. Sales & Revenue from Purchased Date filtered data
+                affiliate_leads_bookings_pivot_matured = create_affiliate_pivot(affiliate_df_matured_bookings, filter_by_created_date=True)
+                affiliate_sales_revenue_pivot_matured = create_affiliate_pivot(affiliate_df_matured, filter_by_created_date=False)
                 advanced_pivot_matured = create_advanced_pivot(advanced_df_matured)
-                optimization_report_matured = create_optimization_report(
-                    affiliate_pivot_matured, advanced_pivot_matured, partner_list_df, None
+                optimization_report_matured = create_optimization_report_v2(
+                    affiliate_leads_bookings_pivot_matured, affiliate_sales_revenue_pivot_matured, advanced_pivot_matured, partner_list_df
                 )
                 
                 # Show preview of both reports
@@ -460,12 +464,17 @@ def process_dataframe(df, url_column):
     
     return df
 
-def create_affiliate_pivot(df):
+def create_affiliate_pivot(df, filter_by_created_date=False):
     """Create pivot table for Affiliate Leads QA data.
     
     As per instructions:
     1. Pull in the ClickURL_partnerID into the rows (index='partnerID')
     2. In the values, pull in Sum of Unique Leads, Sum of Booked Count, Sum of Transaction Count & Sum of Net Sales Amount
+    
+    Args:
+        df: DataFrame to pivot
+        filter_by_created_date: If True, returns only Unique Leads and Booked Count (for Created Date filtering)
+                                If False, returns all metrics (for Purchased Date filtering)
     """
     # First verify Transaction Count column exists
     if 'Transaction Count' not in df.columns:
@@ -541,18 +550,26 @@ def create_affiliate_pivot(df):
         st.write(f"Debug - May purchases: {len(may_rows)} rows, {may_sales} sales, ${may_revenue:.2f} revenue")
     
     # Create pivot table with specific aggregation methods
-    pivot = df.groupby('partnerID').agg({
-        'Unique Leads': 'sum',
-        'Transaction Count': 'sum',
-        'Booked Count': 'sum',
-        'Net Sales Amount': 'sum'
-    }).reset_index()
+    if filter_by_created_date:
+        # For Created Date filtering: only include Leads and Bookings
+        pivot = df.groupby('partnerID').agg({
+            'Unique Leads': 'sum',
+            'Booked Count': 'sum'
+        }).reset_index()
+    else:
+        # For Purchased Date filtering: include Sales and Revenue
+        pivot = df.groupby('partnerID').agg({
+            'Transaction Count': 'sum',
+            'Net Sales Amount': 'sum'
+        }).reset_index()
     
     # Log pivot results for debugging
-    st.write(f"Debug - Total Transaction Count after pivot: {pivot['Transaction Count'].sum()}")
-    st.write(f"Debug - Total Net Sales Amount after pivot: ${pivot['Net Sales Amount'].sum():.2f}")
-    st.write(f"Debug - Total Unique Leads after pivot: {pivot['Unique Leads'].sum()}")
-    st.write(f"Debug - Total Booked Count after pivot: {pivot['Booked Count'].sum()}")
+    if filter_by_created_date:
+        st.write(f"Debug - Total Unique Leads after pivot: {pivot['Unique Leads'].sum()}")
+        st.write(f"Debug - Total Booked Count after pivot: {pivot['Booked Count'].sum()}")
+    else:
+        st.write(f"Debug - Total Transaction Count after pivot: {pivot['Transaction Count'].sum()}")
+        st.write(f"Debug - Total Net Sales Amount after pivot: ${pivot['Net Sales Amount'].sum():.2f}")
     st.write("Debug - Sample of pivot data:")
     st.dataframe(pivot.head())
     
@@ -616,6 +633,89 @@ def create_advanced_pivot(df):
     pivot.columns = ['partnerID', 'Leads', 'Spend']
     
     return pivot
+
+def create_optimization_report_v2(leads_bookings_pivot, sales_revenue_pivot, advanced_pivot, partner_list=None):
+    """Create the final optimization report by combining separate pivots for leads/bookings and sales/revenue.
+    
+    This version properly handles:
+    - Leads & Bookings from Created Date filtered data
+    - Sales & Revenue from Purchased Date filtered data
+    - Spend from Advanced Action data
+    """
+    # Start with leads and bookings (from Created Date filtering)
+    merged_df = leads_bookings_pivot.copy()
+    
+    # Rename columns
+    merged_df = merged_df.rename(columns={
+        'Unique Leads': 'Leads',
+        'Booked Count': 'Bookings'
+    })
+    
+    # Add sales and revenue (from Purchased Date filtering)
+    if not sales_revenue_pivot.empty:
+        sales_data = sales_revenue_pivot.rename(columns={
+            'Transaction Count': 'Sales',
+            'Net Sales Amount': 'Revenue'
+        })
+        merged_df = pd.merge(
+            merged_df,
+            sales_data,
+            on='partnerID',
+            how='outer'
+        ).fillna(0)
+    else:
+        merged_df['Sales'] = 0
+        merged_df['Revenue'] = 0
+    
+    # Add spend data from advanced action
+    if not advanced_pivot.empty:
+        spend_data = advanced_pivot[['partnerID', 'Spend']].copy()
+        merged_df = pd.merge(
+            merged_df,
+            spend_data,
+            on='partnerID',
+            how='left'
+        ).fillna(0)
+    else:
+        merged_df['Spend'] = 0
+    
+    # Ensure all required columns exist and are numeric
+    required_columns = ['Leads', 'Spend', 'Bookings', 'Sales', 'Revenue']
+    for col in required_columns:
+        if col not in merged_df.columns:
+            merged_df[col] = 0
+        merged_df[col] = pd.to_numeric(merged_df[col], errors='coerce').fillna(0)
+    
+    # Remove rows with all zeros
+    merged_df = merged_df[~((merged_df['Leads'] == 0) & 
+                           (merged_df['Spend'] == 0) & 
+                           (merged_df['Bookings'] == 0) & 
+                           (merged_df['Sales'] == 0) & 
+                           (merged_df['Revenue'] == 0))]
+    
+    # Calculate additional metrics
+    merged_df['Lead to Sale'] = merged_df['Sales'] / merged_df['Leads'].replace(0, np.inf)
+    merged_df['ROAS'] = merged_df['Revenue'] / merged_df['Spend'].replace(0, np.inf)
+    merged_df['eCPL at $1.50'] = (merged_df['Revenue'] / merged_df['Leads'].replace(0, np.inf)) / 1.5
+    
+    # Clean up infinity values
+    merged_df = merged_df.replace([np.inf, -np.inf], 0)
+    
+    # Add partner names if available
+    if partner_list is not None:
+        try:
+            merged_df = pd.merge(
+                merged_df,
+                partner_list[['Partner ID', 'Account Manager Name', 'Affiliate Name']],
+                left_on='partnerID',
+                right_on='Partner ID',
+                how='left'
+            )
+            merged_df = merged_df.drop(columns=['Partner ID'])
+        except Exception as e:
+            st.warning(f"Error in VLOOKUP processing: {str(e)}. Continuing without VLOOKUP data.")
+    
+    return merged_df
 
 def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=None, bookings_pivot=None):
     """Create the final optimization report by combining pivot tables.
