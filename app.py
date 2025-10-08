@@ -60,12 +60,16 @@ def show_main_page():
                 st.stop()
             
             # Check for treatments column and get unique treatments
+            st.write("Debug - Checking for treatments column...")
+            st.write(f"Debug - Available columns in affiliate data: {list(affiliate_df_processed.columns)}")
+            
             unique_treatments = get_unique_treatments(affiliate_df_processed)
             if unique_treatments:
-                st.info(f"Found treatments column with {len(unique_treatments)} unique treatments: {', '.join(unique_treatments)}")
+                st.success(f"✅ Found treatments column with {len(unique_treatments)} unique treatments: {', '.join(unique_treatments)}")
+                st.write(f"Debug - Treatment list: {unique_treatments}")
             else:
-                st.warning("No 'treatments' column found in affiliate data. Will process all data together.")
-                unique_treatments = ['All Treatments']  # Default treatment for backward compatibility
+                st.warning("⚠️ No 'treatments' column found in affiliate data. Will process all data together.")
+                unique_treatments = []  # Empty list means no treatment sheets will be created
             
             # Show preview of processed data
             st.subheader("Preview of Processed Affiliate Data")
