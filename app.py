@@ -704,14 +704,46 @@ def create_optimization_report_v2(leads_bookings_pivot, sales_revenue_pivot, adv
     # Add partner names if available
     if partner_list is not None:
         try:
-            merged_df = pd.merge(
-                merged_df,
-                partner_list[['Partner ID', 'Account Manager Name', 'Affiliate Name']],
-                left_on='partnerID',
-                right_on='Partner ID',
-                how='left'
-            )
-            merged_df = merged_df.drop(columns=['Partner ID'])
+            st.write("Debug - Partner list columns:", list(partner_list.columns))
+            
+            # Check for various column name variations
+            partner_id_col = None
+            account_manager_col = None
+            affiliate_name_col = None
+            
+            for col in partner_list.columns:
+                if col.lower().strip() in ['partner id', 'partnerid', 'partner_id']:
+                    partner_id_col = col
+                elif 'account manager' in col.lower() or 'media buyer' in col.lower():
+                    account_manager_col = col
+                elif 'affiliate name' in col.lower() or 'partner name' in col.lower():
+                    affiliate_name_col = col
+            
+            if partner_id_col and (account_manager_col or affiliate_name_col):
+                cols_to_merge = [partner_id_col]
+                if account_manager_col:
+                    cols_to_merge.append(account_manager_col)
+                if affiliate_name_col:
+                    cols_to_merge.append(affiliate_name_col)
+                
+                merged_df = pd.merge(
+                    merged_df,
+                    partner_list[cols_to_merge],
+                    left_on='partnerID',
+                    right_on=partner_id_col,
+                    how='left'
+                )
+                
+                # Rename columns to standard names
+                if account_manager_col and account_manager_col != 'Account Manager Name':
+                    merged_df = merged_df.rename(columns={account_manager_col: 'Account Manager Name'})
+                if affiliate_name_col and affiliate_name_col != 'Affiliate Name':
+                    merged_df = merged_df.rename(columns={affiliate_name_col: 'Affiliate Name'})
+                
+                merged_df = merged_df.drop(columns=[partner_id_col])
+                st.success("Successfully added partner information via VLOOKUP")
+            else:
+                st.warning(f"Could not find required columns in partner list. Found Partner ID: {partner_id_col}, Account Manager: {account_manager_col}, Affiliate Name: {affiliate_name_col}")
         except Exception as e:
             st.warning(f"Error in VLOOKUP processing: {str(e)}. Continuing without VLOOKUP data.")
     
