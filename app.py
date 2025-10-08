@@ -206,20 +206,20 @@ def show_main_page():
                     (affiliate_df_processed['Created Date'].dt.date <= matured_end_date.date())
                 ]
 
-                # Full report (same as before)
+                # Full report - use the SAME data source for leads, bookings, and sales
+                # This ensures consistency - all metrics come from the same filtered dataset
                 affiliate_pivot_full = create_affiliate_pivot(affiliate_df_full)
-                affiliate_bookings_pivot_full = create_affiliate_bookings_pivot(affiliate_df_full_bookings)
                 advanced_pivot_full = create_advanced_pivot(advanced_df_full)
                 optimization_report_full = create_optimization_report(
-                    affiliate_pivot_full, advanced_pivot_full, partner_list_df, affiliate_bookings_pivot_full
+                    affiliate_pivot_full, advanced_pivot_full, partner_list_df, None
                 )
                 
-                # Matured report (same as before)
+                # Matured report - use the SAME data source for leads, bookings, and sales
+                # This ensures consistency - all metrics come from the same filtered dataset
                 affiliate_pivot_matured = create_affiliate_pivot(affiliate_df_matured)
-                affiliate_bookings_pivot_matured = create_affiliate_bookings_pivot(affiliate_df_matured_bookings)
                 advanced_pivot_matured = create_advanced_pivot(advanced_df_matured)
                 optimization_report_matured = create_optimization_report(
-                    affiliate_pivot_matured, advanced_pivot_matured, partner_list_df, affiliate_bookings_pivot_matured
+                    affiliate_pivot_matured, advanced_pivot_matured, partner_list_df, None
                 )
                 
                 # Show preview of both reports
