@@ -465,7 +465,7 @@ def create_affiliate_pivot(df):
     
     As per instructions:
     1. Pull in the ClickURL_partnerID into the rows (index='partnerID')
-    2. In the values, pull in Sum of Booked Count, Sum of Transaction Count & Sum of Net Sales Amount
+    2. In the values, pull in Sum of Unique Leads, Sum of Booked Count, Sum of Transaction Count & Sum of Net Sales Amount
     """
     # First verify Transaction Count column exists
     if 'Transaction Count' not in df.columns:
@@ -480,8 +480,13 @@ def create_affiliate_pivot(df):
         st.warning("'Net Sales Amount' column not found in affiliate data. Creating it with zeros.")
         df['Net Sales Amount'] = 0
     
+    # Make sure Unique Leads column exists, create it with zeros if not
+    if 'Unique Leads' not in df.columns:
+        st.warning("'Unique Leads' column not found in affiliate data. Creating it with zeros.")
+        df['Unique Leads'] = 0
+    
     # Ensure other numeric columns are properly converted if they exist
-    numeric_cols = ['Booked Count', 'Net Sales Amount']
+    numeric_cols = ['Unique Leads', 'Booked Count', 'Net Sales Amount']
     for col in numeric_cols:
         if col in df.columns:
             # Clean currency indicators if present
@@ -519,6 +524,7 @@ def create_affiliate_pivot(df):
     
     # Create pivot table with specific aggregation methods
     pivot = df.groupby('partnerID').agg({
+        'Unique Leads': 'sum',
         'Transaction Count': 'sum',
         'Booked Count': 'sum',
         'Net Sales Amount': 'sum'
@@ -594,7 +600,7 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
     
     As per instructions, columns should be:
     1. PartnerID = landing page URL_partnerID and clickURL_partnerID values
-    2. Leads = count of event type from Cleaned_Advance_Action pivot table
+    2. Leads = sum of unique leads from Cleaned_Affiliate_Leads_QA pivot table
     3. Spend = sum of action earnings from Cleaned_Advance_Action pivot table 
     4. Bookings = sum of booked count from Cleaned_Affliate_Leads_QA pivot table
     5. Sales = sum of transaction count from Cleaned_Affliate_Leads_QA pivot table
@@ -609,21 +615,25 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
     renamed_affiliate = affiliate_pivot.copy()
     
     # Check for required columns
+    has_unique_leads = 'Unique Leads' in renamed_affiliate.columns
     has_transaction_count = 'Transaction Count' in renamed_affiliate.columns
     has_booked_count = 'Booked Count' in renamed_affiliate.columns
     has_net_sales = 'Net Sales Amount' in renamed_affiliate.columns
     
-    if has_transaction_count and has_booked_count and has_net_sales:
+    if has_unique_leads and has_transaction_count and has_booked_count and has_net_sales:
         st.success("All required columns found in affiliate data")
         renamed_affiliate = renamed_affiliate.rename(columns={
+            'Unique Leads': 'Leads',
             'Booked Count': 'Bookings',
             'Transaction Count': 'Sales',
             'Net Sales Amount': 'Revenue'
         })
     else:
-        st.warning(f"Some expected columns not found in affiliate data. Found: Transaction Count={has_transaction_count}, Booked Count={has_booked_count}, Net Sales Amount={has_net_sales}")
+        st.warning(f"Some expected columns not found in affiliate data. Found: Unique Leads={has_unique_leads}, Transaction Count={has_transaction_count}, Booked Count={has_booked_count}, Net Sales Amount={has_net_sales}")
         # Try to use available columns or create defaults
         column_mapping = {}
+        if has_unique_leads:
+            column_mapping['Unique Leads'] = 'Leads'
         if has_booked_count:
             column_mapping['Booked Count'] = 'Bookings'
         if has_transaction_count:
@@ -639,11 +649,13 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
             st.warning("Using column positions since column names don't match expected values")
             column_mapping = {}
             if len(renamed_affiliate.columns) >= 2:
-                column_mapping[renamed_affiliate.columns[1]] = 'Bookings'
+                column_mapping[renamed_affiliate.columns[1]] = 'Leads'
             if len(renamed_affiliate.columns) >= 3:
-                column_mapping[renamed_affiliate.columns[2]] = 'Sales'
+                column_mapping[renamed_affiliate.columns[2]] = 'Bookings'
             if len(renamed_affiliate.columns) >= 4:
-                column_mapping[renamed_affiliate.columns[3]] = 'Revenue'
+                column_mapping[renamed_affiliate.columns[3]] = 'Sales'
+            if len(renamed_affiliate.columns) >= 5:
+                column_mapping[renamed_affiliate.columns[4]] = 'Revenue'
             renamed_affiliate = renamed_affiliate.rename(columns=column_mapping)
     
     # Display the renamed affiliate data for debugging
@@ -658,6 +670,16 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
         on='partnerID',
         how='outer'
     ).fillna(0)
+    
+    # If affiliate data has Leads column, use that instead of advanced action leads
+    if 'Leads' in renamed_affiliate.columns:
+        # Override leads from advanced action with leads from affiliate data
+        merged_df['Leads'] = merged_df['Leads_y'] if 'Leads_y' in merged_df.columns else merged_df['Leads']
+        # Drop the advanced action leads column if it exists
+        if 'Leads_x' in merged_df.columns:
+            merged_df = merged_df.drop(columns=['Leads_x'])
+        if 'Leads_y' in merged_df.columns:
+            merged_df = merged_df.drop(columns=['Leads_y'])
 
     # If a bookings pivot based on Created Date is provided, merge and override Bookings
     if bookings_pivot is not None and not bookings_pivot.empty:
