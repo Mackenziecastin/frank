@@ -74,8 +74,13 @@ def show_main_page():
             # Show preview of processed data
             st.subheader("Preview of Processed Affiliate Data")
             preview_cols = ['Click URL', 'PID', 'SUBID', 'partnerID']
-            if 'treatments' in affiliate_df_processed.columns:
-                preview_cols.append('treatments')
+            # Check for treatment column (case insensitive)
+            treatment_col = None
+            for col in affiliate_df_processed.columns:
+                if col.lower() in ['treatment', 'treatments']:
+                    treatment_col = col
+                    preview_cols.append(col)
+                    break
             st.dataframe(affiliate_df_processed[preview_cols].head())
             
             st.subheader("Preview of Processed Advanced Action Data")
@@ -359,18 +364,32 @@ def extract_pid_subid(after_3d_value):
         return "", ""
 
 def get_unique_treatments(df):
-    """Get unique treatments from the treatments column if it exists."""
-    if 'treatments' in df.columns:
-        treatments = df['treatments'].dropna().unique()
-        treatments = [str(t).strip() for t in treatments if str(t).strip() != '']
+    """Get unique treatments from the treatments/Treatment column if it exists."""
+    # Check for various column name variations
+    treatment_col = None
+    for col in df.columns:
+        if col.lower() in ['treatment', 'treatments']:
+            treatment_col = col
+            break
+    
+    if treatment_col:
+        treatments = df[treatment_col].dropna().unique()
+        treatments = [str(t).strip() for t in treatments if str(t).strip() != '' and str(t).lower() != 'nan']
         return sorted(treatments)
     return []
 
 def filter_data_by_treatment(df, treatment):
     """Filter dataframe by treatment. If treatment is 'All Treatments', return all data."""
-    if treatment == 'All Treatments' or 'treatments' not in df.columns:
+    # Check for various column name variations
+    treatment_col = None
+    for col in df.columns:
+        if col.lower() in ['treatment', 'treatments']:
+            treatment_col = col
+            break
+    
+    if treatment == 'All Treatments' or treatment_col is None:
         return df
-    return df[df['treatments'] == treatment]
+    return df[df[treatment_col] == treatment]
 
 def process_dataframe(df, url_column):
     """Process dataframe to add PID, SUBID, and partnerID columns."""
