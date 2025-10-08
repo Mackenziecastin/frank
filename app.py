@@ -300,8 +300,8 @@ def show_main_page():
                 st.dataframe(combined_no_date)
                 
                 # Create download button for the single report with multiple sheets
-                excel_data = to_excel_download_multi_sheet(
-                    treatment_reports_no_date, unique_treatments, advanced_df_processed, combined_no_date, "Full"
+                excel_data = to_excel_download_multi_sheet_no_date(
+                    treatment_reports_no_date, unique_treatments, advanced_df_processed, combined_no_date
                 )
                 st.download_button(
                     label="Download Report (All Treatments)",
@@ -980,7 +980,9 @@ def to_excel_download_multi_sheet(treatment_reports, unique_treatments, advanced
                 continue  # Skip the "All Treatments" as it's already the combined data
                 
             sheet_name = f"{treatment} - {report_type} Report"
-            treatment_reports[treatment][report_type.lower()].to_excel(writer, sheet_name=sheet_name, index=False)
+            # Access the correct data structure: treatment_reports[treatment]['full'] or ['matured']
+            report_key = 'full' if report_type.lower() == 'full' else 'matured'
+            treatment_reports[treatment][report_key].to_excel(writer, sheet_name=sheet_name, index=False)
         
         # Write advanced action data to its own sheet
         advanced_sheet_name = f"Advanced Action Data - {report_type}"
@@ -1005,7 +1007,64 @@ def to_excel_download_multi_sheet(treatment_reports, unique_treatments, advanced
                 else:
                     # Find the treatment for this sheet
                     treatment = sheet_name.replace(f" - {report_type} Report", "")
-                    df = treatment_reports[treatment][report_type.lower()]
+                    report_key = 'full' if report_type.lower() == 'full' else 'matured'
+                    df = treatment_reports[treatment][report_key]
+                
+                # Apply formats to specific columns
+                for col_idx, col_name in enumerate(df.columns):
+                    if col_name in ['Spend', 'Revenue', 'ROAS', 'eCPL at $1.50']:
+                        worksheet.set_column(col_idx, col_idx, 15, money_format)
+                    elif col_name in ['Leads', 'Bookings', 'Sales']:
+                        worksheet.set_column(col_idx, col_idx, 15, integer_format)
+                    elif col_name in ['Lead to Sale']:
+                        worksheet.set_column(col_idx, col_idx, 15, percent_format)
+                    else:
+                        worksheet.set_column(col_idx, col_idx, 15)  # Default width
+    
+    return output.getvalue()
+
+def to_excel_download_multi_sheet_no_date(treatment_reports, unique_treatments, advanced_df, combined_report):
+    """Convert multiple treatment reports to Excel file with multiple sheets (no date filtering)."""
+    output = BytesIO()
+    
+    # Use xlsxwriter engine instead of openpyxl for formatting support
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        # Write combined report first
+        combined_sheet_name = "Combined - Full Report"
+        combined_report.to_excel(writer, sheet_name=combined_sheet_name, index=False)
+        
+        # Write each treatment report to its own sheet
+        for treatment in unique_treatments:
+            if treatment == 'All Treatments':
+                continue  # Skip the "All Treatments" as it's already the combined data
+                
+            sheet_name = f"{treatment} - Full Report"
+            treatment_reports[treatment]['full'].to_excel(writer, sheet_name=sheet_name, index=False)
+        
+        # Write advanced action data to its own sheet
+        advanced_sheet_name = "Advanced Action Data - Full"
+        advanced_df.to_excel(writer, sheet_name=advanced_sheet_name, index=False)
+        
+        # Get the xlsxwriter workbook object
+        workbook = writer.book
+        
+        # Define formats
+        money_format = workbook.add_format({'num_format': '$#,##0.00'})
+        integer_format = workbook.add_format({'num_format': '0'})
+        percent_format = workbook.add_format({'num_format': '0.0%'})
+        
+        # Apply formats to all optimization report sheets
+        for sheet_name in writer.sheets:
+            if "Report" in sheet_name:
+                worksheet = writer.sheets[sheet_name]
+                
+                # Get the dataframe for this sheet to determine column types
+                if sheet_name == combined_sheet_name:
+                    df = combined_report
+                else:
+                    # Find the treatment for this sheet
+                    treatment = sheet_name.replace(" - Full Report", "")
+                    df = treatment_reports[treatment]['full']
                 
                 # Apply formats to specific columns
                 for col_idx, col_name in enumerate(df.columns):
