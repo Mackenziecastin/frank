@@ -480,10 +480,25 @@ def create_affiliate_pivot(df):
         st.warning("'Net Sales Amount' column not found in affiliate data. Creating it with zeros.")
         df['Net Sales Amount'] = 0
     
-    # Make sure Unique Leads column exists, create it with zeros if not
-    if 'Unique Leads' not in df.columns:
-        st.warning("'Unique Leads' column not found in affiliate data. Creating it with zeros.")
+    # Check for leads column with various possible names
+    leads_column = None
+    possible_leads_columns = ['Unique Leads', 'Leads', 'Lead Count', 'Total Leads', 'Unique Lead Count']
+    
+    for col_name in possible_leads_columns:
+        if col_name in df.columns:
+            leads_column = col_name
+            st.info(f"Found leads column: '{col_name}'")
+            break
+    
+    if leads_column is None:
+        st.warning("No leads column found in affiliate data. Available columns: " + ", ".join(df.columns))
+        st.warning("Creating 'Unique Leads' column with zeros.")
         df['Unique Leads'] = 0
+    else:
+        # Rename the found column to 'Unique Leads' for consistency
+        if leads_column != 'Unique Leads':
+            df['Unique Leads'] = df[leads_column]
+            st.info(f"Using '{leads_column}' as the leads column")
     
     # Ensure other numeric columns are properly converted if they exist
     numeric_cols = ['Unique Leads', 'Booked Count', 'Net Sales Amount']
@@ -507,6 +522,9 @@ def create_affiliate_pivot(df):
     # Log data for debugging
     st.write(f"Debug - Total Transaction Count before pivot: {df['Transaction Count'].sum()}")
     st.write(f"Debug - Total Net Sales Amount before pivot: ${df['Net Sales Amount'].sum():.2f}")
+    st.write(f"Debug - Total Unique Leads before pivot: {df['Unique Leads'].sum()}")
+    st.write(f"Debug - Total Booked Count before pivot: {df['Booked Count'].sum()}")
+    st.write(f"Debug - Available columns in affiliate data: {list(df.columns)}")
     if date_ranges:
         for col, range_str in date_ranges.items():
             st.write(f"Debug - {col} range: {range_str}")
@@ -533,6 +551,10 @@ def create_affiliate_pivot(df):
     # Log pivot results for debugging
     st.write(f"Debug - Total Transaction Count after pivot: {pivot['Transaction Count'].sum()}")
     st.write(f"Debug - Total Net Sales Amount after pivot: ${pivot['Net Sales Amount'].sum():.2f}")
+    st.write(f"Debug - Total Unique Leads after pivot: {pivot['Unique Leads'].sum()}")
+    st.write(f"Debug - Total Booked Count after pivot: {pivot['Booked Count'].sum()}")
+    st.write("Debug - Sample of pivot data:")
+    st.dataframe(pivot.head())
     
     return pivot
 
