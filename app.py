@@ -734,24 +734,32 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
     if partner_list is not None:
         try:
             # Extract affiliate ID from partnerID (part before underscore)
-            merged_df['Affiliate ID'] = merged_df['partnerID'].apply(
+            merged_df['Temp_Affiliate_ID'] = merged_df['partnerID'].apply(
                 lambda x: x.split('_')[0] if x != "Unattributed" and '_' in x else x)
             
+            # Check which ID column exists in partner list
+            id_col = None
+            if 'Affiliate ID' in partner_list.columns:
+                id_col = 'Affiliate ID'
+            elif 'Partner ID' in partner_list.columns:
+                id_col = 'Partner ID'
+            
             # Ensure required columns exist in partner list
-            required_cols = ['Partner ID', 'Affiliate Name', 'Account Manager Name']
-            if not all(col in partner_list.columns for col in required_cols):
-                st.warning("Partner list file missing required columns. Required columns are: Partner ID, Affiliate Name, Account Manager Name")
-            else:
-                # Convert Partner ID to string in both dataframes
-                partner_list['Partner ID'] = partner_list['Partner ID'].astype(str)
-                merged_df['Affiliate ID'] = merged_df['Affiliate ID'].astype(str)
+            if id_col and 'Affiliate Name' in partner_list.columns and 'Account Manager Name' in partner_list.columns:
+                # Convert IDs to string in both dataframes
+                partner_list[id_col] = partner_list[id_col].astype(str)
+                merged_df['Temp_Affiliate_ID'] = merged_df['Temp_Affiliate_ID'].astype(str)
+                
+                st.write(f"Debug - Using '{id_col}' from partner list for VLOOKUP")
+                st.write(f"Debug - Sample IDs from partner list: {partner_list[id_col].head().tolist()}")
+                st.write(f"Debug - Sample IDs from report: {merged_df['Temp_Affiliate_ID'].head().tolist()}")
                 
                 # Merge with partner list to get affiliate name and account manager
                 merged_df = pd.merge(
                     merged_df,
-                    partner_list[['Partner ID', 'Affiliate Name', 'Account Manager Name']],
-                    left_on='Affiliate ID',
-                    right_on='Partner ID',
+                    partner_list[[id_col, 'Affiliate Name', 'Account Manager Name']],
+                    left_on='Temp_Affiliate_ID',
+                    right_on=id_col,
                     how='left'
                 )
                 
@@ -762,17 +770,17 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
                 # Reorder columns to put VLOOKUP data first
                 cols = ['partnerID', 'Affiliate Name', 'Account Manager Name'] + \
                     [col for col in merged_df.columns if col not in 
-                        ['partnerID', 'Affiliate Name', 'Account Manager Name', 'Affiliate ID', 'Partner ID']]
+                        ['partnerID', 'Affiliate Name', 'Account Manager Name', 'Temp_Affiliate_ID', id_col]]
                 merged_df = merged_df[cols]
                 
-                # Drop the temporary columns
-                if 'Affiliate ID' in merged_df.columns:
-                    merged_df = merged_df.drop('Affiliate ID', axis=1)
-                if 'Partner ID' in merged_df.columns:
-                    merged_df = merged_df.drop('Partner ID', axis=1)
+                st.success(f"Successfully added Affiliate Name and Account Manager Name via VLOOKUP using {id_col}")
+            else:
+                st.warning(f"Partner list file missing required columns. Found: {list(partner_list.columns)}")
                 
         except Exception as e:
             st.warning(f"Error in VLOOKUP processing: {str(e)}. Continuing without VLOOKUP data.")
+            import traceback
+            st.code(traceback.format_exc())
     
     return merged_df
 
