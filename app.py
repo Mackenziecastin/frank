@@ -259,7 +259,8 @@ def show_main_page():
                 
                 with col1:
                     excel_data = to_excel_download_with_treatments(
-                        affiliate_df_full, advanced_df_full, optimization_report_full, unique_treatments, "Full"
+                        affiliate_df_full, advanced_df_full, optimization_report_full, unique_treatments, "Full",
+                        df_affiliate_created_date=affiliate_df_full_leads_bookings, partner_list=partner_list_df
                     )
                     st.download_button(
                         label="Download Full Report",
@@ -270,7 +271,8 @@ def show_main_page():
                 
                 with col2:
                     excel_data_matured = to_excel_download_with_treatments(
-                        affiliate_df_matured, advanced_df_matured, optimization_report_matured, unique_treatments, "Matured"
+                        affiliate_df_matured, advanced_df_matured, optimization_report_matured, unique_treatments, "Matured",
+                        df_affiliate_created_date=affiliate_df_matured_leads_bookings, partner_list=partner_list_df
                     )
                     st.download_button(
                         label="Download Matured Report",
@@ -300,7 +302,8 @@ def show_main_page():
                 st.dataframe(optimization_report_full)
                 
                 excel_data = to_excel_download_with_treatments(
-                    affiliate_df_processed, advanced_df_processed, optimization_report_full, unique_treatments, "Full"
+                    affiliate_df_processed, advanced_df_processed, optimization_report_full, unique_treatments, "Full",
+                    df_affiliate_created_date=affiliate_df_processed, partner_list=partner_list_df
                 )
                 st.download_button(
                     label="Download Full Report",
@@ -890,8 +893,19 @@ def to_excel_download(df_affiliate, df_advanced, df_optimization):
     
     return output.getvalue()
 
-def to_excel_download_with_treatments(df_affiliate, df_advanced, df_optimization, unique_treatments, report_type):
-    """Convert dataframes to Excel file for download with additional treatment sheets."""
+def to_excel_download_with_treatments(df_affiliate, df_advanced, df_optimization, unique_treatments, report_type, 
+                                      df_affiliate_created_date=None, partner_list=None):
+    """Convert dataframes to Excel file for download with additional treatment sheets.
+    
+    Args:
+        df_affiliate: Affiliate data filtered by Purchased Date (for Sales/Revenue)
+        df_advanced: Advanced Action data
+        df_optimization: Main optimization report (all treatments)
+        unique_treatments: List of unique treatment names
+        report_type: "Full" or "Matured"
+        df_affiliate_created_date: Affiliate data filtered by Created Date (for Leads/Bookings)
+        partner_list: Partner list for VLOOKUP
+    """
     output = BytesIO()
     
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
@@ -900,21 +914,41 @@ def to_excel_download_with_treatments(df_affiliate, df_advanced, df_optimization
         df_optimization.to_excel(writer, sheet_name='Optimization Report', index=False)
         
         # If there are treatments (and not just 'All Treatments'), create additional sheets
-        if unique_treatments and 'All Treatments' not in unique_treatments:
+        if unique_treatments and 'All Treatments' not in unique_treatments and len(unique_treatments) > 0:
             for treatment in unique_treatments:
-                # Filter affiliate data by treatment
-                treatment_affiliate = filter_data_by_treatment(df_affiliate, treatment)
+                st.write(f"Creating sheet for treatment: {treatment}")
                 
-                if not treatment_affiliate.empty:
-                    # Create pivot and optimization report for this treatment
-                    treatment_pivot = create_affiliate_pivot(treatment_affiliate)
+                # Filter data by treatment for BOTH date ranges
+                # For Leads & Bookings: use Created Date filtered data
+                if df_affiliate_created_date is not None:
+                    treatment_affiliate_created = filter_data_by_treatment(df_affiliate_created_date, treatment)
+                else:
+                    treatment_affiliate_created = filter_data_by_treatment(df_affiliate, treatment)
+                
+                # For Sales & Revenue: use Purchased Date filtered data
+                treatment_affiliate_purchased = filter_data_by_treatment(df_affiliate, treatment)
+                
+                if not treatment_affiliate_created.empty or not treatment_affiliate_purchased.empty:
+                    # Create pivots for this treatment
+                    # Leads & Bookings from Created Date
+                    treatment_leads_bookings_pivot = create_affiliate_bookings_pivot(treatment_affiliate_created)
+                    
+                    # Sales & Revenue from Purchased Date
+                    treatment_sales_pivot = create_affiliate_pivot(treatment_affiliate_purchased)
+                    
+                    # Advanced pivot (not filtered by treatment, includes all)
                     treatment_advanced_pivot = create_advanced_pivot(df_advanced)
+                    
+                    # Create optimization report with proper date filtering
                     treatment_optimization = create_optimization_report(
-                        treatment_pivot, treatment_advanced_pivot, None, None
+                        treatment_sales_pivot, 
+                        treatment_advanced_pivot, 
+                        partner_list, 
+                        treatment_leads_bookings_pivot
                     )
                     
                     # Add treatment sheet
-                    sheet_name = f"{treatment} - Optimization Report"
+                    sheet_name = f"{treatment}"[:31]  # Excel sheet name limit is 31 characters
                     treatment_optimization.to_excel(writer, sheet_name=sheet_name, index=False)
         
         workbook = writer.book
@@ -922,24 +956,21 @@ def to_excel_download_with_treatments(df_affiliate, df_advanced, df_optimization
         integer_format = workbook.add_format({'num_format': '0'})
         percent_format = workbook.add_format({'num_format': '0.0%'})
         
-        # Apply formatting to all optimization report sheets
+        # Apply formatting to all sheets with optimization data
         for sheet_name in writer.sheets:
-            if "Optimization Report" in sheet_name:
+            # Format the main Optimization Report and all treatment sheets
+            if sheet_name == "Optimization Report" or (sheet_name not in ['Cleaned Affiliate Data', 'Cleaned Advanced Action Data']):
                 worksheet = writer.sheets[sheet_name]
                 
-                # Get the dataframe for this sheet
+                # Get the appropriate dataframe for column detection
                 if sheet_name == "Optimization Report":
                     df = df_optimization
                 else:
-                    treatment = sheet_name.replace(" - Optimization Report", "")
-                    treatment_affiliate = filter_data_by_treatment(df_affiliate, treatment)
-                    if not treatment_affiliate.empty:
-                        treatment_pivot = create_affiliate_pivot(treatment_affiliate)
-                        treatment_advanced_pivot = create_advanced_pivot(df_advanced)
-                        df = create_optimization_report(treatment_pivot, treatment_advanced_pivot, None, None)
-                    else:
-                        continue
+                    # For treatment sheets, we need to get the dataframe
+                    # Use the optimization report structure for column detection
+                    df = df_optimization  # Use same columns as main report
                 
+                # Apply formatting
                 for col_idx, col_name in enumerate(df.columns):
                     if col_name in ['Spend', 'Revenue', 'ROAS', 'eCPL at $1.50']:
                         worksheet.set_column(col_idx, col_idx, 15, money_format)
