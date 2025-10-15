@@ -76,17 +76,35 @@ def clean_data(df, start_date, end_date, logger):
         
         logger.info(f"Looking for purchased date column in: {possible_purchased_names}")
         
+        # First try exact matches
         for col_name in possible_purchased_names:
             if col_name in df.columns:
                 purchased_col = col_name
-                logger.info(f"Found purchased date column: {col_name}")
+                logger.info(f"Found purchased date column (exact match): {col_name}")
                 break
+        
+        # If no exact match, try case-insensitive and whitespace-tolerant matching
+        if purchased_col is None:
+            logger.info("No exact match found, trying case-insensitive matching...")
+            for col_name in possible_purchased_names:
+                for df_col in df.columns:
+                    if col_name.lower().strip() == df_col.lower().strip():
+                        purchased_col = df_col
+                        logger.info(f"Found purchased date column (case-insensitive match): {df_col}")
+                        break
+                if purchased_col:
+                    break
         
         if purchased_col is None:
             logger.error(f"Could not find purchased date column. Available columns: {list(df.columns)}")
             raise ValueError(f"Could not find purchased date column. Available columns: {list(df.columns)}")
         
         logger.info(f"Using purchased date column: {purchased_col}")
+        
+        # Double-check that the column exists before trying to access it
+        if purchased_col not in df.columns:
+            logger.error(f"Column '{purchased_col}' not found in dataframe. Available columns: {list(df.columns)}")
+            raise ValueError(f"Column '{purchased_col}' not found in dataframe. Available columns: {list(df.columns)}")
         
         # Convert the found column to datetime if it's not already and remove any null values
         df[purchased_col] = pd.to_datetime(df[purchased_col], errors='coerce')
@@ -95,10 +113,15 @@ def clean_data(df, start_date, end_date, logger):
         # Log some sample dates for debugging
         logger.info(f"Attempting to access column: {purchased_col}")
         logger.info(f"Column exists: {purchased_col in df.columns}")
-        sample_dates = df[purchased_col].head()
-        logger.info("\nSample Purchased Date values:")
-        for idx, date in enumerate(sample_dates):
-            logger.info(f"Record {idx}: {date}")
+        try:
+            sample_dates = df[purchased_col].head()
+            logger.info("\nSample Purchased Date values:")
+            for idx, date in enumerate(sample_dates):
+                logger.info(f"Record {idx}: {date}")
+        except Exception as e:
+            logger.error(f"Error accessing column '{purchased_col}': {str(e)}")
+            logger.error(f"Available columns: {list(df.columns)}")
+            raise
         
         # Try to find the affiliate column with different possible names
         affiliate_col = None
