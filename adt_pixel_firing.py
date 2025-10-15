@@ -335,6 +335,22 @@ def process_adt_report(file_path):
 =======
         # Count of sales to process
         total_sales = len(filtered_df)
+<<<<<<< Updated upstream
+=======
+        
+        # Check if we have any qualifying sales
+        if total_sales == 0:
+            logging.info("\n=== Summary ===")
+            logging.info(f"Processing complete!")
+            logging.info("No qualifying sales found in the report.")
+            logging.info("No pixels were fired.")
+            logging.info(f"Check the log file for detailed information: {log_filename}")
+            return
+        
+        # Extract the date from the first sale
+        sale_date = filtered_df['Sale_Date'].dt.date.iloc[0].strftime('%Y-%m-%d')
+        logging.info(f"\nFound {total_sales} qualifying sales for date: {sale_date}")
+>>>>>>> Stashed changes
         
         # Check if we have any qualifying sales
         if total_sales == 0:
