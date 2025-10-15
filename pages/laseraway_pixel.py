@@ -358,7 +358,7 @@ def show_laseraway_pixel():
         - `Net Sales` or similar revenue column
         
         **Supported column name variations:**
-        - Date columns: Purchased Date, Purchased, purchased, Purchase Date, Date, etc.
+        - Date columns: Purchased Date, Purchase Date, Date, etc.
         - Revenue columns: Net Sales, Revenue, Amount, Sales, etc.
         - Affiliate columns: affiliate_directagent_subid1, affiliate_subid1, subid1, etc.
         """)
