@@ -325,7 +325,7 @@ def show_laseraway_pixel():
         st.info("""
         **Required columns (case-insensitive):**
         - `affiliate_directagent_subid1` or similar (filtered for value "42865")
-        - `Purchased` or similar date column
+        - `Purchased Date` or similar date column
         - `Net Sales` or similar revenue column
         
         **Supported column name variations:**
@@ -418,7 +418,7 @@ Revenue Amount = Net Sales / 1.75
         st.write("""
         **Data Processing Steps:**
         1. Filter for `affiliate_directagent_subid1 = 42865` entries only
-        2. Filter for sales within the specified date range on `Purchased` column
+        2. Filter for sales within the specified date range on `Purchased Date` column
         3. Calculate revenue share using formula: `Net Sales / 1.75`
         4. Fire pixels with proper date formatting and revenue amounts
         5. Generate unique transaction IDs for each pixel firing
