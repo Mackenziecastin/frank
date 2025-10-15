@@ -74,6 +74,8 @@ def clean_data(df, start_date, end_date, logger):
         purchased_col = None
         possible_purchased_names = ['Purchased Date', 'Purchased', 'purchased', 'Purchase Date', 'Purchase_Date', 'Date', 'date']
         
+        logger.info(f"Looking for purchased date column in: {possible_purchased_names}")
+        
         for col_name in possible_purchased_names:
             if col_name in df.columns:
                 purchased_col = col_name
@@ -84,11 +86,15 @@ def clean_data(df, start_date, end_date, logger):
             logger.error(f"Could not find purchased date column. Available columns: {list(df.columns)}")
             raise ValueError(f"Could not find purchased date column. Available columns: {list(df.columns)}")
         
+        logger.info(f"Using purchased date column: {purchased_col}")
+        
         # Convert the found column to datetime if it's not already and remove any null values
         df[purchased_col] = pd.to_datetime(df[purchased_col], errors='coerce')
         df = df.dropna(subset=[purchased_col])
         
         # Log some sample dates for debugging
+        logger.info(f"Attempting to access column: {purchased_col}")
+        logger.info(f"Column exists: {purchased_col in df.columns}")
         sample_dates = df[purchased_col].head()
         logger.info("\nSample Purchased Date values:")
         for idx, date in enumerate(sample_dates):
