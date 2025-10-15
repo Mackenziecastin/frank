@@ -11,7 +11,13 @@ import uuid
 import requests
 import io
 import tempfile
-import chardet
+# Optional import of chardet
+CHARDET_AVAILABLE = False
+try:
+    import chardet
+    CHARDET_AVAILABLE = True
+except ImportError:
+    pass  # We'll handle this gracefully
 
 def setup_logging():
     """Set up logging to capture output"""
@@ -38,16 +44,19 @@ def detect_encoding(file_path):
     Attempt to detect the file encoding
     """
     try:
-        # Read a sample of the file to detect encoding
-        with open(file_path, 'rb') as f:
-            raw_data = f.read(min(1024 * 1024, os.path.getsize(file_path)))  # Read up to 1MB
-        
-        # Detect encoding
-        result = chardet.detect(raw_data)
-        encoding = result['encoding']
-        confidence = result['confidence']
-        
-        return encoding
+        if CHARDET_AVAILABLE:
+            # Read a sample of the file to detect encoding
+            with open(file_path, 'rb') as f:
+                raw_data = f.read(min(1024 * 1024, os.path.getsize(file_path)))  # Read up to 1MB
+            
+            # Detect encoding
+            result = chardet.detect(raw_data)
+            encoding = result['encoding']
+            confidence = result['confidence']
+            
+            return encoding
+        else:
+            return None
     except Exception as e:
         return None
 
@@ -161,29 +170,42 @@ def process_laseraway_report(uploaded_file, start_date, end_date, logger):
         logger.info("\n=== LaserAway Revshare Pixel Firing Process Started ===")
         logger.info(f"Date range: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
         
-        # Read the uploaded file
+        # Read the uploaded file based on file type
+        file_extension = os.path.splitext(uploaded_file.name)[1].lower()
         file_content = uploaded_file.getvalue()
-        
-        # Try different encodings if needed
-        encodings_to_try = ['utf-8', 'latin1', 'cp1252', 'ISO-8859-1']
         
         df = None
         successful_encoding = None
         
-        for encoding in encodings_to_try:
+        if file_extension == '.xlsx':
+            # Handle Excel files
             try:
-                logger.info(f"Attempting to read file with {encoding} encoding")
-                df = pd.read_csv(io.BytesIO(file_content), encoding=encoding)
-                successful_encoding = encoding
-                logger.info(f"Successfully read file with {encoding} encoding")
-                break
-            except UnicodeDecodeError as e:
-                logger.warning(f"Failed to read with {encoding} encoding: {str(e)}")
+                logger.info("Attempting to read Excel file")
+                df = pd.read_excel(io.BytesIO(file_content))
+                successful_encoding = "excel"
+                logger.info("Successfully read Excel file")
             except Exception as e:
-                logger.warning(f"Error reading CSV with {encoding} encoding: {str(e)}")
-        
-        if df is None:
-            raise Exception("Failed to read CSV file with any of the attempted encodings")
+                logger.error(f"Failed to read Excel file: {str(e)}")
+                raise Exception(f"Failed to read Excel file: {str(e)}")
+        else:
+            # Handle CSV files
+            # Try different encodings if needed
+            encodings_to_try = ['utf-8', 'latin1', 'cp1252', 'ISO-8859-1']
+            
+            for encoding in encodings_to_try:
+                try:
+                    logger.info(f"Attempting to read file with {encoding} encoding")
+                    df = pd.read_csv(io.BytesIO(file_content), encoding=encoding)
+                    successful_encoding = encoding
+                    logger.info(f"Successfully read file with {encoding} encoding")
+                    break
+                except UnicodeDecodeError as e:
+                    logger.warning(f"Failed to read with {encoding} encoding: {str(e)}")
+                except Exception as e:
+                    logger.warning(f"Error reading CSV with {encoding} encoding: {str(e)}")
+            
+            if df is None:
+                raise Exception("Failed to read CSV file with any of the attempted encodings")
         
         # Clean and filter the data
         filtered_df = clean_data(df, start_date, end_date, logger)
@@ -229,7 +251,7 @@ def show_laseraway_pixel():
     
     st.write("""
     This tool processes LaserAway reports and fires pixels for qualifying sales based on revenue share calculations.
-    Upload your LaserAway report (CSV format) and specify the date range to begin.
+    Upload your LaserAway report (CSV or XLSX format) and specify the date range to begin.
     """)
     
     # Date range selection
@@ -242,7 +264,7 @@ def show_laseraway_pixel():
         end_date = st.date_input("End Date", value=datetime.now().date())
     
     # File upload
-    uploaded_file = st.file_uploader("Upload LaserAway Report (CSV)", type=['csv'])
+    uploaded_file = st.file_uploader("Upload LaserAway Report (CSV or XLSX)", type=['csv', 'xlsx'])
     
     if uploaded_file is not None:
         st.info(f"📁 **File uploaded:** {uploaded_file.name}")

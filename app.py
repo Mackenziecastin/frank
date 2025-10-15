@@ -1012,10 +1012,10 @@ def show_adt_pixel():
     
     st.write("""
     This tool processes ADT Athena reports and fires pixels for qualifying sales.
-    Upload your ADT Athena report (CSV format) to begin.
+    Upload your ADT Athena report (CSV or XLSX format) to begin.
     """)
     
-    uploaded_file = st.file_uploader("Upload ADT Athena Report (CSV)", type=['csv'])
+    uploaded_file = st.file_uploader("Upload ADT Athena Report (CSV or XLSX)", type=['csv', 'xlsx'])
     
     if uploaded_file is not None:
         if st.button("Process and Fire Pixels"):

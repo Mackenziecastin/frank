@@ -297,33 +297,48 @@ def process_adt_report(file_path):
     try:
         logging.info("\n=== ADT Pixel Firing Process Started ===")
         
-        # Try to detect encoding first
-        detected_encoding = detect_encoding(file_path)
-        
-        # Try different encodings if needed
-        encodings_to_try = [detected_encoding] if detected_encoding else []
-        encodings_to_try.extend(['utf-8', 'latin1', 'cp1252', 'ISO-8859-1'])
-        
-        # Remove duplicates while preserving order
-        encodings_to_try = list(dict.fromkeys(encodings_to_try))
+        # Determine file type and read accordingly
+        file_extension = os.path.splitext(file_path)[1].lower()
         
         df = None
         successful_encoding = None
         
-        for encoding in encodings_to_try:
+        if file_extension == '.xlsx':
+            # Handle Excel files
             try:
-                logging.info(f"Attempting to read file with {encoding} encoding")
-                df = pd.read_csv(file_path, encoding=encoding)
-                successful_encoding = encoding
-                logging.info(f"Successfully read file with {encoding} encoding")
-                break
-            except UnicodeDecodeError as e:
-                logging.warning(f"Failed to read with {encoding} encoding: {str(e)}")
+                logging.info("Attempting to read Excel file")
+                df = pd.read_excel(file_path)
+                successful_encoding = "excel"
+                logging.info("Successfully read Excel file")
             except Exception as e:
-                logging.warning(f"Error reading CSV with {encoding} encoding: {str(e)}")
-        
-        if df is None:
-            raise Exception("Failed to read CSV file with any of the attempted encodings")
+                logging.error(f"Failed to read Excel file: {str(e)}")
+                raise Exception(f"Failed to read Excel file: {str(e)}")
+        else:
+            # Handle CSV files
+            # Try to detect encoding first
+            detected_encoding = detect_encoding(file_path)
+            
+            # Try different encodings if needed
+            encodings_to_try = [detected_encoding] if detected_encoding else []
+            encodings_to_try.extend(['utf-8', 'latin1', 'cp1252', 'ISO-8859-1'])
+            
+            # Remove duplicates while preserving order
+            encodings_to_try = list(dict.fromkeys(encodings_to_try))
+            
+            for encoding in encodings_to_try:
+                try:
+                    logging.info(f"Attempting to read file with {encoding} encoding")
+                    df = pd.read_csv(file_path, encoding=encoding)
+                    successful_encoding = encoding
+                    logging.info(f"Successfully read file with {encoding} encoding")
+                    break
+                except UnicodeDecodeError as e:
+                    logging.warning(f"Failed to read with {encoding} encoding: {str(e)}")
+                except Exception as e:
+                    logging.warning(f"Error reading CSV with {encoding} encoding: {str(e)}")
+            
+            if df is None:
+                raise Exception("Failed to read CSV file with any of the attempted encodings")
         
         # Clean and filter the data
         filtered_df = clean_data(df, file_path)

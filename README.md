@@ -36,9 +36,11 @@ python laseraway_revshare_pixel_firing.py <report_file.csv> <start_date> <end_da
 python laseraway_revshare_pixel_firing.py laseraway_report.csv 2024-06-01 2024-06-30
 ```
 
-## Required CSV Columns
+**Note:** The script supports both CSV and XLSX file formats.
 
-Your CSV file must contain these columns:
+## Required File Columns
+
+Your CSV or XLSX file must contain these columns:
 - `affiliate_directagent_subid1` - Filtered for value "42865"
 - `Purchased` - Date column for purchase dates
 - `Net Sales` - Revenue amount for calculations
@@ -76,6 +78,7 @@ The script creates detailed logs in `laseraway_revshare_pixel_firing_YYYYMMDD.lo
 ## Error Handling
 
 - Automatic encoding detection for CSV files
+- Excel file support with openpyxl
 - Graceful handling of missing or invalid data
 - Comprehensive error logging
 - Validation of required columns
