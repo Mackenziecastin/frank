@@ -76,12 +76,12 @@ def clean_data(df, file_path, start_date, end_date):
     try:
         logging.info(f"\nStarting with {len(df)} total records")
         
-        # Convert Purchased column to datetime if it's not already and remove any null values
-        df['Purchased'] = pd.to_datetime(df['Purchased'], errors='coerce')
-        df = df.dropna(subset=['Purchased'])
+        # Convert Purchased Date column to datetime if it's not already and remove any null values
+        df['Purchased Date'] = pd.to_datetime(df['Purchased Date'], errors='coerce')
+        df = df.dropna(subset=['Purchased Date'])
         
         # Log some sample dates for debugging
-        sample_dates = df['Purchased'].head()
+        sample_dates = df['Purchased Date'].head()
         logging.info("\nSample Purchased values:")
         for idx, date in enumerate(sample_dates):
             logging.info(f"Record {idx}: {date}")
@@ -97,14 +97,14 @@ def clean_data(df, file_path, start_date, end_date):
             return df_after_affiliate
         
         # Filter for date range
-        date_filter = (df_after_affiliate['Purchased'] >= start_date) & (df_after_affiliate['Purchased'] <= end_date)
+        date_filter = (df_after_affiliate['Purchased Date'] >= start_date) & (df_after_affiliate['Purchased Date'] <= end_date)
         df_after_date = df_after_affiliate[date_filter]
         
         # Log all unique dates in the dataset
-        unique_dates = sorted(df_after_affiliate['Purchased'].dt.date.unique())
+        unique_dates = sorted(df_after_affiliate['Purchased Date'].dt.date.unique())
         logging.info("\nAll unique dates in dataset:")
         for date in unique_dates:
-            count = len(df_after_affiliate[df_after_affiliate['Purchased'].dt.date == date])
+            count = len(df_after_affiliate[df_after_affiliate['Purchased Date'].dt.date == date])
             logging.info(f"Date {date}: {count} records")
         
         logging.info(f"\nLooking for records between {start_date.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')}")
@@ -221,9 +221,9 @@ def process_laseraway_report(file_path, start_date, end_date):
         
         # Process each record
         for _, row in filtered_df.iterrows():
-            transaction_id = f"LASERAWAY_{row['Purchased'].strftime('%Y%m%d')}_{uuid.uuid4().hex[:8]}"
+            transaction_id = f"LASERAWAY_{row['Purchased Date'].strftime('%Y%m%d')}_{uuid.uuid4().hex[:8]}"
             net_sales = row['Net Sales']
-            purchase_date = row['Purchased']
+            purchase_date = row['Purchased Date']
             
             total_pixels += 1
             total_revenue += net_sales
