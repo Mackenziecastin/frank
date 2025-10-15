@@ -327,14 +327,12 @@ def process_laseraway_report(uploaded_file, start_date, end_date, logger):
 
 def show_laseraway_pixel():
     """Display the LaserAway Revshare Pixel Firing interface"""
-    st.title("LaserAway Revshare Pixel Firing - UPDATED")
+    st.title("LaserAway Revshare Pixel Firing")
     
     st.write("""
     This tool processes LaserAway reports and fires pixels for qualifying sales based on revenue share calculations.
     Upload your LaserAway report (CSV or XLSX format) and specify the date range to begin.
     """)
-    
-    st.success("🔧 DEBUG: This is the UPDATED version of the LaserAway pixel firing page!")
     
     # Date range selection
     col1, col2 = st.columns(2)
