@@ -1,56 +1,81 @@
-# ADT Pixel Firing
+# LaserAway Revshare Pixel Firing
 
-This script processes ADT Athena daily lead call data and fires tracking pixels for qualifying sales.
+This script fires tracking pixels for Schemathics on LaserAway based on Net Sales revenue share calculations.
+
+## Features
+
+- Filters data for `affiliate_directagent_subid1 = 42865`
+- Processes sales within a specified date range
+- Calculates revenue share using formula: `Net Sales / 1.75`
+- Fires pixels with proper date formatting and revenue amounts
+- Comprehensive logging and error handling
 
 ## Requirements
 
 - Python 3.7+
-- pandas
-- requests
+- pandas==2.2.0
+- requests>=2.25.0
+- chardet>=4.0.0 (optional, for better encoding detection)
 
 ## Installation
 
-1. Clone this repository
-2. Install dependencies:
+1. Install required packages:
 ```bash
 pip install -r requirements.txt
 ```
 
 ## Usage
 
-Run the script with the path to your ADT Athena report:
-
 ```bash
-python adt_pixel_firing.py path/to/ADT_Athena_DLY_Lead_CallData_Direct_Agnts_[date].csv
+python laseraway_revshare_pixel_firing.py <report_file.csv> <start_date> <end_date>
 ```
 
-## Data Processing Steps
+### Example
 
-1. Data Cleaning:
-   - Filters out "Health" rows from Ln_of_Busn column
-   - Filters out "US: Health" rows from DNIS_BUSN_SEG_CD column
-   - Filters for yesterday's date in Sale_Date column
-   - Filters for "WEB0021011" in Lead_DNIS column
-   - Filters for "NEW" and "RESALE" values in Ordr_Type column
+```bash
+python laseraway_revshare_pixel_firing.py laseraway_report.csv 2024-06-01 2024-06-30
+```
 
-2. Pixel Firing:
-   - Fires a pixel for each qualifying sale
-   - Uses unique transaction IDs
-   - Logs all activities and results
+## Required CSV Columns
+
+Your CSV file must contain these columns:
+- `affiliate_directagent_subid1` - Filtered for value "42865"
+- `Purchased` - Date column for purchase dates
+- `Net Sales` - Revenue amount for calculations
+
+## Pixel Details
+
+- **URL**: https://trkstar.com/m.ashx
+- **Parameters**:
+  - `o=32067` (Organization ID)
+  - `e=865` (Event ID)
+  - `f=pb` (Format)
+  - `t=TRANSACTION_ID` (Unique transaction ID)
+  - `pubid=42865` (Publisher ID)
+  - `campid=96548` (Campaign ID)
+  - `dt=YYYY-MM-DDTHH:MM:SS+00:00` (Purchase date in ISO format)
+  - `p=REVENUE_AMOUNT` (Calculated revenue share amount)
+
+## Revenue Calculation
+
+The script calculates the revenue share amount using:
+```
+Revenue Amount = Net Sales / 1.75
+```
+
+The result is formatted to 2 decimal places (e.g., 1024.19).
 
 ## Logging
 
-The script creates a daily log file named `adt_pixel_firing_YYYYMMDD.log` that contains:
-- Data processing information
-- Number of qualifying sales
+The script creates detailed logs in `laseraway_revshare_pixel_firing_YYYYMMDD.log` including:
+- Processing statistics
 - Pixel firing results
-- Any errors or issues encountered
+- Error messages
+- Summary of total revenue processed
 
 ## Error Handling
 
-The script includes comprehensive error handling and logging for:
-- File reading issues
-- Data processing errors
-- Pixel firing failures
-
-All errors are logged to the daily log file.
+- Automatic encoding detection for CSV files
+- Graceful handling of missing or invalid data
+- Comprehensive error logging
+- Validation of required columns

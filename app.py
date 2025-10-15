@@ -16,6 +16,7 @@ import importlib
 
 # Custom modules
 from adt_pixel_firing import process_adt_report
+from pages.laseraway_pixel import show_laseraway_pixel
 
 st.set_page_config(page_title="Partner Optimization Report Generator", layout="wide")
 
@@ -1096,7 +1097,7 @@ def load_module_reliably(module_path):
 def main():
     # Create the navigation
     st.sidebar.title("Navigation")
-    page = st.sidebar.radio("Go to", ["Frank (LaserAway)", "Bob (ADT)", "ADT Pixel Firing", "Brinks Optimization Report", "Vivint Optimization Report"])
+    page = st.sidebar.radio("Go to", ["Frank (LaserAway)", "Bob (ADT)", "ADT Pixel Firing", "LaserAway Pixel Firing", "Brinks Optimization Report", "Vivint Optimization Report"])
     
     if page == "Frank (LaserAway)":
         show_main_page()
@@ -1106,6 +1107,8 @@ def main():
         bob_module.show_bob_analysis()
     elif page == "ADT Pixel Firing":
         show_adt_pixel()
+    elif page == "LaserAway Pixel Firing":
+        show_laseraway_pixel()
     elif page == "Brinks Optimization Report":
         try:
             # Import Brinks module dynamically
