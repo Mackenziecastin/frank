@@ -328,9 +328,27 @@ def process_adt_report(file_path):
         # Clean and filter the data
         filtered_df = clean_data(df, file_path)
         
+<<<<<<< Updated upstream
         if len(filtered_df) == 0:
             logging.info("No qualifying sales found to process.")
             return
+=======
+        # Count of sales to process
+        total_sales = len(filtered_df)
+        
+        # Check if we have any qualifying sales
+        if total_sales == 0:
+            logging.info("\n=== Summary ===")
+            logging.info(f"Processing complete!")
+            logging.info("No qualifying sales found in the report.")
+            logging.info("No pixels were fired.")
+            logging.info(f"Check the log file for detailed information: {log_filename}")
+            return
+        
+        # Extract the date from the first sale
+        sale_date = filtered_df['Sale_Date'].dt.date.iloc[0].strftime('%Y-%m-%d')
+        logging.info(f"\nFound {total_sales} qualifying sales for date: {sale_date}")
+>>>>>>> Stashed changes
         
         # Initialize success counters by DNIS code
         success_counters = {}
@@ -357,6 +375,7 @@ def process_adt_report(file_path):
         
         # Log summary by DNIS code
         logging.info("\n=== Summary ===")
+<<<<<<< Updated upstream
         logging.info(f"File processed successfully with encoding: {successful_encoding}")
         
         total_successful = 0
@@ -381,6 +400,14 @@ def process_adt_report(file_path):
         
         logging.info(f"\nTotal pixels fired: {total_successful}")
         logging.info(f"Total records processed: {total_processed}")
+=======
+        logging.info(f"Processing complete!")
+        logging.info(f"Date processed: {sale_date}")
+        logging.info(f"Successfully fired DIFM pixels: {difm_sales} out of {difm_sales}")
+        logging.info(f"Successfully fired DIY pixels: {diy_sales} out of {diy_sales}")
+        logging.info(f"Total pixels fired: {successful_pixels} out of {total_sales}")
+        logging.info(f"Check the log file for detailed information: {log_filename}")
+>>>>>>> Stashed changes
         
     except Exception as e:
         logging.error(f"Error processing ADT report: {str(e)}")
