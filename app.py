@@ -16,6 +16,10 @@ import importlib
 
 # Custom modules
 from adt_pixel_firing import process_adt_report
+# Force reload of the module
+import importlib
+import pages.laseraway_pixel
+importlib.reload(pages.laseraway_pixel)
 from pages.laseraway_pixel import show_laseraway_pixel
 
 st.set_page_config(page_title="Partner Optimization Report Generator", layout="wide")
