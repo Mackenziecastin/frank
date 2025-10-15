@@ -67,9 +67,31 @@ def clean_data(df, start_date, end_date, logger):
     try:
         logger.info(f"\nStarting with {len(df)} total records")
         
-        # Convert Purchased column to datetime if it's not already and remove any null values
-        df['Purchased'] = pd.to_datetime(df['Purchased'], errors='coerce')
-        df = df.dropna(subset=['Purchased'])
+        # Log all column names for debugging
+        logger.info(f"Available columns: {list(df.columns)}")
+        
+        # Try to find the purchased date column with different possible names
+        purchased_col = None
+        possible_purchased_names = ['Purchased Date', 'Purchased', 'purchased', 'Purchase Date', 'Purchase_Date', 'Date', 'date']
+        
+        for col_name in possible_purchased_names:
+            if col_name in df.columns:
+                purchased_col = col_name
+                logger.info(f"Found purchased date column: {col_name}")
+                break
+        
+        if purchased_col is None:
+            logger.error(f"Could not find purchased date column. Available columns: {list(df.columns)}")
+            raise ValueError(f"Could not find purchased date column. Available columns: {list(df.columns)}")
+        
+        # Convert the found column to datetime if it's not already and remove any null values
+        df[purchased_col] = pd.to_datetime(df[purchased_col], errors='coerce')
+        df = df.dropna(subset=[purchased_col])
+        
+        # Rename the column to 'Purchased' for consistency
+        if purchased_col != 'Purchased':
+            df = df.rename(columns={purchased_col: 'Purchased'})
+            logger.info(f"Renamed column '{purchased_col}' to 'Purchased'")
         
         # Log some sample dates for debugging
         sample_dates = df['Purchased'].head()
@@ -77,11 +99,25 @@ def clean_data(df, start_date, end_date, logger):
         for idx, date in enumerate(sample_dates):
             logger.info(f"Record {idx}: {date}")
         
+        # Try to find the affiliate column with different possible names
+        affiliate_col = None
+        possible_affiliate_names = ['affiliate_directagent_subid1', 'affiliate_directagent_subidi', 'affiliate_subid1', 'subid1', 'affiliate_id']
+        
+        for col_name in possible_affiliate_names:
+            if col_name in df.columns:
+                affiliate_col = col_name
+                logger.info(f"Found affiliate column: {col_name}")
+                break
+        
+        if affiliate_col is None:
+            logger.error(f"Could not find affiliate column. Available columns: {list(df.columns)}")
+            raise ValueError(f"Could not find affiliate column. Available columns: {list(df.columns)}")
+        
         # Filter for affiliate_directagent_subid1 = 42865
-        df['affiliate_directagent_subid1'] = df['affiliate_directagent_subid1'].fillna('')
-        affiliate_filter = df['affiliate_directagent_subid1'] == '42865'
+        df[affiliate_col] = df[affiliate_col].fillna('')
+        affiliate_filter = df[affiliate_col] == '42865'
         df_after_affiliate = df[affiliate_filter]
-        logger.info(f"After filtering for affiliate_directagent_subid1 = 42865: {len(df_after_affiliate)} records")
+        logger.info(f"After filtering for {affiliate_col} = 42865: {len(df_after_affiliate)} records")
         
         if len(df_after_affiliate) == 0:
             logger.info("No records found with affiliate_directagent_subid1 = 42865")
@@ -101,14 +137,28 @@ def clean_data(df, start_date, end_date, logger):
         logger.info(f"\nLooking for records between {start_date.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')}")
         logger.info(f"After filtering for date range: {len(df_after_date)} records")
         
-        # Check Net Sales column
-        if 'Net Sales' not in df_after_date.columns:
-            logger.error("Net Sales column not found in the dataset")
-            raise ValueError("Net Sales column is required but not found")
+        # Try to find the Net Sales column with different possible names
+        net_sales_col = None
+        possible_net_sales_names = ['Net Sales', 'net_sales', 'Net_Sales', 'Revenue', 'revenue', 'Amount', 'amount', 'Sales', 'sales']
+        
+        for col_name in possible_net_sales_names:
+            if col_name in df_after_date.columns:
+                net_sales_col = col_name
+                logger.info(f"Found Net Sales column: {col_name}")
+                break
+        
+        if net_sales_col is None:
+            logger.error(f"Could not find Net Sales column. Available columns: {list(df_after_date.columns)}")
+            raise ValueError(f"Could not find Net Sales column. Available columns: {list(df_after_date.columns)}")
         
         # Convert Net Sales to numeric, handling any non-numeric values
-        df_after_date['Net Sales'] = pd.to_numeric(df_after_date['Net Sales'], errors='coerce')
-        df_after_date = df_after_date.dropna(subset=['Net Sales'])
+        df_after_date[net_sales_col] = pd.to_numeric(df_after_date[net_sales_col], errors='coerce')
+        df_after_date = df_after_date.dropna(subset=[net_sales_col])
+        
+        # Rename the column to 'Net Sales' for consistency
+        if net_sales_col != 'Net Sales':
+            df_after_date = df_after_date.rename(columns={net_sales_col: 'Net Sales'})
+            logger.info(f"Renamed column '{net_sales_col}' to 'Net Sales'")
         
         logger.info(f"After filtering for valid Net Sales: {len(df_after_date)} records")
         
@@ -272,10 +322,15 @@ def show_laseraway_pixel():
         
         # Show required columns info
         st.info("""
-        **Required CSV columns:**
-        - `affiliate_directagent_subid1` (filtered for value "42865")
-        - `Purchased` (date column)
-        - `Net Sales` (revenue amount)
+        **Required columns (case-insensitive):**
+        - `affiliate_directagent_subid1` or similar (filtered for value "42865")
+        - `Purchased` or similar date column
+        - `Net Sales` or similar revenue column
+        
+        **Supported column name variations:**
+        - Date columns: Purchased Date, Purchased, purchased, Purchase Date, Date, etc.
+        - Revenue columns: Net Sales, Revenue, Amount, Sales, etc.
+        - Affiliate columns: affiliate_directagent_subid1, affiliate_subid1, subid1, etc.
         """)
         
         if st.button("🚀 Process and Fire Pixels", type="primary"):
@@ -317,6 +372,22 @@ def show_laseraway_pixel():
                     
             except Exception as e:
                 st.error(f"❌ **Error processing LaserAway report:** {str(e)}")
+                
+                # Try to show available columns if it's a column-related error
+                if "column" in str(e).lower() or "not found" in str(e).lower():
+                    try:
+                        # Read the file to show available columns
+                        file_content = uploaded_file.getvalue()
+                        file_extension = os.path.splitext(uploaded_file.name)[1].lower()
+                        
+                        if file_extension == '.xlsx':
+                            df_preview = pd.read_excel(io.BytesIO(file_content))
+                        else:
+                            df_preview = pd.read_csv(io.BytesIO(file_content))
+                        
+                        st.warning(f"📋 **Available columns in your file:** {list(df_preview.columns)}")
+                    except:
+                        pass
                 
                 # Show error logs
                 with st.expander("📋 View Error Logs"):
