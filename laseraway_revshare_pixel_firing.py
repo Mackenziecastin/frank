@@ -96,8 +96,10 @@ def clean_data(df, file_path, start_date, end_date):
             logging.info("No records found with affiliate_directagent_subid1 = 42865")
             return df_after_affiliate
         
-        # Filter for date range
-        date_filter = (df_after_affiliate['Purchased Date'] >= start_date) & (df_after_affiliate['Purchased Date'] <= end_date)
+        # Filter for date range (convert date objects to datetime for comparison)
+        start_datetime = pd.to_datetime(start_date)
+        end_datetime = pd.to_datetime(end_date)
+        date_filter = (df_after_affiliate['Purchased Date'] >= start_datetime) & (df_after_affiliate['Purchased Date'] <= end_datetime)
         df_after_date = df_after_affiliate[date_filter]
         
         # Log all unique dates in the dataset

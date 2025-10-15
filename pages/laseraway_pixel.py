@@ -338,7 +338,7 @@ def show_laseraway_pixel():
     """Display the LaserAway Revshare Pixel Firing interface"""
     st.title("LaserAway Revshare Pixel Firing - v2.0")
     
-    st.success("🔄 **UPDATED VERSION - Oct 15, 2024** - Now using 'Purchased Date' column (Column G)")
+    st.success("🔄 **UPDATED VERSION - Oct 15, 2024 v2.1** - Fixed datetime comparison issue")
     
     st.write("""
     This tool processes LaserAway reports and fires pixels for qualifying sales based on revenue share calculations.
