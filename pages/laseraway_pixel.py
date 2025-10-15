@@ -88,14 +88,9 @@ def clean_data(df, start_date, end_date, logger):
         df[purchased_col] = pd.to_datetime(df[purchased_col], errors='coerce')
         df = df.dropna(subset=[purchased_col])
         
-        # Rename the column to 'Purchased' for consistency
-        if purchased_col != 'Purchased':
-            df = df.rename(columns={purchased_col: 'Purchased'})
-            logger.info(f"Renamed column '{purchased_col}' to 'Purchased'")
-        
         # Log some sample dates for debugging
-        sample_dates = df['Purchased'].head()
-        logger.info("\nSample Purchased values:")
+        sample_dates = df[purchased_col].head()
+        logger.info("\nSample Purchased Date values:")
         for idx, date in enumerate(sample_dates):
             logger.info(f"Record {idx}: {date}")
         
@@ -124,14 +119,14 @@ def clean_data(df, start_date, end_date, logger):
             return df_after_affiliate
         
         # Filter for date range
-        date_filter = (df_after_affiliate['Purchased'] >= start_date) & (df_after_affiliate['Purchased'] <= end_date)
+        date_filter = (df_after_affiliate[purchased_col] >= start_date) & (df_after_affiliate[purchased_col] <= end_date)
         df_after_date = df_after_affiliate[date_filter]
         
         # Log all unique dates in the dataset
-        unique_dates = sorted(df_after_affiliate['Purchased'].dt.date.unique())
+        unique_dates = sorted(df_after_affiliate[purchased_col].dt.date.unique())
         logger.info("\nAll unique dates in dataset:")
         for date in unique_dates:
-            count = len(df_after_affiliate[df_after_affiliate['Purchased'].dt.date == date])
+            count = len(df_after_affiliate[df_after_affiliate[purchased_col].dt.date == date])
             logger.info(f"Date {date}: {count} records")
         
         logger.info(f"\nLooking for records between {start_date.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')}")
@@ -168,7 +163,7 @@ def clean_data(df, start_date, end_date, logger):
         for idx, sales in enumerate(sample_sales):
             logger.info(f"Record {idx}: {sales}")
         
-        return df_after_date
+        return df_after_date, purchased_col
         
     except Exception as e:
         logger.error(f"Error cleaning data: {str(e)}")
@@ -258,7 +253,7 @@ def process_laseraway_report(uploaded_file, start_date, end_date, logger):
                 raise Exception("Failed to read CSV file with any of the attempted encodings")
         
         # Clean and filter the data
-        filtered_df = clean_data(df, start_date, end_date, logger)
+        filtered_df, purchased_col = clean_data(df, start_date, end_date, logger)
         
         if len(filtered_df) == 0:
             logger.info("No qualifying sales found to process.")
@@ -271,9 +266,9 @@ def process_laseraway_report(uploaded_file, start_date, end_date, logger):
         
         # Process each record
         for _, row in filtered_df.iterrows():
-            transaction_id = f"LASERAWAY_{row['Purchased'].strftime('%Y%m%d')}_{uuid.uuid4().hex[:8]}"
+            transaction_id = f"LASERAWAY_{row[purchased_col].strftime('%Y%m%d')}_{uuid.uuid4().hex[:8]}"
             net_sales = row['Net Sales']
-            purchase_date = row['Purchased']
+            purchase_date = row[purchased_col]
             
             total_pixels += 1
             total_revenue += net_sales
