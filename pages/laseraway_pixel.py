@@ -86,6 +86,12 @@ def clean_data(df, start_date, end_date, logger):
             logger.info(f"Found 'Purchased Date' column - using it directly")
         else:
             logger.warning("'Purchased Date' not found, trying other options...")
+            # Try to find any column that contains 'Purchased'
+            for col in df.columns:
+                if 'Purchased' in col:
+                    purchased_col = col
+                    logger.info(f"Found column containing 'Purchased': {col}")
+                    break
         
         # Only look for 'Purchased Date' - no fallbacks
         if purchased_col is None:
@@ -101,8 +107,14 @@ def clean_data(df, start_date, end_date, logger):
             raise ValueError(f"Column '{purchased_col}' not found in dataframe. Available columns: {list(df.columns)}")
         
         # Convert the found column to datetime if it's not already and remove any null values
-        df[purchased_col] = pd.to_datetime(df[purchased_col], errors='coerce')
-        df = df.dropna(subset=[purchased_col])
+        logger.info(f"About to convert column '{purchased_col}' to datetime")
+        try:
+            df[purchased_col] = pd.to_datetime(df[purchased_col], errors='coerce')
+            df = df.dropna(subset=[purchased_col])
+            logger.info(f"Successfully converted column '{purchased_col}' to datetime")
+        except Exception as e:
+            logger.error(f"Error converting column '{purchased_col}' to datetime: {str(e)}")
+            raise
         
         # Log some sample dates for debugging
         logger.info(f"Attempting to access column: {purchased_col}")
