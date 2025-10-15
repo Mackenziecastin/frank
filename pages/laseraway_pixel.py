@@ -74,6 +74,10 @@ def clean_data(df, start_date, end_date, logger):
         if len(df.columns) > 3:
             logger.info(f"Column D (index 3): {df.columns[3]}")
         
+        # Check for any column containing 'Purchased'
+        purchased_columns = [col for col in df.columns if 'Purchased' in col]
+        logger.info(f"Columns containing 'Purchased': {purchased_columns}")
+        
         # Try to find the purchased date column with different possible names
         purchased_col = None
         possible_purchased_names = ['Purchased Date', 'Purchase Date', 'Purchase_Date', 'Date', 'date']
@@ -92,6 +96,9 @@ def clean_data(df, start_date, end_date, logger):
                     purchased_col = col
                     logger.info(f"Found column containing 'Purchased': {col}")
                     break
+        
+        logger.info(f"FINAL purchased_col value: {purchased_col}")
+        logger.info(f"purchased_col is None: {purchased_col is None}")
         
         # Only look for 'Purchased Date' - no fallbacks
         if purchased_col is None:
