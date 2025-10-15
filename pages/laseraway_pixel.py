@@ -70,34 +70,28 @@ def clean_data(df, start_date, end_date, logger):
         # Log all column names for debugging
         logger.info(f"Available columns: {list(df.columns)}")
         
+        # Check if 'Purchased Date' exists in column D (index 3)
+        if len(df.columns) > 3:
+            logger.info(f"Column D (index 3): {df.columns[3]}")
+        
         # Try to find the purchased date column with different possible names
         purchased_col = None
         possible_purchased_names = ['Purchased Date', 'Purchase Date', 'Purchase_Date', 'Date', 'date']
         
         logger.info(f"Looking for purchased date column in: {possible_purchased_names}")
         
-        # First try exact matches
-        for col_name in possible_purchased_names:
-            if col_name in df.columns:
-                purchased_col = col_name
-                logger.info(f"Found purchased date column (exact match): {col_name}")
-                break
+        # Force use 'Purchased Date' if it exists
+        if 'Purchased Date' in df.columns:
+            purchased_col = 'Purchased Date'
+            logger.info(f"Found 'Purchased Date' column - using it directly")
+        else:
+            logger.warning("'Purchased Date' not found, trying other options...")
         
-        # If no exact match, try case-insensitive and whitespace-tolerant matching
+        # Only look for 'Purchased Date' - no fallbacks
         if purchased_col is None:
-            logger.info("No exact match found, trying case-insensitive matching...")
-            for col_name in possible_purchased_names:
-                for df_col in df.columns:
-                    if col_name.lower().strip() == df_col.lower().strip():
-                        purchased_col = df_col
-                        logger.info(f"Found purchased date column (case-insensitive match): {df_col}")
-                        break
-                if purchased_col:
-                    break
-        
-        if purchased_col is None:
-            logger.error(f"Could not find purchased date column. Available columns: {list(df.columns)}")
-            raise ValueError(f"Could not find purchased date column. Available columns: {list(df.columns)}")
+            logger.error("'Purchased Date' column is required but not found!")
+            logger.error(f"Available columns: {list(df.columns)}")
+            raise ValueError("'Purchased Date' column is required but not found!")
         
         logger.info(f"Using purchased date column: {purchased_col}")
         
