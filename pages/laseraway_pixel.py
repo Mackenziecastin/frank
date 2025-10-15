@@ -336,6 +336,8 @@ def show_laseraway_pixel():
     """Display the LaserAway Revshare Pixel Firing interface"""
     st.title("LaserAway Revshare Pixel Firing")
     
+    st.success("🔄 **UPDATED VERSION** - Now using 'Purchased Date' column")
+    
     st.write("""
     This tool processes LaserAway reports and fires pixels for qualifying sales based on revenue share calculations.
     Upload your LaserAway report (CSV or XLSX format) and specify the date range to begin.
