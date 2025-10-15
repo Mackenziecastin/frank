@@ -72,7 +72,7 @@ def clean_data(df, start_date, end_date, logger):
         
         # Try to find the purchased date column with different possible names
         purchased_col = None
-        possible_purchased_names = ['Purchased Date', 'Purchased', 'purchased', 'Purchase Date', 'Purchase_Date', 'Date', 'date']
+        possible_purchased_names = ['Purchased Date', 'Purchase Date', 'Purchase_Date', 'Date', 'date']
         
         logger.info(f"Looking for purchased date column in: {possible_purchased_names}")
         
