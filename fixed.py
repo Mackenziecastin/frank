@@ -362,8 +362,10 @@ def show_brinks_optimization():
                         
                         import traceback
                         st.code(traceback.format_exc())
-                if sales_file is None or conversion_file is None:
+                else:
                     st.info("Please upload both Sales and Conversion files to generate the report")
+    
+    except Exception as e:
         st.error(f"Error loading Brinks Optimization Report interface: {str(e)}")
         st.error("Please try refreshing the page. If the error persists, contact support.")
         import traceback

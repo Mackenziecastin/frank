@@ -59,9 +59,29 @@ def show_main_page():
                 st.error("Failed to process Advanced Action file. Please check if it contains a 'Landing Page URL' column.")
                 st.stop()
             
+            # Check for treatments column and get unique treatments
+            st.write("Debug - Checking for treatments column...")
+            st.write(f"Debug - Available columns in affiliate data: {list(affiliate_df_processed.columns)}")
+            
+            unique_treatments = get_unique_treatments(affiliate_df_processed)
+            if unique_treatments:
+                st.success(f"✅ Found treatments column with {len(unique_treatments)} unique treatments: {', '.join(unique_treatments)}")
+                st.write(f"Debug - Treatment list: {unique_treatments}")
+            else:
+                st.warning("⚠️ No 'treatments' column found in affiliate data. Will process all data together.")
+                unique_treatments = []  # Empty list means no treatment sheets will be created
+            
             # Show preview of processed data
             st.subheader("Preview of Processed Affiliate Data")
-            st.dataframe(affiliate_df_processed[['Click URL', 'PID', 'SUBID', 'partnerID']].head())
+            preview_cols = ['Click URL', 'PID', 'SUBID', 'partnerID']
+            # Check for treatment column (case insensitive)
+            treatment_col = None
+            for col in affiliate_df_processed.columns:
+                if col.lower() in ['treatment', 'treatments']:
+                    treatment_col = col
+                    preview_cols.append(col)
+                    break
+            st.dataframe(affiliate_df_processed[preview_cols].head())
             
             st.subheader("Preview of Processed Advanced Action Data")
             st.dataframe(advanced_df_processed[['Landing Page URL', 'PID', 'SUBID', 'partnerID']].head())
@@ -184,18 +204,56 @@ def show_main_page():
                         st.warning(f"Note: Affiliate data contains {extra_days} additional day(s) beyond {full_end_date.strftime('%Y-%m-%d')}. These dates have been excluded for consistency with Advanced Action data.")
                     
                 # Create pivot tables and reports
-                # Full report
-                affiliate_pivot_full = create_affiliate_pivot(affiliate_df_full)
+                # IMPORTANT: Leads & Bookings use Created Date, Sales & Revenue use Purchased Date
+                
+                # For Leads & Bookings: Filter by Created Date
+                st.write("### Debug - Filtering for Leads & Bookings (Created Date)")
+                affiliate_df_full_leads_bookings = affiliate_df_processed[
+                    (affiliate_df_processed['Created Date'].dt.date >= full_start_date.date()) &
+                    (affiliate_df_processed['Created Date'].dt.date <= full_end_date.date())
+                ].copy()
+                st.write(f"Records with Created Date in range: {len(affiliate_df_full_leads_bookings)}")
+                st.write(f"Total Booked Count (Created Date): {affiliate_df_full_leads_bookings['Booked Count'].sum()}")
+                
+                # For Sales & Revenue: Use the already filtered data (by Purchased Date if available)
+                st.write("### Debug - Data for Sales & Revenue")
+                st.write(f"Records in affiliate_df_full: {len(affiliate_df_full)}")
+                st.write(f"Total Transaction Count: {affiliate_df_full['Transaction Count'].sum()}")
+                st.write(f"Total Net Sales Amount: ${affiliate_df_full['Net Sales Amount'].sum():.2f}")
+                
+                # Create separate pivots for each metric
+                # Leads & Bookings pivot (from Created Date data)
+                affiliate_leads_bookings_pivot_full = create_affiliate_bookings_pivot(affiliate_df_full_leads_bookings)
+                
+                # Sales & Revenue pivot (from Purchased Date data)
+                affiliate_sales_pivot_full = create_affiliate_pivot(affiliate_df_full)
+                
+                # Advanced pivot for Spend
                 advanced_pivot_full = create_advanced_pivot(advanced_df_full)
+                
+                # Create optimization report using both pivots
                 optimization_report_full = create_optimization_report(
-                    affiliate_pivot_full, advanced_pivot_full, partner_list_df
+                    affiliate_sales_pivot_full, advanced_pivot_full, partner_list_df, affiliate_leads_bookings_pivot_full
                 )
                 
-                # Matured report
-                affiliate_pivot_matured = create_affiliate_pivot(affiliate_df_matured)
+                # Matured report - same logic as full report
+                st.write("### Debug - Matured Report Filtering")
+                
+                # For Leads & Bookings: Filter by Created Date
+                affiliate_df_matured_leads_bookings = affiliate_df_processed[
+                    (affiliate_df_processed['Created Date'].dt.date >= matured_start_date.date()) &
+                    (affiliate_df_processed['Created Date'].dt.date <= matured_end_date.date())
+                ].copy()
+                st.write(f"Matured - Records with Created Date in range: {len(affiliate_df_matured_leads_bookings)}")
+                st.write(f"Matured - Total Booked Count (Created Date): {affiliate_df_matured_leads_bookings['Booked Count'].sum()}")
+                
+                # Create separate pivots
+                affiliate_leads_bookings_pivot_matured = create_affiliate_bookings_pivot(affiliate_df_matured_leads_bookings)
+                affiliate_sales_pivot_matured = create_affiliate_pivot(affiliate_df_matured)
                 advanced_pivot_matured = create_advanced_pivot(advanced_df_matured)
+                
                 optimization_report_matured = create_optimization_report(
-                    affiliate_pivot_matured, advanced_pivot_matured, partner_list_df
+                    affiliate_sales_pivot_matured, advanced_pivot_matured, partner_list_df, affiliate_leads_bookings_pivot_matured
                 )
                 
                 # Show preview of both reports
@@ -205,12 +263,13 @@ def show_main_page():
                 st.subheader("Preview of Matured Optimization Report (Excluding Last 7 Days)")
                 st.dataframe(optimization_report_matured)
                 
-                # Create download buttons for both reports
+                # Create download buttons
                 col1, col2 = st.columns(2)
                 
                 with col1:
-                    excel_data = to_excel_download(
-                        affiliate_df_full, advanced_df_full, optimization_report_full
+                    excel_data = to_excel_download_with_treatments(
+                        affiliate_df_full, advanced_df_full, optimization_report_full, unique_treatments, "Full",
+                        df_affiliate_created_date=affiliate_df_full_leads_bookings, partner_list=partner_list_df
                     )
                     st.download_button(
                         label="Download Full Report",
@@ -220,8 +279,9 @@ def show_main_page():
                     )
                 
                 with col2:
-                    excel_data_matured = to_excel_download(
-                        affiliate_df_matured, advanced_df_matured, optimization_report_matured
+                    excel_data_matured = to_excel_download_with_treatments(
+                        affiliate_df_matured, advanced_df_matured, optimization_report_matured, unique_treatments, "Matured",
+                        df_affiliate_created_date=affiliate_df_matured_leads_bookings, partner_list=partner_list_df
                     )
                     st.download_button(
                         label="Download Matured Report",
@@ -240,12 +300,19 @@ def show_main_page():
                 st.write("Affiliate Leads columns:", ", ".join(affiliate_df_processed.columns))
                 st.write("Advanced Action columns:", ", ".join(advanced_df_processed.columns))
                 
-                # Show only the full report if date columns are missing
+                # Show only the full report if date columns are missing (same as before)
+                affiliate_pivot_full = create_affiliate_pivot(affiliate_df_processed)
+                advanced_pivot_full = create_advanced_pivot(advanced_df_processed)
+                optimization_report_full = create_optimization_report(
+                    affiliate_pivot_full, advanced_pivot_full, partner_list_df, None
+                )
+                
                 st.subheader("Preview of Full Optimization Report (without date filtering)")
                 st.dataframe(optimization_report_full)
                 
-                excel_data = to_excel_download(
-                    affiliate_df_full, advanced_df_full, optimization_report_full
+                excel_data = to_excel_download_with_treatments(
+                    affiliate_df_processed, advanced_df_processed, optimization_report_full, unique_treatments, "Full",
+                    df_affiliate_created_date=affiliate_df_processed, partner_list=partner_list_df
                 )
                 st.download_button(
                     label="Download Full Report",
@@ -296,6 +363,34 @@ def extract_pid_subid(after_3d_value):
     except:
         return "", ""
 
+def get_unique_treatments(df):
+    """Get unique treatments from the treatments/Treatment column if it exists."""
+    # Check for various column name variations
+    treatment_col = None
+    for col in df.columns:
+        if col.lower() in ['treatment', 'treatments']:
+            treatment_col = col
+            break
+    
+    if treatment_col:
+        treatments = df[treatment_col].dropna().unique()
+        treatments = [str(t).strip() for t in treatments if str(t).strip() != '' and str(t).lower() != 'nan']
+        return sorted(treatments)
+    return []
+
+def filter_data_by_treatment(df, treatment):
+    """Filter dataframe by treatment. If treatment is 'All Treatments', return all data."""
+    # Check for various column name variations
+    treatment_col = None
+    for col in df.columns:
+        if col.lower() in ['treatment', 'treatments']:
+            treatment_col = col
+            break
+    
+    if treatment == 'All Treatments' or treatment_col is None:
+        return df
+    return df[df[treatment_col] == treatment]
+
 def process_dataframe(df, url_column):
     """Process dataframe to add PID, SUBID, and partnerID columns."""
     # Make a copy to avoid modifying the original
@@ -331,12 +426,7 @@ def process_dataframe(df, url_column):
         st.error(f"Could not find {expected_type} column. Available columns are: {available_columns}")
         return None
     
-    # Filter out rows where URL contains "coolsculpting"
-    coolsculpting_count = df[df[actual_column].str.contains('coolsculpting', case=False, na=False)].shape[0]
-    if coolsculpting_count > 0:
-        st.info(f"Filtered out {coolsculpting_count} rows containing 'coolsculpting' in the URL.")
-    
-    df = df[~df[actual_column].str.contains('coolsculpting', case=False, na=False)]
+    # Note: Removed coolsculpting filtering - now using treatments column instead
     
     # Create new columns
     df['After_3D'] = df[actual_column].apply(extract_values_after_3d)
@@ -490,6 +580,71 @@ def create_affiliate_pivot(df):
     
     return pivot
 
+def create_affiliate_bookings_pivot(df):
+    """Create leads and bookings pivot based on Created Date window.
+    
+    Sums 'Unique Leads' and 'Booked Count' by 'partnerID'. This ignores Purchased Date entirely
+    and is intended to provide Leads and Bookings from Created Date filtered data.
+    """
+    if df is None or len(df) == 0:
+        return pd.DataFrame({
+            'partnerID': [],
+            'Leads': [],
+            'Bookings': []
+        })
+    
+    # Ensure Booked Count column exists
+    if 'Booked Count' not in df.columns:
+        df = df.copy()
+        df['Booked Count'] = 0
+    
+    # Ensure Unique Leads column exists (check various names)
+    leads_col = None
+    for col in ['Unique Leads', 'Leads', 'Lead Count', 'Total Leads', 'Unique Lead Count']:
+        if col in df.columns:
+            leads_col = col
+            break
+    
+    if leads_col is None:
+        st.warning("No leads column found in Created Date data. Creating Unique Leads with 0s.")
+        df = df.copy()
+        df['Unique Leads'] = 0
+        leads_col = 'Unique Leads'
+    elif leads_col != 'Unique Leads':
+        df = df.copy()
+        df['Unique Leads'] = df[leads_col]
+        leads_col = 'Unique Leads'
+    
+    # Clean numeric columns
+    bookings_series = df['Booked Count'].astype(str)
+    bookings_series = bookings_series.str.replace('$', '', regex=False)
+    bookings_series = bookings_series.str.replace(',', '', regex=False)
+    bookings_series = bookings_series.str.replace('"', '', regex=False)
+    df['Booked Count'] = pd.to_numeric(bookings_series, errors='coerce').fillna(0)
+    
+    leads_series = df['Unique Leads'].astype(str)
+    leads_series = leads_series.str.replace('$', '', regex=False)
+    leads_series = leads_series.str.replace(',', '', regex=False)
+    leads_series = leads_series.str.replace('"', '', regex=False)
+    df['Unique Leads'] = pd.to_numeric(leads_series, errors='coerce').fillna(0)
+    
+    # Group by partnerID and sum both metrics
+    pivot = df.groupby('partnerID').agg({
+        'Unique Leads': 'sum',
+        'Booked Count': 'sum'
+    }).reset_index()
+    
+    pivot = pivot.rename(columns={
+        'Unique Leads': 'Leads',
+        'Booked Count': 'Bookings'
+    })
+    
+    st.write(f"Debug - Leads & Bookings pivot created: {len(pivot)} partners")
+    st.write(f"Debug - Total Leads from Created Date: {pivot['Leads'].sum()}")
+    st.write(f"Debug - Total Bookings from Created Date: {pivot['Bookings'].sum()}")
+    
+    return pivot
+
 def create_advanced_pivot(df):
     """Create pivot table for Advanced Action data.
     
@@ -519,7 +674,7 @@ def create_advanced_pivot(df):
     
     return pivot
 
-def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=None):
+def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=None, bookings_pivot=None):
     """Create the final optimization report by combining pivot tables.
     
     As per instructions, columns should be:
@@ -588,6 +743,33 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
         on='partnerID',
         how='outer'
     ).fillna(0)
+
+    # If a bookings pivot based on Created Date is provided, merge and override Leads and Bookings
+    if bookings_pivot is not None and not bookings_pivot.empty:
+        st.write("Debug - Using Created Date-based Leads & Bookings pivot")
+        st.write(f"Debug - Columns in bookings_pivot: {list(bookings_pivot.columns)}")
+        
+        # Merge the Created Date based Leads and Bookings
+        merged_df = pd.merge(
+            merged_df,
+            bookings_pivot.rename(columns={'Leads': 'Leads_CreatedDate', 'Bookings': 'Bookings_CreatedDate'}),
+            on='partnerID',
+            how='left'
+        )
+        
+        # Convert to numeric
+        merged_df['Leads_CreatedDate'] = pd.to_numeric(merged_df['Leads_CreatedDate'], errors='coerce').fillna(0)
+        merged_df['Bookings_CreatedDate'] = pd.to_numeric(merged_df['Bookings_CreatedDate'], errors='coerce').fillna(0)
+        
+        # Override both Leads and Bookings with Created Date-based values
+        merged_df['Leads'] = merged_df['Leads_CreatedDate']
+        merged_df['Bookings'] = merged_df['Bookings_CreatedDate']
+        
+        # Drop temporary columns
+        merged_df = merged_df.drop(columns=['Leads_CreatedDate', 'Bookings_CreatedDate'])
+        
+        st.write(f"Debug - After override - Total Leads: {merged_df['Leads'].sum()}")
+        st.write(f"Debug - After override - Total Bookings: {merged_df['Bookings'].sum()}")
     
     # Debug merged dataframe
     st.write("Debug - Merged dataframe columns:", list(merged_df.columns))
@@ -609,6 +791,25 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
     
     # Show total revenue after conversion
     st.write(f"Debug - Total Revenue after numeric conversion: ${merged_df['Revenue'].sum():.2f}")
+    
+    # Validate that Bookings (Created Date-based) are not lower than Sales
+    try:
+        total_bookings = pd.to_numeric(merged_df['Bookings'], errors='coerce').fillna(0).sum()
+        total_sales = pd.to_numeric(merged_df['Sales'], errors='coerce').fillna(0).sum()
+        if total_bookings < total_sales:
+            st.warning(
+                f"Total Bookings ({int(total_bookings)}) are less than Total Sales ({int(total_sales)}). "
+                "Bookings are computed from Created Date prior to any Purchased Date filtering; please review input date windows."
+            )
+        # Surface sample partners where Bookings < Sales
+        partner_violations = merged_df[pd.to_numeric(merged_df['Bookings'], errors='coerce').fillna(0) < 
+                                       pd.to_numeric(merged_df['Sales'], errors='coerce').fillna(0)]
+        if not partner_violations.empty:
+            st.info(f"Partners with Bookings < Sales: {len(partner_violations)} (showing up to 10)")
+            st.dataframe(partner_violations[['partnerID', 'Bookings', 'Sales']].head(10))
+    except Exception as _e:
+        # Non-fatal; continue without blocking report generation
+        pass
     
     # Remove rows with all zeros
     merged_df = merged_df[~((merged_df['Leads'] == 0) & 
@@ -632,23 +833,32 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
     if partner_list is not None:
         try:
             # Extract affiliate ID from partnerID (part before underscore)
-            merged_df['Affiliate ID'] = merged_df['partnerID'].apply(
+            merged_df['Temp_Affiliate_ID'] = merged_df['partnerID'].apply(
                 lambda x: x.split('_')[0] if x != "Unattributed" and '_' in x else x)
             
+            # Check which ID column exists in partner list
+            id_col = None
+            if 'Affiliate ID' in partner_list.columns:
+                id_col = 'Affiliate ID'
+            elif 'Partner ID' in partner_list.columns:
+                id_col = 'Partner ID'
+            
             # Ensure required columns exist in partner list
-            required_cols = ['Affiliate ID', 'Affiliate Name', 'Account Manager Name']
-            if not all(col in partner_list.columns for col in required_cols):
-                st.warning("Partner list file missing required columns. Required columns are: Affiliate ID, Affiliate Name, Account Manager Name")
-            else:
-                # Convert Affiliate ID to string in both dataframes
-                partner_list['Affiliate ID'] = partner_list['Affiliate ID'].astype(str)
-                merged_df['Affiliate ID'] = merged_df['Affiliate ID'].astype(str)
+            if id_col and 'Affiliate Name' in partner_list.columns and 'Account Manager Name' in partner_list.columns:
+                # Convert IDs to string in both dataframes
+                partner_list[id_col] = partner_list[id_col].astype(str)
+                merged_df['Temp_Affiliate_ID'] = merged_df['Temp_Affiliate_ID'].astype(str)
+                
+                st.write(f"Debug - Using '{id_col}' from partner list for VLOOKUP")
+                st.write(f"Debug - Sample IDs from partner list: {partner_list[id_col].head().tolist()}")
+                st.write(f"Debug - Sample IDs from report: {merged_df['Temp_Affiliate_ID'].head().tolist()}")
                 
                 # Merge with partner list to get affiliate name and account manager
                 merged_df = pd.merge(
                     merged_df,
-                    partner_list[['Affiliate ID', 'Affiliate Name', 'Account Manager Name']],
-                    on='Affiliate ID',
+                    partner_list[[id_col, 'Affiliate Name', 'Account Manager Name']],
+                    left_on='Temp_Affiliate_ID',
+                    right_on=id_col,
                     how='left'
                 )
                 
@@ -659,14 +869,17 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
                 # Reorder columns to put VLOOKUP data first
                 cols = ['partnerID', 'Affiliate Name', 'Account Manager Name'] + \
                     [col for col in merged_df.columns if col not in 
-                        ['partnerID', 'Affiliate Name', 'Account Manager Name', 'Affiliate ID']]
+                        ['partnerID', 'Affiliate Name', 'Account Manager Name', 'Temp_Affiliate_ID', id_col]]
                 merged_df = merged_df[cols]
                 
-                # Drop the temporary Affiliate ID column
-                merged_df = merged_df.drop('Affiliate ID', axis=1)
+                st.success(f"Successfully added Affiliate Name and Account Manager Name via VLOOKUP using {id_col}")
+            else:
+                st.warning(f"Partner list file missing required columns. Found: {list(partner_list.columns)}")
                 
         except Exception as e:
             st.warning(f"Error in VLOOKUP processing: {str(e)}. Continuing without VLOOKUP data.")
+            import traceback
+            st.code(traceback.format_exc())
     
     return merged_df
 
@@ -700,6 +913,96 @@ def to_excel_download(df_affiliate, df_advanced, df_optimization):
                 worksheet.set_column(col_idx, col_idx, 15, percent_format)
             else:
                 worksheet.set_column(col_idx, col_idx, 15)  # Default width
+    
+    return output.getvalue()
+
+def to_excel_download_with_treatments(df_affiliate, df_advanced, df_optimization, unique_treatments, report_type, 
+                                      df_affiliate_created_date=None, partner_list=None):
+    """Convert dataframes to Excel file for download with additional treatment sheets.
+    
+    Args:
+        df_affiliate: Affiliate data filtered by Purchased Date (for Sales/Revenue)
+        df_advanced: Advanced Action data
+        df_optimization: Main optimization report (all treatments)
+        unique_treatments: List of unique treatment names
+        report_type: "Full" or "Matured"
+        df_affiliate_created_date: Affiliate data filtered by Created Date (for Leads/Bookings)
+        partner_list: Partner list for VLOOKUP
+    """
+    output = BytesIO()
+    
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df_affiliate.to_excel(writer, sheet_name='Cleaned Affiliate Data', index=False)
+        df_advanced.to_excel(writer, sheet_name='Cleaned Advanced Action Data', index=False)
+        df_optimization.to_excel(writer, sheet_name='Optimization Report', index=False)
+        
+        # If there are treatments (and not just 'All Treatments'), create additional sheets
+        if unique_treatments and 'All Treatments' not in unique_treatments and len(unique_treatments) > 0:
+            for treatment in unique_treatments:
+                st.write(f"Creating sheet for treatment: {treatment}")
+                
+                # Filter data by treatment for BOTH date ranges
+                # For Leads & Bookings: use Created Date filtered data
+                if df_affiliate_created_date is not None:
+                    treatment_affiliate_created = filter_data_by_treatment(df_affiliate_created_date, treatment)
+                else:
+                    treatment_affiliate_created = filter_data_by_treatment(df_affiliate, treatment)
+                
+                # For Sales & Revenue: use Purchased Date filtered data
+                treatment_affiliate_purchased = filter_data_by_treatment(df_affiliate, treatment)
+                
+                if not treatment_affiliate_created.empty or not treatment_affiliate_purchased.empty:
+                    # Create pivots for this treatment
+                    # Leads & Bookings from Created Date
+                    treatment_leads_bookings_pivot = create_affiliate_bookings_pivot(treatment_affiliate_created)
+                    
+                    # Sales & Revenue from Purchased Date
+                    treatment_sales_pivot = create_affiliate_pivot(treatment_affiliate_purchased)
+                    
+                    # Advanced pivot (not filtered by treatment, includes all)
+                    treatment_advanced_pivot = create_advanced_pivot(df_advanced)
+                    
+                    # Create optimization report with proper date filtering
+                    treatment_optimization = create_optimization_report(
+                        treatment_sales_pivot, 
+                        treatment_advanced_pivot, 
+                        partner_list, 
+                        treatment_leads_bookings_pivot
+                    )
+                    
+                    # Add treatment sheet
+                    sheet_name = f"{treatment}"[:31]  # Excel sheet name limit is 31 characters
+                    treatment_optimization.to_excel(writer, sheet_name=sheet_name, index=False)
+        
+        workbook = writer.book
+        money_format = workbook.add_format({'num_format': '$#,##0.00'})
+        integer_format = workbook.add_format({'num_format': '0'})
+        percent_format = workbook.add_format({'num_format': '0.0%'})
+        
+        # Apply formatting to all sheets with optimization data
+        for sheet_name in writer.sheets:
+            # Format the main Optimization Report and all treatment sheets
+            if sheet_name == "Optimization Report" or (sheet_name not in ['Cleaned Affiliate Data', 'Cleaned Advanced Action Data']):
+                worksheet = writer.sheets[sheet_name]
+                
+                # Get the appropriate dataframe for column detection
+                if sheet_name == "Optimization Report":
+                    df = df_optimization
+                else:
+                    # For treatment sheets, we need to get the dataframe
+                    # Use the optimization report structure for column detection
+                    df = df_optimization  # Use same columns as main report
+                
+                # Apply formatting
+                for col_idx, col_name in enumerate(df.columns):
+                    if col_name in ['Spend', 'Revenue', 'ROAS', 'eCPL at $1.50']:
+                        worksheet.set_column(col_idx, col_idx, 15, money_format)
+                    elif col_name in ['Leads', 'Bookings', 'Sales']:
+                        worksheet.set_column(col_idx, col_idx, 15, integer_format)
+                    elif col_name in ['Lead to Sale']:
+                        worksheet.set_column(col_idx, col_idx, 15, percent_format)
+                    else:
+                        worksheet.set_column(col_idx, col_idx, 15)
     
     return output.getvalue()
 
@@ -793,7 +1096,7 @@ def load_module_reliably(module_path):
 def main():
     # Create the navigation
     st.sidebar.title("Navigation")
-    page = st.sidebar.radio("Go to", ["Frank (LaserAway)", "Bob (ADT)", "ADT Pixel Firing", "Brinks Optimization Report"])
+    page = st.sidebar.radio("Go to", ["Frank (LaserAway)", "Bob (ADT)", "ADT Pixel Firing", "Brinks Optimization Report", "Vivint Optimization Report"])
     
     if page == "Frank (LaserAway)":
         show_main_page()
@@ -820,7 +1123,15 @@ def main():
             st.warning("- Indentation errors") 
             st.warning("- Using undefined variables")
             st.warning("- Incorrect function parameters")
+    elif page == "Vivint Optimization Report":
+        try:
+            vivint_module = load_module_reliably("vivint_optimization")
+            vivint_module.show_vivint_optimization()
+        except Exception as e:
+            st.error("Failed to load the Vivint Optimization Report page.")
+            st.error("If you've made recent changes to the code, there might be a syntax error.")
+            st.error(f"Error details: {str(e)}")
 
 # This is outside the main function
 if __name__ == "__main__":
-    main() 
+    main()
