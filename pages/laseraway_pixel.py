@@ -160,10 +160,8 @@ def clean_data(df, start_date, end_date, logger):
             logger.info("No records found with affiliate_directagent_subid1 = 42865")
             return df_after_affiliate
         
-        # Filter for date range (convert date objects to datetime for comparison)
-        start_datetime = pd.to_datetime(start_date)
-        end_datetime = pd.to_datetime(end_date)
-        date_filter = (df_after_affiliate[purchased_col] >= start_datetime) & (df_after_affiliate[purchased_col] <= end_datetime)
+        # Filter for date range (dates are already datetime objects)
+        date_filter = (df_after_affiliate[purchased_col] >= start_date) & (df_after_affiliate[purchased_col] <= end_date)
         df_after_date = df_after_affiliate[date_filter]
         
         # Log all unique dates in the dataset
@@ -296,8 +294,12 @@ def process_laseraway_report(uploaded_file, start_date, end_date, logger):
             if df is None:
                 raise Exception("Failed to read CSV file with any of the attempted encodings")
         
+        # Convert dates to pandas datetime objects before passing to clean_data
+        start_date_dt = pd.to_datetime(start_date)
+        end_date_dt = pd.to_datetime(end_date)
+        
         # Clean and filter the data
-        filtered_df, purchased_col = clean_data(df, start_date, end_date, logger)
+        filtered_df, purchased_col = clean_data(df, start_date_dt, end_date_dt, logger)
         
         if len(filtered_df) == 0:
             logger.info("No qualifying sales found to process.")
@@ -336,10 +338,10 @@ def process_laseraway_report(uploaded_file, start_date, end_date, logger):
 
 def show_laseraway_pixel():
     """Display the LaserAway Revshare Pixel Firing interface"""
-    st.title("LaserAway Revshare Pixel Firing - v2.1 DATETIME FIX")
+    st.title("LaserAway Revshare Pixel Firing - v2.2 FINAL FIX")
     
-    st.success("🔄 **UPDATED VERSION - Oct 15, 2024 v2.1** - Fixed datetime comparison issue")
-    st.warning("⚠️ If you still see v2.0, please clear your browser cache and refresh!")
+    st.success("🔄 **UPDATED VERSION - Oct 15, 2024 v2.2** - Datetime fix applied before clean_data")
+    st.warning("⚠️ If you still see v2.0 or v2.1, the deployment may be stuck. Contact admin to reboot.")
     
     st.write("""
     This tool processes LaserAway reports and fires pixels for qualifying sales based on revenue share calculations.

@@ -224,25 +224,60 @@ def clean_data(df, file_path):
 
 # DNIS to pixel configuration mapping
 DNIS_PIXEL_CONFIG = {
+    # Top10US DNIS codes
     'WEB0021011': {
         'url': 'https://speedtrkzone.com/m.ashx',
-        'campaigns': {'DIFM': '91149', 'DIY': '91162'}
+        'campaigns': {'DIFM': '91149', 'DIY': '91162'},
+        'partner': 'Top10US'
     },
     '8669765334': {
         'url': 'https://trkfocus.com/m.ashx',
-        'campaigns': {'DIFM': '93166', 'DIY': '93168'}
+        'campaigns': {'DIFM': '93166', 'DIY': '93168'},
+        'partner': 'Top10US'
     },
     'WEB0021042': {
         'url': 'https://trkfocus.com/m.ashx',
-        'campaigns': {'DIFM': '95377', 'DIY': '95378'}
+        'campaigns': {'DIFM': '95377', 'DIY': '95378'},
+        'partner': 'Top10US'
     },
     'WEB0021044': {
         'url': 'https://trkfocus.com/m.ashx',
-        'campaigns': {'DIFM': '95379', 'DIY': '95380'}
+        'campaigns': {'DIFM': '95379', 'DIY': '95380'},
+        'partner': 'Top10US'
     },
     'WEB0021008': {
         'url': 'https://trkfocus.com/m.ashx',
-        'campaigns': {'DIFM': '95385', 'DIY': '95386'}
+        'campaigns': {'DIFM': '95385', 'DIY': '95386'},
+        'partner': 'Top10US'
+    },
+    # Front Story DNIS codes
+    '8662381072': {
+        'url': 'https://speedtrkzone.com/m.ashx',
+        'campaigns': {'DIFM': '96566', 'DIY': '96567'},
+        'partner': 'Front Story',
+        'pubid': '43148',
+        'org_id': '31729'
+    },
+    'WEB0043217': {
+        'url': 'https://speedtrkzone.com/m.ashx',
+        'campaigns': {'DIFM': '96566', 'DIY': '96567'},
+        'partner': 'Front Story',
+        'pubid': '43148',
+        'org_id': '31729'
+    },
+    '8662534738': {
+        'url': 'https://speedtrkzone.com/m.ashx',
+        'campaigns': {'DIFM': '96566', 'DIY': '96567'},
+        'partner': 'Front Story',
+        'pubid': '43148',
+        'org_id': '31729'
+    },
+    'WEB0043219': {
+        'url': 'https://speedtrkzone.com/m.ashx',
+        'campaigns': {'DIFM': '96566', 'DIY': '96567'},
+        'partner': 'Front Story',
+        'pubid': '43148',
+        'org_id': '31729'
     }
 }
 
@@ -258,6 +293,7 @@ def fire_pixel(transaction_id, install_method, sale_date, dnis_code):
             
         config = DNIS_PIXEL_CONFIG[dnis_code]
         pixel_url = config['url']
+        partner = config.get('partner', 'Unknown')
         
         # Set campaign ID based on install method
         install_type = 'DIFM' if 'DIFM' in str(install_method).upper() else 'DIY'
@@ -267,13 +303,14 @@ def fire_pixel(transaction_id, install_method, sale_date, dnis_code):
         pixel_datetime = sale_date.replace(hour=12, minute=0, second=0)
         iso_datetime = pixel_datetime.strftime('%Y-%m-%dT%H:%M:%S+00:00')
         
-        # Set up parameters
+        # Set up parameters with partner-specific values
+        # Use custom pubid and org_id if provided, otherwise use defaults (Top10US values)
         params = {
-            'o': '32022',
+            'o': config.get('org_id', '32022'),  # Default to Top10US org_id
             'e': '565',
             'f': 'pb',
             't': transaction_id,
-            'pubid': '42865',
+            'pubid': config.get('pubid', '42865'),  # Default to Top10US pubid
             'campid': campaign_id,
             'dt': iso_datetime
         }
@@ -282,11 +319,11 @@ def fire_pixel(transaction_id, install_method, sale_date, dnis_code):
         response = requests.get(pixel_url, params=params)
         response.raise_for_status()
         
-        logging.info(f"Fired {install_type} pixel for {dnis_code} successfully - Transaction ID: {transaction_id}")
+        logging.info(f"Fired {install_type} pixel for {partner} ({dnis_code}) successfully - Transaction ID: {transaction_id}")
         return True
         
     except Exception as e:
-        logging.error(f"Failed to fire {install_type} pixel for {dnis_code} - Transaction ID: {transaction_id} - Error: {str(e)}")
+        logging.error(f"Failed to fire {install_type} pixel for {partner} ({dnis_code}) - Transaction ID: {transaction_id} - Error: {str(e)}")
         return False
 
 
