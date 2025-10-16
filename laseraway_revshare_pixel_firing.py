@@ -146,8 +146,10 @@ def fire_pixel(transaction_id, net_sales_amount, purchase_date):
         
         # Format the purchase date to the required format: 2016-07-15T15:14:21+00:00
         # Set time to noon for consistency
+        logging.info(f"Original purchase_date: {purchase_date}, type: {type(purchase_date)}")
         pixel_datetime = purchase_date.replace(hour=12, minute=0, second=0)
         iso_datetime = pixel_datetime.strftime('%Y-%m-%dT%H:%M:%S+00:00')
+        logging.info(f"ISO datetime for pixel: {iso_datetime}")
         
         # Set up parameters
         params = {
@@ -163,8 +165,11 @@ def fire_pixel(transaction_id, net_sales_amount, purchase_date):
         
         # Make the request
         pixel_url = 'https://trkstar.com/m.ashx'
+        logging.info(f"Firing pixel with URL: {pixel_url}")
+        logging.info(f"Parameters: {params}")
         response = requests.get(pixel_url, params=params)
         response.raise_for_status()
+        logging.info(f"Full pixel URL: {response.url}")
         
         logging.info(f"Fired pixel successfully - Transaction ID: {transaction_id}, Revenue Amount: {revenue_amount_formatted}, Date: {iso_datetime}")
         return True
