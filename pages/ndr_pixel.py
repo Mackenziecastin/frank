@@ -242,9 +242,24 @@ def process_ndr_report(uploaded_file, start_date, end_date, logger):
         
         if file_extension == '.xlsx':
             logger.info("Attempting to read Excel file")
-            df = pd.read_excel(io.BytesIO(file_content))
-            successful_encoding = "excel"
-            logger.info("Successfully read Excel file")
+            # Try reading with header on row 12 first (NDR format)
+            try:
+                df = pd.read_excel(io.BytesIO(file_content), header=11)  # 0-indexed, so row 12 = index 11
+                # Verify we got valid columns
+                if 'Lead Source' in df.columns or 'Enrollment Datetime' in df.columns or 'Affiliate SubID 1' in df.columns:
+                    logger.info("Successfully read Excel file with header on row 12")
+                    successful_encoding = "excel (header row 12)"
+                else:
+                    # If not NDR format, try default header
+                    logger.info("Row 12 didn't have expected columns, trying default header row")
+                    df = pd.read_excel(io.BytesIO(file_content))
+                    successful_encoding = "excel"
+                    logger.info("Successfully read Excel file with default header")
+            except Exception as e:
+                logger.warning(f"Failed to read with header on row 12: {str(e)}, trying default")
+                df = pd.read_excel(io.BytesIO(file_content))
+                successful_encoding = "excel"
+                logger.info("Successfully read Excel file with default header")
         else:
             # Try to read the CSV file with different encodings
             encodings_to_try = ['utf-8', 'latin-1', 'iso-8859-1', 'cp1252']
@@ -328,9 +343,10 @@ def process_ndr_report(uploaded_file, start_date, end_date, logger):
 
 def show_ndr_pixel():
     """Display the NDR Revshare Pixel Firing interface"""
-    st.title("NDR Revshare Pixel Firing - v1.0")
+    st.title("NDR Revshare Pixel Firing - v1.1")
     
     st.success("🔄 **NDR (National Debt Relief) Pixel Firing** - 4% Revenue Share")
+    st.info("✅ **v1.1 Update**: Now automatically detects NDR report format with headers starting on row 12")
     
     st.write("""
     This tool processes NDR reports and fires pixels for qualifying enrollments based on revenue share calculations.

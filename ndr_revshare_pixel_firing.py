@@ -274,9 +274,24 @@ def process_ndr_report(file_path, start_date, end_date):
         
         if file_extension == '.xlsx':
             logging.info("Attempting to read Excel file")
-            df = pd.read_excel(file_path)
-            successful_encoding = "excel"
-            logging.info("Successfully read Excel file")
+            # Try reading with header on row 12 first (NDR format)
+            try:
+                df = pd.read_excel(file_path, header=11)  # 0-indexed, so row 12 = index 11
+                # Verify we got valid columns
+                if 'Lead Source' in df.columns or 'Enrollment Datetime' in df.columns or 'Affiliate SubID 1' in df.columns:
+                    logging.info("Successfully read Excel file with header on row 12")
+                    successful_encoding = "excel (header row 12)"
+                else:
+                    # If not NDR format, try default header
+                    logging.info("Row 12 didn't have expected columns, trying default header row")
+                    df = pd.read_excel(file_path)
+                    successful_encoding = "excel"
+                    logging.info("Successfully read Excel file with default header")
+            except Exception as e:
+                logging.warning(f"Failed to read with header on row 12: {str(e)}, trying default")
+                df = pd.read_excel(file_path)
+                successful_encoding = "excel"
+                logging.info("Successfully read Excel file with default header")
         else:
             # Try to read the CSV file with detected encoding
             encodings_to_try = []
