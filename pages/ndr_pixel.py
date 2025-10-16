@@ -355,6 +355,10 @@ def show_ndr_pixel():
     if uploaded_file is not None:
         st.success(f"✅ File uploaded: {uploaded_file.name}")
         
+        st.markdown("---")
+        st.subheader("📅 Select Date Range")
+        st.write("Choose the enrollment date range to filter which records should fire pixels:")
+        
         # Date range selector
         col1, col2 = st.columns(2)
         with col1:
