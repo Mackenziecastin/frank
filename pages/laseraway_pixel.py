@@ -216,6 +216,7 @@ def fire_pixel(transaction_id, net_sales_amount, purchase_date, logger):
     Fire the pixel for a given transaction ID, net sales amount, and purchase date
     """
     try:
+        logger.info("🚀 FIRE_PIXEL FUNCTION V2.2 - UPDATED OCT 16 2025 🚀")
         # Calculate revenue share amount (Net Sales / 1.75)
         revenue_amount = net_sales_amount / 1.75
         revenue_amount_formatted = f"{revenue_amount:.2f}"
@@ -259,7 +260,8 @@ def process_laseraway_report(uploaded_file, start_date, end_date, logger):
     Main function to process the LaserAway report and fire pixels
     """
     try:
-        logger.info("\n=== LaserAway Revshare Pixel Firing Process Started ===")
+        logger.info("\n🔥🔥🔥 LaserAway Revshare Pixel Firing V2.2 - UPDATED OCT 16 2025 🔥🔥🔥")
+        logger.info("=== LaserAway Revshare Pixel Firing Process Started ===")
         logger.info(f"Date range: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
         
         # Read the uploaded file based on file type
@@ -343,10 +345,10 @@ def process_laseraway_report(uploaded_file, start_date, end_date, logger):
 
 def show_laseraway_pixel():
     """Display the LaserAway Revshare Pixel Firing interface"""
-    st.title("LaserAway Revshare Pixel Firing - v2.2 FINAL FIX")
+    st.title("LaserAway Revshare Pixel Firing - v2.3 ENHANCED LOGGING")
     
-    st.success("🔄 **UPDATED VERSION - Oct 15, 2024 v2.2** - Datetime fix applied before clean_data")
-    st.warning("⚠️ If you still see v2.0 or v2.1, the deployment may be stuck. Contact admin to reboot.")
+    st.success("🔄 **UPDATED VERSION - Oct 16, 2025 v2.3** - Enhanced logging to debug dt parameter")
+    st.warning("⚠️ Look for 🔥🔥🔥 and 🚀 emojis in logs to confirm this version is running!")
     
     st.write("""
     This tool processes LaserAway reports and fires pixels for qualifying sales based on revenue share calculations.
