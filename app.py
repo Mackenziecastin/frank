@@ -18,6 +18,8 @@ import importlib
 from adt_pixel_firing import process_adt_report
 # Import the module - UPDATED Oct 16, 2025 - v2.3 - ENHANCED LOGGING FOR DT PARAMETER DEBUG
 from pages.laseraway_pixel import show_laseraway_pixel
+# Import the NDR pixel module - UPDATED Oct 16, 2025 - NEW NDR REVSHARE PIXEL FIRING
+from pages.ndr_pixel import show_ndr_pixel
 
 st.set_page_config(page_title="Partner Optimization Report Generator", layout="wide")
 
@@ -1098,7 +1100,7 @@ def load_module_reliably(module_path):
 def main():
     # Create the navigation
     st.sidebar.title("Navigation")
-    page = st.sidebar.radio("Go to", ["Frank (LaserAway)", "Bob (ADT)", "ADT Pixel Firing", "LaserAway Pixel Firing", "Brinks Optimization Report", "Vivint Optimization Report"])
+    page = st.sidebar.radio("Go to", ["Frank (LaserAway)", "Bob (ADT)", "ADT Pixel Firing", "LaserAway Pixel Firing", "NDR Pixel Firing", "Brinks Optimization Report", "Vivint Optimization Report"])
     
     if page == "Frank (LaserAway)":
         show_main_page()
@@ -1110,6 +1112,8 @@ def main():
         show_adt_pixel()
     elif page == "LaserAway Pixel Firing":
         show_laseraway_pixel()
+    elif page == "NDR Pixel Firing":
+        show_ndr_pixel()
     elif page == "Brinks Optimization Report":
         try:
             # Import Brinks module dynamically
