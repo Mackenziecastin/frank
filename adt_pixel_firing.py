@@ -395,7 +395,14 @@ def process_adt_report(file_path):
         
         # Process each record
         for _, row in filtered_df.iterrows():
-            transaction_id = f"ADT_{row['Sale_Date'].strftime('%Y%m%d')}_{uuid.uuid4().hex[:8]}"
+            # Use Primary_Phone_Customer_ANI as the transaction ID (unique to each sale)
+            phone_ani = str(row.get('Primary_Phone_Customer_ANI', '')).strip()
+            if phone_ani:
+                transaction_id = phone_ani
+            else:
+                # Fallback to generated ID if phone is not available
+                transaction_id = f"ADT_{row['Sale_Date'].strftime('%Y%m%d')}_{uuid.uuid4().hex[:8]}"
+            
             dnis_code = row['Lead_DNIS']
             is_difm = 'DIFM' in str(row['INSTALL_METHOD']).upper()
             install_type = 'DIFM' if is_difm else 'DIY'
