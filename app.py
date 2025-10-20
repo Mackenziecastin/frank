@@ -809,16 +809,18 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
     if has_transaction_count and has_booked_count and has_net_sales:
         st.success("All required columns found in affiliate data")
         renamed_affiliate = renamed_affiliate.rename(columns={
-            'Booked Count': 'Bookings',
+            'Booked Count': 'Bookings_Temp',  # Don't use this - will be overridden by bookings_pivot
             'Transaction Count': 'Sales',
             'Net Sales Amount': 'Revenue'
         })
+        # Drop the temporary Bookings column - we'll get it from bookings_pivot instead
+        if 'Bookings_Temp' in renamed_affiliate.columns:
+            renamed_affiliate = renamed_affiliate.drop(columns=['Bookings_Temp'])
     else:
         st.warning(f"Some expected columns not found in affiliate data. Found: Transaction Count={has_transaction_count}, Booked Count={has_booked_count}, Net Sales Amount={has_net_sales}")
         # Try to use available columns or create defaults
         column_mapping = {}
-        if has_booked_count:
-            column_mapping['Booked Count'] = 'Bookings'
+        # Don't map Booked Count here - it will come from bookings_pivot
         if has_transaction_count:
             column_mapping['Transaction Count'] = 'Sales'
         if has_net_sales:
@@ -827,17 +829,22 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
         # Apply the mapping if we have any
         if column_mapping:
             renamed_affiliate = renamed_affiliate.rename(columns=column_mapping)
+            # Drop Booked Count if it exists
+            if 'Booked Count' in renamed_affiliate.columns:
+                renamed_affiliate = renamed_affiliate.drop(columns=['Booked Count'])
         else:
             # Fallback to using column positions if names don't match
             st.warning("Using column positions since column names don't match expected values")
             column_mapping = {}
-            if len(renamed_affiliate.columns) >= 2:
-                column_mapping[renamed_affiliate.columns[1]] = 'Bookings'
+            # Skip position 1 (which would be Booked Count) - get it from bookings_pivot instead
             if len(renamed_affiliate.columns) >= 3:
                 column_mapping[renamed_affiliate.columns[2]] = 'Sales'
             if len(renamed_affiliate.columns) >= 4:
                 column_mapping[renamed_affiliate.columns[3]] = 'Revenue'
             renamed_affiliate = renamed_affiliate.rename(columns=column_mapping)
+            # Drop any leftover columns that might be Booked Count
+            cols_to_keep = ['partnerID', 'Sales', 'Revenue']
+            renamed_affiliate = renamed_affiliate[[col for col in renamed_affiliate.columns if col in cols_to_keep or col == 'partnerID']]
     
     # Display the renamed affiliate data for debugging
     st.write("Debug - Renamed affiliate columns:", list(renamed_affiliate.columns))
@@ -860,24 +867,26 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
         # Merge the Created Date based Leads and Bookings
         merged_df = pd.merge(
             merged_df,
-            bookings_pivot.rename(columns={'Leads': 'Leads_CreatedDate', 'Bookings': 'Bookings_CreatedDate'}),
+            bookings_pivot,  # Use directly - already has 'Leads' and 'Bookings' columns
             on='partnerID',
-            how='left'
+            how='left',
+            suffixes=('_old', '')  # Keep new values, rename old ones
         )
         
-        # Convert to numeric
-        merged_df['Leads_CreatedDate'] = pd.to_numeric(merged_df['Leads_CreatedDate'], errors='coerce').fillna(0)
-        merged_df['Bookings_CreatedDate'] = pd.to_numeric(merged_df['Bookings_CreatedDate'], errors='coerce').fillna(0)
+        # Drop old Leads column if it exists (from advanced pivot)
+        if 'Leads_old' in merged_df.columns:
+            merged_df = merged_df.drop(columns=['Leads_old'])
         
-        # Override both Leads and Bookings with Created Date-based values
-        merged_df['Leads'] = merged_df['Leads_CreatedDate']
-        merged_df['Bookings'] = merged_df['Bookings_CreatedDate']
+        # Fill NaN values for partners that don't have bookings data
+        merged_df['Leads'] = pd.to_numeric(merged_df['Leads'], errors='coerce').fillna(0)
+        merged_df['Bookings'] = pd.to_numeric(merged_df['Bookings'], errors='coerce').fillna(0)
         
-        # Drop temporary columns
-        merged_df = merged_df.drop(columns=['Leads_CreatedDate', 'Bookings_CreatedDate'])
-        
-        st.write(f"Debug - After override - Total Leads: {merged_df['Leads'].sum()}")
-        st.write(f"Debug - After override - Total Bookings: {merged_df['Bookings'].sum()}")
+        st.write(f"Debug - After merge - Total Leads: {merged_df['Leads'].sum()}")
+        st.write(f"Debug - After merge - Total Bookings: {merged_df['Bookings'].sum()}")
+    else:
+        # No bookings pivot provided - create Bookings column with zeros
+        st.write("Debug - No bookings pivot provided, using zeros for Bookings")
+        merged_df['Bookings'] = 0
     
     # Debug merged dataframe
     st.write("Debug - Merged dataframe columns:", list(merged_df.columns))
@@ -1040,6 +1049,22 @@ def to_excel_download_with_treatments(df_affiliate, df_advanced, df_optimization
                 treatment_affiliate_purchased = filter_data_by_treatment(df_affiliate, treatment)
                 
                 if not treatment_affiliate_created.empty or not treatment_affiliate_purchased.empty:
+                    # Debug: Show raw counts for this treatment
+                    st.write(f"\n### Debug - Raw data for treatment '{treatment}':")
+                    if not treatment_affiliate_created.empty:
+                        st.write(f"Created Date filtered data: {len(treatment_affiliate_created)} rows")
+                        if 'Unique Leads' in treatment_affiliate_created.columns:
+                            st.write(f"  Total Unique Leads: {treatment_affiliate_created['Unique Leads'].sum()}")
+                        if 'Booked Count' in treatment_affiliate_created.columns:
+                            st.write(f"  Total Booked Count: {treatment_affiliate_created['Booked Count'].sum()}")
+                    
+                    if not treatment_affiliate_purchased.empty:
+                        st.write(f"Purchased Date filtered data: {len(treatment_affiliate_purchased)} rows")
+                        if 'Transaction Count' in treatment_affiliate_purchased.columns:
+                            st.write(f"  Total Transaction Count: {treatment_affiliate_purchased['Transaction Count'].sum()}")
+                        if 'Net Sales Amount' in treatment_affiliate_purchased.columns:
+                            st.write(f"  Total Net Sales Amount: ${treatment_affiliate_purchased['Net Sales Amount'].sum():.2f}")
+                    
                     # Create pivots for this treatment
                     # Leads & Bookings from Created Date
                     treatment_leads_bookings_pivot = create_affiliate_bookings_pivot(treatment_affiliate_created)
