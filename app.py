@@ -654,8 +654,8 @@ def create_advanced_pivot(df):
     
     As per instructions:
     1. Pull in the Landing Page URL_PartnerID into the rows (index='partnerID')
-    2. In the values, pull in Count of Event Type but filter for ONLY the Lead Submissions
-    3. Also pull in the Sum of Action Earnings
+    2. Count Lead Submissions for the Leads column
+    3. Sum ALL Action Earnings (regardless of Event Type) for the Spend column
     """
     # Debug info
     st.write(f"Debug - create_advanced_pivot: Processing {len(df)} rows")
@@ -668,7 +668,7 @@ def create_advanced_pivot(df):
     df['Action Id'] = pd.to_numeric(df['Action Id'], errors='coerce').fillna(0)
     df['Action Earnings'] = pd.to_numeric(df['Action Earnings'], errors='coerce').fillna(0)
     
-    st.write(f"Debug - Total Action Earnings before Event Type filtering: ${df['Action Earnings'].sum():.2f}")
+    st.write(f"Debug - Total Action Earnings (all event types): ${df['Action Earnings'].sum():.2f}")
     
     # Show event type breakdown
     if 'Event Type' in df.columns:
@@ -676,25 +676,24 @@ def create_advanced_pivot(df):
         st.write("Debug - Event Type breakdown:")
         st.write(event_counts)
     
-    # Filter for Lead Submissions
+    # Filter for Lead Submissions to count leads
     lead_submissions = df[df['Event Type'] == 'Lead Submission']
     st.write(f"Debug - Lead Submission rows: {len(lead_submissions)}")
-    st.write(f"Debug - Total Spend (Action Earnings for Lead Submissions): ${lead_submissions['Action Earnings'].sum():.2f}")
     
-    # Count the number of rows with Lead Submission per partnerID
+    # Count the number of rows with Lead Submission per partnerID (for Leads column)
     lead_counts = lead_submissions.groupby('partnerID').size().reset_index(name='Leads')
     
-    # Sum the Action Earnings per partnerID
-    earnings_sums = lead_submissions.groupby('partnerID')['Action Earnings'].sum().reset_index()
+    # Sum ALL Action Earnings per partnerID (for Spend column) - NO EVENT TYPE FILTER
+    earnings_sums = df.groupby('partnerID')['Action Earnings'].sum().reset_index()
     
     # Merge the two dataframes
-    pivot = pd.merge(lead_counts, earnings_sums, on='partnerID')
+    pivot = pd.merge(lead_counts, earnings_sums, on='partnerID', how='outer').fillna(0)
     
     # Rename columns for clarity
     pivot.columns = ['partnerID', 'Leads', 'Spend']
     
     st.write(f"Debug - Advanced pivot created with {len(pivot)} partners")
-    st.write(f"Debug - Total Spend in pivot: ${pivot['Spend'].sum():.2f}")
+    st.write(f"Debug - Total Spend in pivot (all Action Earnings): ${pivot['Spend'].sum():.2f}")
     
     return pivot
 
