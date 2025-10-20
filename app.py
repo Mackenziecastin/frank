@@ -686,14 +686,27 @@ def create_advanced_pivot(df):
     # Sum ALL Action Earnings per partnerID (for Spend column) - NO EVENT TYPE FILTER
     earnings_sums = df.groupby('partnerID')['Action Earnings'].sum().reset_index()
     
-    # Debug: Check specific partner
+    # Debug: Check specific partner and show similar IDs
     test_partner = '22975_160007'
-    if test_partner in df['partnerID'].values:
-        partner_data = df[df['partnerID'] == test_partner]
-        st.write(f"Debug - Partner {test_partner} details:")
-        st.write(f"  - Total rows: {len(partner_data)}")
-        st.write(f"  - Total Action Earnings: ${partner_data['Action Earnings'].sum():.2f}")
-        st.write(f"  - Event types: {partner_data['Event Type'].value_counts().to_dict()}")
+    st.write(f"Debug - Looking for partner {test_partner}")
+    
+    # Show all partnerIDs that start with 22975
+    matching_partners = df[df['partnerID'].astype(str).str.startswith('22975')]
+    if not matching_partners.empty:
+        st.write(f"Debug - Found {len(matching_partners)} rows with partnerID starting with '22975'")
+        partner_ids = matching_partners['partnerID'].unique()
+        st.write(f"Debug - Partner IDs found: {list(partner_ids)}")
+        
+        # Check each matching partner
+        for pid in partner_ids:
+            partner_data = df[df['partnerID'] == pid]
+            total_earnings = partner_data['Action Earnings'].sum()
+            st.write(f"  Partner {pid}: {len(partner_data)} rows, ${total_earnings:.2f} total earnings")
+    else:
+        st.write(f"Debug - No partners found starting with '22975'")
+        # Show first 10 partner IDs as sample
+        sample_partners = df['partnerID'].unique()[:10]
+        st.write(f"Debug - Sample partner IDs in data: {list(sample_partners)}")
     
     # Merge the two dataframes
     pivot = pd.merge(lead_counts, earnings_sums, on='partnerID', how='outer').fillna(0)
