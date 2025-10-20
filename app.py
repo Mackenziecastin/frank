@@ -686,11 +686,25 @@ def create_advanced_pivot(df):
     # Sum ALL Action Earnings per partnerID (for Spend column) - NO EVENT TYPE FILTER
     earnings_sums = df.groupby('partnerID')['Action Earnings'].sum().reset_index()
     
+    # Debug: Check specific partner
+    test_partner = '22975_160007'
+    if test_partner in df['partnerID'].values:
+        partner_data = df[df['partnerID'] == test_partner]
+        st.write(f"Debug - Partner {test_partner} details:")
+        st.write(f"  - Total rows: {len(partner_data)}")
+        st.write(f"  - Total Action Earnings: ${partner_data['Action Earnings'].sum():.2f}")
+        st.write(f"  - Event types: {partner_data['Event Type'].value_counts().to_dict()}")
+    
     # Merge the two dataframes
     pivot = pd.merge(lead_counts, earnings_sums, on='partnerID', how='outer').fillna(0)
     
     # Rename columns for clarity
     pivot.columns = ['partnerID', 'Leads', 'Spend']
+    
+    # Debug: Check if partner is in pivot
+    if test_partner in pivot['partnerID'].values:
+        partner_spend = pivot[pivot['partnerID'] == test_partner]['Spend'].values[0]
+        st.write(f"Debug - Partner {test_partner} spend in pivot: ${partner_spend:.2f}")
     
     st.write(f"Debug - Advanced pivot created with {len(pivot)} partners")
     st.write(f"Debug - Total Spend in pivot (all Action Earnings): ${pivot['Spend'].sum():.2f}")
