@@ -1068,9 +1068,13 @@ def to_excel_download_with_treatments(df_affiliate, df_advanced, df_optimization
                     # Create pivots for this treatment
                     # Leads & Bookings from Created Date
                     treatment_leads_bookings_pivot = create_affiliate_bookings_pivot(treatment_affiliate_created)
+                    st.write(f"Debug - Treatment '{treatment}' bookings pivot:")
+                    st.dataframe(treatment_leads_bookings_pivot.head())
                     
                     # Sales & Revenue from Purchased Date
                     treatment_sales_pivot = create_affiliate_pivot(treatment_affiliate_purchased)
+                    st.write(f"Debug - Treatment '{treatment}' sales pivot:")
+                    st.dataframe(treatment_sales_pivot.head())
                     
                     # Get unique partnerIDs for this treatment (from both Created Date and Purchased Date data)
                     treatment_partner_ids = set()
@@ -1095,6 +1099,9 @@ def to_excel_download_with_treatments(df_affiliate, df_advanced, df_optimization
                         partner_list, 
                         treatment_leads_bookings_pivot
                     )
+                    
+                    st.write(f"Debug - Treatment '{treatment}' final optimization report:")
+                    st.dataframe(treatment_optimization[['partnerID', 'Leads', 'Bookings', 'Sales', 'Revenue']].head())
                     
                     # Add treatment sheet
                     sheet_name = f"{treatment}"[:31]  # Excel sheet name limit is 31 characters
