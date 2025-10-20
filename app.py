@@ -107,11 +107,30 @@ def show_main_page():
                 affiliate_df_processed['Created Date'] = pd.to_datetime(affiliate_df_processed['Created Date'])
                 advanced_df_processed['Action Date'] = pd.to_datetime(advanced_df_processed['Action Date'])
                 
-                # Check if Purchased Date exists, and use that instead of Created Date if available
+                # Debug: Show all column names
+                st.write("### Debug - Checking for Purchased Date column")
+                st.write(f"All columns in affiliate data: {list(affiliate_df_processed.columns)}")
+                
+                # Check if Purchased Date exists (case-insensitive), and use that instead of Created Date if available
                 use_purchased_date = False
-                if 'Purchased Date' in affiliate_df_processed.columns:
+                purchased_date_col = None
+                for col in affiliate_df_processed.columns:
+                    # Strip whitespace and check
+                    col_clean = str(col).strip()
+                    if col_clean.lower() == 'purchased date':
+                        purchased_date_col = col
+                        st.write(f"Found purchased date column: '{col}' (original), '{col_clean}' (cleaned)")
+                        break
+                
+                if not purchased_date_col:
+                    st.warning("No 'Purchased Date' column found! Will use 'Created Date' for all metrics.")
+                
+                if purchased_date_col:
+                    # Standardize column name
+                    if purchased_date_col != 'Purchased Date':
+                        affiliate_df_processed['Purchased Date'] = affiliate_df_processed[purchased_date_col]
                     affiliate_df_processed['Purchased Date'] = pd.to_datetime(affiliate_df_processed['Purchased Date'])
-                    st.info("Using 'Purchased Date' for filtering rather than 'Created Date'")
+                    st.info(f"Using '{purchased_date_col}' for filtering rather than 'Created Date'")
                     use_purchased_date = True
                     
                     # Display info about Purchased Date values
@@ -415,11 +434,17 @@ def process_dataframe(df, url_column):
     st.write("Debug - First few rows of data:")
     st.dataframe(df.head(2))
     
-    # Convert date columns to datetime if they exist
-    date_columns = ['Date', 'Created Date', 'Booked Date', 'Purchased Date', 'Action Date']
-    for date_col in date_columns:
-        if date_col in df.columns:
-            df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
+    # Convert date columns to datetime if they exist (case-insensitive)
+    date_columns_to_check = ['Date', 'Created Date', 'Booked Date', 'Purchased Date', 'Purchased date', 'Action Date']
+    for date_col in date_columns_to_check:
+        # Check case-insensitive
+        for col in df.columns:
+            if col.lower() == date_col.lower():
+                df[col] = pd.to_datetime(df[col], errors='coerce')
+                # Standardize the column name
+                if col != date_col and date_col in ['Created Date', 'Purchased Date', 'Action Date']:
+                    df[date_col] = df[col]
+                break
     
     # Check if this is the Advanced Action Sheet (has Sub Id 1 and Sub Id 2 columns)
     if 'Sub Id 1' in df.columns:
@@ -606,11 +631,32 @@ def create_affiliate_pivot(df):
             date_ranges[date_col] = f"{df[date_col].min()} to {df[date_col].max()}"
     
     # Log data for debugging
-    st.write(f"Debug - Total Transaction Count before pivot: {df['Transaction Count'].sum()}")
+    st.write(f"Debug - Total rows in data: {len(df)}")
+    st.write(f"Debug - Total Transaction Count (sum of all rows): {df['Transaction Count'].sum()}")
+    st.write(f"Debug - Unique transactions (count of rows with Transaction Count > 0): {(df['Transaction Count'] > 0).sum()}")
     st.write(f"Debug - Total Net Sales Amount before pivot: ${df['Net Sales Amount'].sum():.2f}")
     if date_ranges:
         for col, range_str in date_ranges.items():
             st.write(f"Debug - {col} range: {range_str}")
+    
+    # Check if there are duplicate transactions
+    if 'Transaction Count' in df.columns:
+        rows_with_transactions = df[df['Transaction Count'] > 0]
+        st.write(f"Debug - Rows with transactions: {len(rows_with_transactions)}")
+        st.write(f"Debug - If 148 sales but only 116 unique, then transactions appear on multiple rows (e.g., one per treatment)")
+        
+        # Check for transaction/order ID columns
+        id_columns = [col for col in df.columns if any(keyword in col.lower() for keyword in ['transaction', 'order', 'sale', 'id'])]
+        if id_columns:
+            st.write(f"Debug - Potential ID columns found: {id_columns}")
+            # Check if there's a specific transaction ID column
+            for col in ['Transaction ID', 'Order ID', 'Sale ID', 'transaction_id', 'order_id']:
+                if col in df.columns:
+                    unique_ids = df[col].nunique()
+                    total_rows = len(df)
+                    st.write(f"Debug - Column '{col}': {total_rows} rows, {unique_ids} unique values")
+                    if unique_ids < total_rows:
+                        st.info(f"Found duplicate {col}s! Should count unique {col}s instead of summing Transaction Count")
     
     # Check if "Purchased Date" exists and filter for May if doing May report
     if 'Purchased Date' in df.columns:
