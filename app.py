@@ -911,32 +911,12 @@ def to_excel_download(df_affiliate, df_advanced, df_optimization):
     """Convert dataframes to Excel file for download."""
     output = BytesIO()
     
-    # Use xlsxwriter engine instead of openpyxl for formatting support
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+    # Use openpyxl engine for compatibility
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
         # Write each dataframe to a different sheet
         df_affiliate.to_excel(writer, sheet_name='Cleaned Affiliate Data', index=False)
         df_advanced.to_excel(writer, sheet_name='Cleaned Advanced Action Data', index=False)
         df_optimization.to_excel(writer, sheet_name='Optimization Report', index=False)
-        
-        # Get the xlsxwriter workbook and worksheet objects
-        workbook = writer.book
-        worksheet = writer.sheets['Optimization Report']
-        
-        # Define formats
-        money_format = workbook.add_format({'num_format': '$#,##0.00'})
-        integer_format = workbook.add_format({'num_format': '0'})
-        percent_format = workbook.add_format({'num_format': '0.0%'})
-        
-        # Apply formats to specific columns
-        for col_idx, col_name in enumerate(df_optimization.columns):
-            if col_name in ['Spend', 'Revenue', 'ROAS', 'eCPL at $1.50']:
-                worksheet.set_column(col_idx, col_idx, 15, money_format)
-            elif col_name in ['Leads', 'Bookings', 'Sales']:
-                worksheet.set_column(col_idx, col_idx, 15, integer_format)
-            elif col_name in ['Lead to Sale']:
-                worksheet.set_column(col_idx, col_idx, 15, percent_format)
-            else:
-                worksheet.set_column(col_idx, col_idx, 15)  # Default width
     
     return output.getvalue()
 
@@ -955,7 +935,7 @@ def to_excel_download_with_treatments(df_affiliate, df_advanced, df_optimization
     """
     output = BytesIO()
     
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df_affiliate.to_excel(writer, sheet_name='Cleaned Affiliate Data', index=False)
         df_advanced.to_excel(writer, sheet_name='Cleaned Advanced Action Data', index=False)
         df_optimization.to_excel(writer, sheet_name='Optimization Report', index=False)
@@ -997,36 +977,6 @@ def to_excel_download_with_treatments(df_affiliate, df_advanced, df_optimization
                     # Add treatment sheet
                     sheet_name = f"{treatment}"[:31]  # Excel sheet name limit is 31 characters
                     treatment_optimization.to_excel(writer, sheet_name=sheet_name, index=False)
-        
-        workbook = writer.book
-        money_format = workbook.add_format({'num_format': '$#,##0.00'})
-        integer_format = workbook.add_format({'num_format': '0'})
-        percent_format = workbook.add_format({'num_format': '0.0%'})
-        
-        # Apply formatting to all sheets with optimization data
-        for sheet_name in writer.sheets:
-            # Format the main Optimization Report and all treatment sheets
-            if sheet_name == "Optimization Report" or (sheet_name not in ['Cleaned Affiliate Data', 'Cleaned Advanced Action Data']):
-                worksheet = writer.sheets[sheet_name]
-                
-                # Get the appropriate dataframe for column detection
-                if sheet_name == "Optimization Report":
-                    df = df_optimization
-                else:
-                    # For treatment sheets, we need to get the dataframe
-                    # Use the optimization report structure for column detection
-                    df = df_optimization  # Use same columns as main report
-                
-                # Apply formatting
-                for col_idx, col_name in enumerate(df.columns):
-                    if col_name in ['Spend', 'Revenue', 'ROAS', 'eCPL at $1.50']:
-                        worksheet.set_column(col_idx, col_idx, 15, money_format)
-                    elif col_name in ['Leads', 'Bookings', 'Sales']:
-                        worksheet.set_column(col_idx, col_idx, 15, integer_format)
-                    elif col_name in ['Lead to Sale']:
-                        worksheet.set_column(col_idx, col_idx, 15, percent_format)
-                    else:
-                        worksheet.set_column(col_idx, col_idx, 15)
     
     return output.getvalue()
 
