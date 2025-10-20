@@ -1047,8 +1047,21 @@ def to_excel_download_with_treatments(df_affiliate, df_advanced, df_optimization
                     # Sales & Revenue from Purchased Date
                     treatment_sales_pivot = create_affiliate_pivot(treatment_affiliate_purchased)
                     
-                    # Advanced pivot (not filtered by treatment, includes all)
-                    treatment_advanced_pivot = create_advanced_pivot(df_advanced)
+                    # Get unique partnerIDs for this treatment (from both Created Date and Purchased Date data)
+                    treatment_partner_ids = set()
+                    if not treatment_affiliate_created.empty:
+                        treatment_partner_ids.update(treatment_affiliate_created['partnerID'].unique())
+                    if not treatment_affiliate_purchased.empty:
+                        treatment_partner_ids.update(treatment_affiliate_purchased['partnerID'].unique())
+                    
+                    # Filter Advanced Action data to only include partners in this treatment
+                    treatment_advanced_df = df_advanced[df_advanced['partnerID'].isin(treatment_partner_ids)]
+                    
+                    st.write(f"Debug - Treatment '{treatment}': Found {len(treatment_partner_ids)} unique partners")
+                    st.write(f"Debug - Advanced Action rows for this treatment: {len(treatment_advanced_df)}")
+                    
+                    # Create advanced pivot with filtered data
+                    treatment_advanced_pivot = create_advanced_pivot(treatment_advanced_df)
                     
                     # Create optimization report with proper date filtering
                     treatment_optimization = create_optimization_report(
