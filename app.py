@@ -45,6 +45,17 @@ def show_main_page():
             affiliate_df = pd.read_csv(affiliate_file)
             advanced_df = pd.read_csv(advanced_file)
             
+            # Debug: Check raw Advanced Action data for partner 22976
+            st.write("### Debug - Raw Advanced Action Data (before any processing)")
+            if 'Landing Page URL' in advanced_df.columns:
+                # Check if the partner exists in raw data
+                test_urls = advanced_df[advanced_df['Landing Page URL'].astype(str).str.contains('22976', na=False)]
+                if not test_urls.empty:
+                    st.write(f"Found {len(test_urls)} rows with '22976' in Landing Page URL")
+                    if 'Action Earnings' in advanced_df.columns:
+                        total_earnings = pd.to_numeric(advanced_df[advanced_df['Landing Page URL'].astype(str).str.contains('22976', na=False)]['Action Earnings'], errors='coerce').sum()
+                        st.write(f"Total Action Earnings for URLs containing '22976': ${total_earnings:.2f}")
+            
             # Read partner list automatically
             try:
                 partner_list_df = pd.read_csv('Full DA Performance Marketing Team Partner List - Sheet1.csv')
