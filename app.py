@@ -416,11 +416,52 @@ def process_dataframe(df, url_column):
     st.dataframe(df.head(2))
     
     # Convert date columns to datetime if they exist
-    date_columns = ['Date', 'Created Date', 'Booked Date', 'Purchased Date']
+    date_columns = ['Date', 'Created Date', 'Booked Date', 'Purchased Date', 'Action Date']
     for date_col in date_columns:
         if date_col in df.columns:
             df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
     
+    # Check if this is the Advanced Action Sheet (has Sub Id 1 and Sub Id 2 columns)
+    if 'Sub Id 1' in df.columns:
+        st.info("Using Sub Id 1 and Sub Id 2 columns for partner identification (Advanced Action Sheet)")
+        
+        # Ensure Sub Id columns are strings
+        df['Sub Id 1'] = df['Sub Id 1'].astype(str).str.strip()
+        df['Sub Id 2'] = df['Sub Id 2'].fillna('').astype(str).str.strip()
+        
+        # Create partnerID based on the rules:
+        # 1. If Sub Id 1 contains underscore → use it as-is
+        # 2. If Sub Id 1 does NOT contain underscore → concatenate with Sub Id 2
+        def create_partner_id(row):
+            sub_id_1 = str(row['Sub Id 1']).strip()
+            sub_id_2 = str(row['Sub Id 2']).strip()
+            
+            # Skip empty or nan values
+            if sub_id_1 in ['', 'nan', 'None']:
+                return "Unattributed"
+            
+            # If Sub Id 1 already has underscore, use it as-is
+            if '_' in sub_id_1:
+                return sub_id_1
+            
+            # Otherwise, concatenate with Sub Id 2
+            if sub_id_2 and sub_id_2 not in ['', 'nan', 'None']:
+                return f"{sub_id_1}_{sub_id_2}"
+            else:
+                return f"{sub_id_1}_"
+        
+        df['partnerID'] = df.apply(create_partner_id, axis=1)
+        
+        # Extract PID and SUBID from the partnerID for consistency
+        df['PID'] = df['partnerID'].apply(lambda x: x.split('_')[0] if '_' in x else x)
+        df['SUBID'] = df['partnerID'].apply(lambda x: x.split('_')[1] if '_' in x and len(x.split('_')) > 1 else '')
+        
+        st.write(f"Debug - Created partnerIDs from Sub Id columns. Sample values:")
+        st.write(df[['Sub Id 1', 'Sub Id 2', 'partnerID']].head(10))
+        
+        return df
+    
+    # Otherwise, use the original URL parsing logic for Affiliate data
     # Check for variations of URL column names
     url_column_variations = {
         'Click URL': ['Click URL', 'ClickURL', 'Click_URL', 'click url', 'click_url'],
@@ -707,6 +748,11 @@ def create_advanced_pivot(df):
         st.write(f"Debug - Found {len(matching_partners)} rows with partnerID starting with '22976'")
         partner_ids = matching_partners['partnerID'].unique()
         st.write(f"Debug - Partner IDs found: {list(partner_ids)}")
+        
+        # Show Sub Id columns if available
+        if 'Sub Id 1' in matching_partners.columns:
+            st.write("Debug - Sample Sub Id values for partners starting with 22976:")
+            st.dataframe(matching_partners[['Sub Id 1', 'Sub Id 2', 'partnerID', 'Action Earnings']].head(10))
         
         # Check each matching partner
         for pid in partner_ids:
