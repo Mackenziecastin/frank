@@ -670,10 +670,9 @@ def create_affiliate_pivot(df):
         st.write(f"Debug - May purchases: {len(may_rows)} rows, {may_sales} sales, ${may_revenue:.2f} revenue")
     
     # Create pivot table with specific aggregation methods
-    # Count transactions (number of rows) instead of summing Transaction Count
-    # This is because Transaction Count may not always be 1 per row
+    # Sum Transaction Count values to get total sales
     pivot = df.groupby('partnerID').agg({
-        'Transaction Count': 'count',  # Count rows = count transactions
+        'Transaction Count': 'sum',  # Sum of Transaction Count
         'Booked Count': 'sum',
         'Net Sales Amount': 'sum'
     }).reset_index()
