@@ -45,6 +45,17 @@ def show_main_page():
             affiliate_df = pd.read_csv(affiliate_file)
             advanced_df = pd.read_csv(advanced_file)
             
+            # Debug: Check raw Advanced Action data for partner 22976
+            st.write("### Debug - Raw Advanced Action Data (before any processing)")
+            if 'Landing Page URL' in advanced_df.columns:
+                # Check if the partner exists in raw data
+                test_urls = advanced_df[advanced_df['Landing Page URL'].astype(str).str.contains('22976', na=False)]
+                if not test_urls.empty:
+                    st.write(f"Found {len(test_urls)} rows with '22976' in Landing Page URL")
+                    if 'Action Earnings' in advanced_df.columns:
+                        total_earnings = pd.to_numeric(advanced_df[advanced_df['Landing Page URL'].astype(str).str.contains('22976', na=False)]['Action Earnings'], errors='coerce').sum()
+                        st.write(f"Total Action Earnings for URLs containing '22976': ${total_earnings:.2f}")
+            
             # Read partner list automatically
             try:
                 partner_list_df = pd.read_csv('Full DA Performance Marketing Team Partner List - Sheet1.csv')
@@ -96,11 +107,30 @@ def show_main_page():
                 affiliate_df_processed['Created Date'] = pd.to_datetime(affiliate_df_processed['Created Date'])
                 advanced_df_processed['Action Date'] = pd.to_datetime(advanced_df_processed['Action Date'])
                 
-                # Check if Purchased Date exists, and use that instead of Created Date if available
+                # Debug: Show all column names
+                st.write("### Debug - Checking for Purchased Date column")
+                st.write(f"All columns in affiliate data: {list(affiliate_df_processed.columns)}")
+                
+                # Check if Purchased Date exists (case-insensitive), and use that instead of Created Date if available
                 use_purchased_date = False
-                if 'Purchased Date' in affiliate_df_processed.columns:
+                purchased_date_col = None
+                for col in affiliate_df_processed.columns:
+                    # Strip whitespace and check
+                    col_clean = str(col).strip()
+                    if col_clean.lower() == 'purchased date':
+                        purchased_date_col = col
+                        st.write(f"Found purchased date column: '{col}' (original), '{col_clean}' (cleaned)")
+                        break
+                
+                if not purchased_date_col:
+                    st.warning("No 'Purchased Date' column found! Will use 'Created Date' for all metrics.")
+                
+                if purchased_date_col:
+                    # Standardize column name
+                    if purchased_date_col != 'Purchased Date':
+                        affiliate_df_processed['Purchased Date'] = affiliate_df_processed[purchased_date_col]
                     affiliate_df_processed['Purchased Date'] = pd.to_datetime(affiliate_df_processed['Purchased Date'])
-                    st.info("Using 'Purchased Date' for filtering rather than 'Created Date'")
+                    st.info(f"Using '{purchased_date_col}' for filtering rather than 'Created Date'")
                     use_purchased_date = True
                     
                     # Display info about Purchased Date values
@@ -404,12 +434,59 @@ def process_dataframe(df, url_column):
     st.write("Debug - First few rows of data:")
     st.dataframe(df.head(2))
     
-    # Convert date columns to datetime if they exist
-    date_columns = ['Date', 'Created Date', 'Booked Date', 'Purchased Date']
-    for date_col in date_columns:
-        if date_col in df.columns:
-            df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
+    # Convert date columns to datetime if they exist (case-insensitive)
+    date_columns_to_check = ['Date', 'Created Date', 'Booked Date', 'Purchased Date', 'Purchased date', 'Action Date']
+    for date_col in date_columns_to_check:
+        # Check case-insensitive
+        for col in df.columns:
+            if col.lower() == date_col.lower():
+                df[col] = pd.to_datetime(df[col], errors='coerce')
+                # Standardize the column name
+                if col != date_col and date_col in ['Created Date', 'Purchased Date', 'Action Date']:
+                    df[date_col] = df[col]
+                break
     
+    # Check if this is the Advanced Action Sheet (has Sub Id 1 and Sub Id 2 columns)
+    if 'Sub Id 1' in df.columns:
+        st.info("Using Sub Id 1 and Sub Id 2 columns for partner identification (Advanced Action Sheet)")
+        
+        # Ensure Sub Id columns are strings
+        df['Sub Id 1'] = df['Sub Id 1'].astype(str).str.strip()
+        df['Sub Id 2'] = df['Sub Id 2'].fillna('').astype(str).str.strip()
+        
+        # Create partnerID based on the rules:
+        # 1. If Sub Id 1 contains underscore → use it as-is
+        # 2. If Sub Id 1 does NOT contain underscore → concatenate with Sub Id 2
+        def create_partner_id(row):
+            sub_id_1 = str(row['Sub Id 1']).strip()
+            sub_id_2 = str(row['Sub Id 2']).strip()
+            
+            # Skip empty or nan values
+            if sub_id_1 in ['', 'nan', 'None']:
+                return "Unattributed"
+            
+            # If Sub Id 1 already has underscore, use it as-is
+            if '_' in sub_id_1:
+                return sub_id_1
+            
+            # Otherwise, concatenate with Sub Id 2
+            if sub_id_2 and sub_id_2 not in ['', 'nan', 'None']:
+                return f"{sub_id_1}_{sub_id_2}"
+            else:
+                return f"{sub_id_1}_"
+        
+        df['partnerID'] = df.apply(create_partner_id, axis=1)
+        
+        # Extract PID and SUBID from the partnerID for consistency
+        df['PID'] = df['partnerID'].apply(lambda x: x.split('_')[0] if '_' in x else x)
+        df['SUBID'] = df['partnerID'].apply(lambda x: x.split('_')[1] if '_' in x and len(x.split('_')) > 1 else '')
+        
+        st.write(f"Debug - Created partnerIDs from Sub Id columns. Sample values:")
+        st.write(df[['Sub Id 1', 'Sub Id 2', 'partnerID']].head(10))
+        
+        return df
+    
+    # Otherwise, use the original URL parsing logic for Affiliate data
     # Check for variations of URL column names
     url_column_variations = {
         'Click URL': ['Click URL', 'ClickURL', 'Click_URL', 'click url', 'click_url'],
@@ -554,11 +631,32 @@ def create_affiliate_pivot(df):
             date_ranges[date_col] = f"{df[date_col].min()} to {df[date_col].max()}"
     
     # Log data for debugging
-    st.write(f"Debug - Total Transaction Count before pivot: {df['Transaction Count'].sum()}")
+    st.write(f"Debug - Total rows in data: {len(df)}")
+    st.write(f"Debug - Total Transaction Count (sum of all rows): {df['Transaction Count'].sum()}")
+    st.write(f"Debug - Unique transactions (count of rows with Transaction Count > 0): {(df['Transaction Count'] > 0).sum()}")
     st.write(f"Debug - Total Net Sales Amount before pivot: ${df['Net Sales Amount'].sum():.2f}")
     if date_ranges:
         for col, range_str in date_ranges.items():
             st.write(f"Debug - {col} range: {range_str}")
+    
+    # Check if there are duplicate transactions
+    if 'Transaction Count' in df.columns:
+        rows_with_transactions = df[df['Transaction Count'] > 0]
+        st.write(f"Debug - Rows with transactions: {len(rows_with_transactions)}")
+        st.write(f"Debug - If 148 sales but only 116 unique, then transactions appear on multiple rows (e.g., one per treatment)")
+        
+        # Check for transaction/order ID columns
+        id_columns = [col for col in df.columns if any(keyword in col.lower() for keyword in ['transaction', 'order', 'sale', 'id'])]
+        if id_columns:
+            st.write(f"Debug - Potential ID columns found: {id_columns}")
+            # Check if there's a specific transaction ID column
+            for col in ['Transaction ID', 'Order ID', 'Sale ID', 'transaction_id', 'order_id']:
+                if col in df.columns:
+                    unique_ids = df[col].nunique()
+                    total_rows = len(df)
+                    st.write(f"Debug - Column '{col}': {total_rows} rows, {unique_ids} unique values")
+                    if unique_ids < total_rows:
+                        st.info(f"Found duplicate {col}s! Should count unique {col}s instead of summing Transaction Count")
     
     # Check if "Purchased Date" exists and filter for May if doing May report
     if 'Purchased Date' in df.columns:
@@ -572,11 +670,15 @@ def create_affiliate_pivot(df):
         st.write(f"Debug - May purchases: {len(may_rows)} rows, {may_sales} sales, ${may_revenue:.2f} revenue")
     
     # Create pivot table with specific aggregation methods
+    # Sum Transaction Count values to get total sales
     pivot = df.groupby('partnerID').agg({
-        'Transaction Count': 'sum',
+        'Transaction Count': 'sum',  # Sum of Transaction Count
         'Booked Count': 'sum',
         'Net Sales Amount': 'sum'
     }).reset_index()
+    
+    # Rename for clarity
+    pivot = pivot.rename(columns={'Transaction Count': 'Transaction Count'})
     
     # Log pivot results for debugging
     st.write(f"Debug - Total Transaction Count after pivot: {pivot['Transaction Count'].sum()}")
@@ -654,27 +756,79 @@ def create_advanced_pivot(df):
     
     As per instructions:
     1. Pull in the Landing Page URL_PartnerID into the rows (index='partnerID')
-    2. In the values, pull in Count of Event Type but filter for ONLY the Lead Submissions
-    3. Also pull in the Sum of Action Earnings
+    2. Count Lead Submissions for the Leads column
+    3. Sum ALL Action Earnings (regardless of Event Type) for the Spend column
     """
+    # Debug info
+    st.write(f"Debug - create_advanced_pivot: Processing {len(df)} rows")
+    
+    # Show date range if Action Date exists
+    if 'Action Date' in df.columns:
+        st.write(f"Debug - Action Date range: {df['Action Date'].min()} to {df['Action Date'].max()}")
+    
     # Ensure numeric columns are properly converted
     df['Action Id'] = pd.to_numeric(df['Action Id'], errors='coerce').fillna(0)
     df['Action Earnings'] = pd.to_numeric(df['Action Earnings'], errors='coerce').fillna(0)
     
-    # Filter for Lead Submissions
-    lead_submissions = df[df['Event Type'] == 'Lead Submission']
+    st.write(f"Debug - Total Action Earnings (all event types): ${df['Action Earnings'].sum():.2f}")
     
-    # Count the number of rows with Lead Submission per partnerID
+    # Show event type breakdown
+    if 'Event Type' in df.columns:
+        event_counts = df['Event Type'].value_counts()
+        st.write("Debug - Event Type breakdown:")
+        st.write(event_counts)
+    
+    # Filter for Lead Submissions to count leads
+    lead_submissions = df[df['Event Type'] == 'Lead Submission']
+    st.write(f"Debug - Lead Submission rows: {len(lead_submissions)}")
+    
+    # Count the number of rows with Lead Submission per partnerID (for Leads column)
     lead_counts = lead_submissions.groupby('partnerID').size().reset_index(name='Leads')
     
-    # Sum the Action Earnings per partnerID
-    earnings_sums = lead_submissions.groupby('partnerID')['Action Earnings'].sum().reset_index()
+    # Sum ALL Action Earnings per partnerID (for Spend column) - NO EVENT TYPE FILTER
+    earnings_sums = df.groupby('partnerID')['Action Earnings'].sum().reset_index()
+    
+    # Debug: Check specific partner and show similar IDs
+    test_partner = '22976_160007'
+    st.write(f"Debug - Looking for partner {test_partner}")
+    
+    # Show all partnerIDs that start with 22976
+    matching_partners = df[df['partnerID'].astype(str).str.startswith('22976')]
+    if not matching_partners.empty:
+        st.write(f"Debug - Found {len(matching_partners)} rows with partnerID starting with '22976'")
+        partner_ids = matching_partners['partnerID'].unique()
+        st.write(f"Debug - Partner IDs found: {list(partner_ids)}")
+        
+        # Show Sub Id columns if available
+        if 'Sub Id 1' in matching_partners.columns:
+            st.write("Debug - Sample Sub Id values for partners starting with 22976:")
+            st.dataframe(matching_partners[['Sub Id 1', 'Sub Id 2', 'partnerID', 'Action Earnings']].head(10))
+        
+        # Check each matching partner
+        for pid in partner_ids:
+            partner_data = df[df['partnerID'] == pid]
+            total_earnings = partner_data['Action Earnings'].sum()
+            event_breakdown = partner_data['Event Type'].value_counts().to_dict() if 'Event Type' in partner_data.columns else {}
+            st.write(f"  Partner {pid}: {len(partner_data)} rows, ${total_earnings:.2f} total earnings, Events: {event_breakdown}")
+    else:
+        st.write(f"Debug - No partners found starting with '22976'")
+        # Show first 10 partner IDs as sample
+        sample_partners = df['partnerID'].unique()[:10]
+        st.write(f"Debug - Sample partner IDs in data: {list(sample_partners)}")
     
     # Merge the two dataframes
-    pivot = pd.merge(lead_counts, earnings_sums, on='partnerID')
+    pivot = pd.merge(lead_counts, earnings_sums, on='partnerID', how='outer').fillna(0)
     
     # Rename columns for clarity
     pivot.columns = ['partnerID', 'Leads', 'Spend']
+    
+    # Debug: Check if partner is in pivot
+    if test_partner in pivot['partnerID'].values:
+        partner_spend = pivot[pivot['partnerID'] == test_partner]['Spend'].values[0]
+        st.write(f"Debug - Partner {test_partner} spend in pivot: ${partner_spend:.2f}")
+    
+    st.write(f"Debug - Advanced pivot created with {len(pivot)} partners")
+    st.write(f"Debug - Total Spend in pivot (all Action Earnings): ${pivot['Spend'].sum():.2f}")
     
     return pivot
 
@@ -705,16 +859,18 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
     if has_transaction_count and has_booked_count and has_net_sales:
         st.success("All required columns found in affiliate data")
         renamed_affiliate = renamed_affiliate.rename(columns={
-            'Booked Count': 'Bookings',
+            'Booked Count': 'Bookings_Temp',  # Don't use this - will be overridden by bookings_pivot
             'Transaction Count': 'Sales',
             'Net Sales Amount': 'Revenue'
         })
+        # Drop the temporary Bookings column - we'll get it from bookings_pivot instead
+        if 'Bookings_Temp' in renamed_affiliate.columns:
+            renamed_affiliate = renamed_affiliate.drop(columns=['Bookings_Temp'])
     else:
         st.warning(f"Some expected columns not found in affiliate data. Found: Transaction Count={has_transaction_count}, Booked Count={has_booked_count}, Net Sales Amount={has_net_sales}")
         # Try to use available columns or create defaults
         column_mapping = {}
-        if has_booked_count:
-            column_mapping['Booked Count'] = 'Bookings'
+        # Don't map Booked Count here - it will come from bookings_pivot
         if has_transaction_count:
             column_mapping['Transaction Count'] = 'Sales'
         if has_net_sales:
@@ -723,17 +879,22 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
         # Apply the mapping if we have any
         if column_mapping:
             renamed_affiliate = renamed_affiliate.rename(columns=column_mapping)
+            # Drop Booked Count if it exists
+            if 'Booked Count' in renamed_affiliate.columns:
+                renamed_affiliate = renamed_affiliate.drop(columns=['Booked Count'])
         else:
             # Fallback to using column positions if names don't match
             st.warning("Using column positions since column names don't match expected values")
             column_mapping = {}
-            if len(renamed_affiliate.columns) >= 2:
-                column_mapping[renamed_affiliate.columns[1]] = 'Bookings'
+            # Skip position 1 (which would be Booked Count) - get it from bookings_pivot instead
             if len(renamed_affiliate.columns) >= 3:
                 column_mapping[renamed_affiliate.columns[2]] = 'Sales'
             if len(renamed_affiliate.columns) >= 4:
                 column_mapping[renamed_affiliate.columns[3]] = 'Revenue'
             renamed_affiliate = renamed_affiliate.rename(columns=column_mapping)
+            # Drop any leftover columns that might be Booked Count
+            cols_to_keep = ['partnerID', 'Sales', 'Revenue']
+            renamed_affiliate = renamed_affiliate[[col for col in renamed_affiliate.columns if col in cols_to_keep or col == 'partnerID']]
     
     # Display the renamed affiliate data for debugging
     st.write("Debug - Renamed affiliate columns:", list(renamed_affiliate.columns))
@@ -756,24 +917,26 @@ def create_optimization_report(affiliate_pivot, advanced_pivot, partner_list=Non
         # Merge the Created Date based Leads and Bookings
         merged_df = pd.merge(
             merged_df,
-            bookings_pivot.rename(columns={'Leads': 'Leads_CreatedDate', 'Bookings': 'Bookings_CreatedDate'}),
+            bookings_pivot,  # Use directly - already has 'Leads' and 'Bookings' columns
             on='partnerID',
-            how='left'
+            how='left',
+            suffixes=('_old', '')  # Keep new values, rename old ones
         )
         
-        # Convert to numeric
-        merged_df['Leads_CreatedDate'] = pd.to_numeric(merged_df['Leads_CreatedDate'], errors='coerce').fillna(0)
-        merged_df['Bookings_CreatedDate'] = pd.to_numeric(merged_df['Bookings_CreatedDate'], errors='coerce').fillna(0)
+        # Drop old Leads column if it exists (from advanced pivot)
+        if 'Leads_old' in merged_df.columns:
+            merged_df = merged_df.drop(columns=['Leads_old'])
         
-        # Override both Leads and Bookings with Created Date-based values
-        merged_df['Leads'] = merged_df['Leads_CreatedDate']
-        merged_df['Bookings'] = merged_df['Bookings_CreatedDate']
+        # Fill NaN values for partners that don't have bookings data
+        merged_df['Leads'] = pd.to_numeric(merged_df['Leads'], errors='coerce').fillna(0)
+        merged_df['Bookings'] = pd.to_numeric(merged_df['Bookings'], errors='coerce').fillna(0)
         
-        # Drop temporary columns
-        merged_df = merged_df.drop(columns=['Leads_CreatedDate', 'Bookings_CreatedDate'])
-        
-        st.write(f"Debug - After override - Total Leads: {merged_df['Leads'].sum()}")
-        st.write(f"Debug - After override - Total Bookings: {merged_df['Bookings'].sum()}")
+        st.write(f"Debug - After merge - Total Leads: {merged_df['Leads'].sum()}")
+        st.write(f"Debug - After merge - Total Bookings: {merged_df['Bookings'].sum()}")
+    else:
+        # No bookings pivot provided - create Bookings column with zeros
+        st.write("Debug - No bookings pivot provided, using zeros for Bookings")
+        merged_df['Bookings'] = 0
     
     # Debug merged dataframe
     st.write("Debug - Merged dataframe columns:", list(merged_df.columns))
@@ -891,32 +1054,12 @@ def to_excel_download(df_affiliate, df_advanced, df_optimization):
     """Convert dataframes to Excel file for download."""
     output = BytesIO()
     
-    # Use xlsxwriter engine instead of openpyxl for formatting support
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+    # Use openpyxl engine for compatibility
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
         # Write each dataframe to a different sheet
         df_affiliate.to_excel(writer, sheet_name='Cleaned Affiliate Data', index=False)
         df_advanced.to_excel(writer, sheet_name='Cleaned Advanced Action Data', index=False)
         df_optimization.to_excel(writer, sheet_name='Optimization Report', index=False)
-        
-        # Get the xlsxwriter workbook and worksheet objects
-        workbook = writer.book
-        worksheet = writer.sheets['Optimization Report']
-        
-        # Define formats
-        money_format = workbook.add_format({'num_format': '$#,##0.00'})
-        integer_format = workbook.add_format({'num_format': '0'})
-        percent_format = workbook.add_format({'num_format': '0.0%'})
-        
-        # Apply formats to specific columns
-        for col_idx, col_name in enumerate(df_optimization.columns):
-            if col_name in ['Spend', 'Revenue', 'ROAS', 'eCPL at $1.50']:
-                worksheet.set_column(col_idx, col_idx, 15, money_format)
-            elif col_name in ['Leads', 'Bookings', 'Sales']:
-                worksheet.set_column(col_idx, col_idx, 15, integer_format)
-            elif col_name in ['Lead to Sale']:
-                worksheet.set_column(col_idx, col_idx, 15, percent_format)
-            else:
-                worksheet.set_column(col_idx, col_idx, 15)  # Default width
     
     return output.getvalue()
 
@@ -935,7 +1078,7 @@ def to_excel_download_with_treatments(df_affiliate, df_advanced, df_optimization
     """
     output = BytesIO()
     
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df_affiliate.to_excel(writer, sheet_name='Cleaned Affiliate Data', index=False)
         df_advanced.to_excel(writer, sheet_name='Cleaned Advanced Action Data', index=False)
         df_optimization.to_excel(writer, sheet_name='Optimization Report', index=False)
@@ -956,15 +1099,48 @@ def to_excel_download_with_treatments(df_affiliate, df_advanced, df_optimization
                 treatment_affiliate_purchased = filter_data_by_treatment(df_affiliate, treatment)
                 
                 if not treatment_affiliate_created.empty or not treatment_affiliate_purchased.empty:
+                    # Debug: Show raw counts for this treatment
+                    st.write(f"\n### Debug - Raw data for treatment '{treatment}':")
+                    if not treatment_affiliate_created.empty:
+                        st.write(f"Created Date filtered data: {len(treatment_affiliate_created)} rows")
+                        if 'Unique Leads' in treatment_affiliate_created.columns:
+                            st.write(f"  Total Unique Leads: {treatment_affiliate_created['Unique Leads'].sum()}")
+                        if 'Booked Count' in treatment_affiliate_created.columns:
+                            st.write(f"  Total Booked Count: {treatment_affiliate_created['Booked Count'].sum()}")
+                    
+                    if not treatment_affiliate_purchased.empty:
+                        st.write(f"Purchased Date filtered data: {len(treatment_affiliate_purchased)} rows")
+                        if 'Transaction Count' in treatment_affiliate_purchased.columns:
+                            st.write(f"  Total Transaction Count: {treatment_affiliate_purchased['Transaction Count'].sum()}")
+                        if 'Net Sales Amount' in treatment_affiliate_purchased.columns:
+                            st.write(f"  Total Net Sales Amount: ${treatment_affiliate_purchased['Net Sales Amount'].sum():.2f}")
+                    
                     # Create pivots for this treatment
                     # Leads & Bookings from Created Date
                     treatment_leads_bookings_pivot = create_affiliate_bookings_pivot(treatment_affiliate_created)
+                    st.write(f"Debug - Treatment '{treatment}' bookings pivot:")
+                    st.dataframe(treatment_leads_bookings_pivot.head())
                     
                     # Sales & Revenue from Purchased Date
                     treatment_sales_pivot = create_affiliate_pivot(treatment_affiliate_purchased)
+                    st.write(f"Debug - Treatment '{treatment}' sales pivot:")
+                    st.dataframe(treatment_sales_pivot.head())
                     
-                    # Advanced pivot (not filtered by treatment, includes all)
-                    treatment_advanced_pivot = create_advanced_pivot(df_advanced)
+                    # Get unique partnerIDs for this treatment (from both Created Date and Purchased Date data)
+                    treatment_partner_ids = set()
+                    if not treatment_affiliate_created.empty:
+                        treatment_partner_ids.update(treatment_affiliate_created['partnerID'].unique())
+                    if not treatment_affiliate_purchased.empty:
+                        treatment_partner_ids.update(treatment_affiliate_purchased['partnerID'].unique())
+                    
+                    # Filter Advanced Action data to only include partners in this treatment
+                    treatment_advanced_df = df_advanced[df_advanced['partnerID'].isin(treatment_partner_ids)]
+                    
+                    st.write(f"Debug - Treatment '{treatment}': Found {len(treatment_partner_ids)} unique partners")
+                    st.write(f"Debug - Advanced Action rows for this treatment: {len(treatment_advanced_df)}")
+                    
+                    # Create advanced pivot with filtered data
+                    treatment_advanced_pivot = create_advanced_pivot(treatment_advanced_df)
                     
                     # Create optimization report with proper date filtering
                     treatment_optimization = create_optimization_report(
@@ -974,39 +1150,12 @@ def to_excel_download_with_treatments(df_affiliate, df_advanced, df_optimization
                         treatment_leads_bookings_pivot
                     )
                     
+                    st.write(f"Debug - Treatment '{treatment}' final optimization report:")
+                    st.dataframe(treatment_optimization[['partnerID', 'Leads', 'Bookings', 'Sales', 'Revenue']].head())
+                    
                     # Add treatment sheet
                     sheet_name = f"{treatment}"[:31]  # Excel sheet name limit is 31 characters
                     treatment_optimization.to_excel(writer, sheet_name=sheet_name, index=False)
-        
-        workbook = writer.book
-        money_format = workbook.add_format({'num_format': '$#,##0.00'})
-        integer_format = workbook.add_format({'num_format': '0'})
-        percent_format = workbook.add_format({'num_format': '0.0%'})
-        
-        # Apply formatting to all sheets with optimization data
-        for sheet_name in writer.sheets:
-            # Format the main Optimization Report and all treatment sheets
-            if sheet_name == "Optimization Report" or (sheet_name not in ['Cleaned Affiliate Data', 'Cleaned Advanced Action Data']):
-                worksheet = writer.sheets[sheet_name]
-                
-                # Get the appropriate dataframe for column detection
-                if sheet_name == "Optimization Report":
-                    df = df_optimization
-                else:
-                    # For treatment sheets, we need to get the dataframe
-                    # Use the optimization report structure for column detection
-                    df = df_optimization  # Use same columns as main report
-                
-                # Apply formatting
-                for col_idx, col_name in enumerate(df.columns):
-                    if col_name in ['Spend', 'Revenue', 'ROAS', 'eCPL at $1.50']:
-                        worksheet.set_column(col_idx, col_idx, 15, money_format)
-                    elif col_name in ['Leads', 'Bookings', 'Sales']:
-                        worksheet.set_column(col_idx, col_idx, 15, integer_format)
-                    elif col_name in ['Lead to Sale']:
-                        worksheet.set_column(col_idx, col_idx, 15, percent_format)
-                    else:
-                        worksheet.set_column(col_idx, col_idx, 15)
     
     return output.getvalue()
 
