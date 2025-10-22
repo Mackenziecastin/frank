@@ -94,6 +94,14 @@ def clean_data(df, file_path):
         for idx, date in enumerate(sample_dates):
             logging.info(f"Record {idx}: {date}")
         
+        # Remove duplicate entries based on Primary_Phone_Customer_ANI
+        # Keep only the first occurrence of each unique phone number
+        initial_count = len(df)
+        df = df.drop_duplicates(subset=['Primary_Phone_Customer_ANI'], keep='first')
+        duplicates_removed = initial_count - len(df)
+        logging.info(f"\nRemoved {duplicates_removed} duplicate records based on Primary_Phone_Customer_ANI")
+        logging.info(f"After removing duplicates: {len(df)} records")
+        
         # Apply filters one by one and show counts
         # Remove health leads from Ln_of_Busn
         df['Ln_of_Busn'] = df['Ln_of_Busn'].fillna('')
