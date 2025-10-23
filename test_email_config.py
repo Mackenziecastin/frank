@@ -36,12 +36,12 @@ def test_email():
     # Check if all required variables are set
     print(f"\nSMTP Server: {SMTP_SERVER}")
     print(f"SMTP Port: {SMTP_PORT}")
-    print(f"Sender Email: {SENDER_EMAIL if SENDER_EMAIL else '❌ NOT SET'}")
-    print(f"Recipient Email(s): {', '.join(RECIPIENT_EMAILS) if RECIPIENT_EMAILS else '❌ NOT SET'}")
-    print(f"Sender Password: {'✓ SET' if SENDER_PASSWORD else '❌ NOT SET'}")
+    print(f"Sender Email: {SENDER_EMAIL if SENDER_EMAIL else '[NOT SET]'}")
+    print(f"Recipient Email(s): {', '.join(RECIPIENT_EMAILS) if RECIPIENT_EMAILS else '[NOT SET]'}")
+    print(f"Sender Password: {'[SET]' if SENDER_PASSWORD else '[NOT SET]'}")
     
     if not all([SENDER_EMAIL, SENDER_PASSWORD, RECIPIENT_EMAIL]):
-        print("\n❌ ERROR: Email configuration is incomplete!")
+        print("\n[ERROR] Email configuration is incomplete!")
         print("Please edit your .env file and set all email variables.")
         return False
     
@@ -76,24 +76,24 @@ This is a test message.
         msg.attach(MIMEText(body, 'plain'))
         
         # Connect and send
-        print("\n📧 Connecting to SMTP server...")
+        print("\nConnecting to SMTP server...")
         server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
         
-        print("🔐 Starting TLS encryption...")
+        print("Starting TLS encryption...")
         server.starttls()
         
-        print("🔑 Logging in...")
+        print("Logging in...")
         server.login(SENDER_EMAIL, SENDER_PASSWORD)
         
-        print(f"📨 Sending test email to {len(RECIPIENT_EMAILS)} recipient(s)...")
+        print(f"Sending test email to {len(RECIPIENT_EMAILS)} recipient(s)...")
         text = msg.as_string()
         server.sendmail(SENDER_EMAIL, RECIPIENT_EMAILS, text)  # Send to list of recipients
         
-        print("👋 Closing connection...")
+        print("Closing connection...")
         server.quit()
         
         print("\n" + "="*60)
-        print("✓ SUCCESS! Test email sent successfully!")
+        print("[SUCCESS] Test email sent successfully!")
         print("="*60)
         print(f"\nCheck your inbox at:")
         for email in RECIPIENT_EMAILS:
@@ -104,7 +104,7 @@ This is a test message.
         
     except smtplib.SMTPAuthenticationError:
         print("\n" + "="*60)
-        print("❌ AUTHENTICATION FAILED")
+        print("[ERROR] AUTHENTICATION FAILED")
         print("="*60)
         print("\nYour email or password is incorrect.")
         print("\nIf using Gmail:")
@@ -115,7 +115,7 @@ This is a test message.
         
     except smtplib.SMTPException as e:
         print("\n" + "="*60)
-        print("❌ SMTP ERROR")
+        print("[ERROR] SMTP ERROR")
         print("="*60)
         print(f"\nError: {str(e)}")
         print("\nCheck your SMTP server and port settings in .env file")
@@ -123,7 +123,7 @@ This is a test message.
         
     except Exception as e:
         print("\n" + "="*60)
-        print("❌ UNEXPECTED ERROR")
+        print("[ERROR] UNEXPECTED ERROR")
         print("="*60)
         print(f"\nError: {str(e)}")
         return False
