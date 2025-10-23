@@ -44,5 +44,14 @@ Thumbs.db
 
 # Log files
 adt_pixel_firing_*.log
+adt_automation_*.log
+
+# Environment files with sensitive credentials
+.env
+
+# Downloaded reports (may contain sensitive data)
+adt_reports/
+*.csv
+*.xlsx
 
 # Existing content... 

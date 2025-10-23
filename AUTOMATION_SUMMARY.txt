@@ -1,0 +1,179 @@
+================================================================================
+ADT DAILY AUTOMATION - COMPLETE SETUP SUMMARY
+================================================================================
+
+✓ AUTOMATION SYSTEM IS READY TO DEPLOY!
+
+What was created:
+--------------------------------------------------------------------------------
+1. adt_automated_daily_run.py
+   → Main automation script that runs daily
+   → Downloads report from SFTP at 12:30 PM EST
+   → Processes report and fires pixels
+   → Sends email notifications for errors
+
+2. env.example / .env
+   → Configuration file with SFTP credentials (already filled in)
+   → You just need to add your email settings
+
+3. test_email_config.py
+   → Test script to verify email configuration works
+   → Run this first before scheduling the automation
+
+4. QUICKSTART_AUTOMATION.md
+   → 5-minute quick start guide
+
+5. AUTOMATION_SETUP.md
+   → Detailed setup instructions with troubleshooting
+
+6. Updated requirements.txt
+   → Added pysftp and python-dotenv dependencies
+
+7. Updated .gitignore
+   → Protects .env file and sensitive data from being committed
+
+================================================================================
+NEXT STEPS - DO THIS NOW:
+================================================================================
+
+STEP 1: Install dependencies
+   → Open terminal and run: pip install pysftp python-dotenv
+
+STEP 2: Configure your email
+   → Edit the .env file (it's already created)
+   → Add your email address and Gmail App Password
+   → Gmail App Password: https://myaccount.google.com/apppasswords
+
+STEP 3: Test email configuration
+   → Run: python test_email_config.py
+   → You should receive a test email
+
+STEP 4: Test full automation
+   → Run: python adt_automated_daily_run.py
+   → This will download today's report and process it
+   → You should receive a success email
+
+STEP 5: Schedule daily runs
+   → Windows Task Scheduler:
+     - Open: Win + R → taskschd.msc
+     - Create task to run at 12:30 PM EST daily
+     - Program: python
+     - Arguments: adt_automated_daily_run.py
+     - Start in: C:\Users\dtanudirjo\Documents\GitHub\frank
+
+================================================================================
+HOW IT WORKS:
+================================================================================
+
+Every day at 12:30 PM EST:
+   1. Script connects to: sftp://mfts.adt.com
+   2. Downloads from: /Resi_New directory
+   3. File pattern: ADT_Athena_DLY_Lead_CallData_Direct_Agnts_YYYYMMDD.csv
+   4. Processes report using existing adt_pixel_firing.py logic
+   5. Fires pixels for qualifying sales
+   6. Sends you an email with results
+
+If something breaks:
+   → You receive an error email immediately
+   → Email contains full error details and log file
+   → You can investigate and fix the issue
+
+================================================================================
+CONFIGURATION FILE (.env):
+================================================================================
+
+Your .env file should look like this:
+
+   # SFTP Configuration (ALREADY FILLED IN)
+   SFTP_HOST=mfts.adt.com
+   SFTP_USERNAME=directagent
+   SFTP_PASSWORD=qM%1773M
+   SFTP_PORT=22
+   SFTP_DIRECTORY=/Resi_New
+
+   # Email Configuration (YOU NEED TO FILL THIS IN)
+   SENDER_EMAIL=your-email@gmail.com          ← Add your email
+   SENDER_PASSWORD=your-app-password-here     ← Add your Gmail App Password
+   RECIPIENT_EMAIL=your-email@gmail.com       ← Where to send notifications
+   SMTP_SERVER=smtp.gmail.com
+   SMTP_PORT=587
+
+================================================================================
+IMPORTANT SECURITY NOTES:
+================================================================================
+
+✓ .env file is in .gitignore (won't be committed to Git)
+✓ Contains sensitive SFTP and email passwords
+✓ Never share or commit this file
+✓ Keep log files secure (they may contain sensitive data)
+
+================================================================================
+WHAT YOU'LL RECEIVE BY EMAIL:
+================================================================================
+
+SUCCESS EMAIL (daily, if everything works):
+   Subject: ADT Automation Success - 2025-10-23
+   Body: Report processed successfully, X pixels fired
+
+ERROR EMAIL (only when something breaks):
+   Subject: ADT Automation Error - 2025-10-23 14:30:00
+   Body: Full error details, log content, what went wrong
+
+================================================================================
+FILES GENERATED:
+================================================================================
+
+Log files (one per run):
+   → adt_automation_20251023_123000.log
+   → Review these if you need to debug issues
+
+Downloaded reports (saved locally):
+   → adt_reports/ADT_Athena_DLY_Lead_CallData_Direct_Agnts_20251023.csv
+   → Auto-created directory, auto-downloaded files
+
+================================================================================
+TROUBLESHOOTING:
+================================================================================
+
+If email test fails:
+   → Make sure you're using Gmail App Password (not regular password)
+   → Enable 2-Factor Authentication on your Google account first
+   → Create App Password at: https://myaccount.google.com/apppasswords
+
+If SFTP connection fails:
+   → Verify credentials are still valid
+   → Test connection manually using FileZilla
+   → Check if ADT changed their SFTP server
+
+If report not found:
+   → Check if report is available on FTP at that time
+   → May need to adjust scheduled time
+   → Script will try yesterday's file as fallback
+
+If pixels not firing:
+   → Check the log file for details
+   → Verify adt_pixel_firing.py is working correctly
+   → Test manually: python adt_pixel_firing.py [report_file.csv]
+
+================================================================================
+SUPPORT & DOCUMENTATION:
+================================================================================
+
+Quick Start: QUICKSTART_AUTOMATION.md (5-minute setup)
+Detailed Guide: AUTOMATION_SETUP.md (full instructions)
+This Summary: AUTOMATION_SUMMARY.txt (you're reading it)
+
+================================================================================
+
+YOU'RE ALL SET! Just follow the NEXT STEPS above to get started.
+
+The automation will save you time every single day by automatically:
+   - Downloading the report from FTP
+   - Processing it
+   - Firing pixels
+   - Notifying you of any issues
+
+No more manual downloads! 🚀
+
+================================================================================
+
