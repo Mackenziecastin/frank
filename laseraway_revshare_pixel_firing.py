@@ -261,6 +261,15 @@ def process_laseraway_report(file_path, start_date, end_date):
         logging.info(f"Total Net Sales processed: ${total_revenue:.2f}")
         logging.info(f"Total revenue share amount: ${total_revenue / 1.75:.2f}")
         
+        # Return summary data for email notifications
+        return {
+            'successful_pixels': successful_pixels,
+            'total_pixels': total_pixels,
+            'total_revenue': total_revenue,
+            'revenue_share': total_revenue / 1.75 if total_revenue > 0 else 0,
+            'encoding': successful_encoding
+        }
+        
     except Exception as e:
         logging.error(f"Error processing LaserAway report: {str(e)}")
         raise

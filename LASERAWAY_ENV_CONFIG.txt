@@ -1,0 +1,32 @@
+============================================
+LaserAway Configuration for .env file
+============================================
+
+COPY AND PASTE these lines to the END of your .env file:
+
+# LaserAway Email Automation Configuration
+# Email account that RECEIVES the LaserAway reports
+LASERAWAY_IMAP_SERVER=imap.gmail.com
+LASERAWAY_IMAP_PORT=993
+LASERAWAY_IMAP_EMAIL=debbie.tanudirjo@directagents.com
+LASERAWAY_IMAP_PASSWORD=your-email-app-password-here
+
+# LaserAway Report Email Identification
+LASERAWAY_REPORT_SENDER=@tombras.com
+LASERAWAY_REPORT_SUBJECT=Affiliate Leads QA - Campaign Filter Report
+LASERAWAY_REPORT_ATTACHMENT=Affiliate Leads QA - Campaign Filter*.xlsx
+
+# Date range for processing (days ago from today)
+LASERAWAY_START_DAYS_AGO=1
+LASERAWAY_END_DAYS_AGO=1
+
+============================================
+
+IMPORTANT: Replace "your-email-app-password-here" with the SAME App Password 
+you're using for SENDER_PASSWORD (the Gmail App Password you created earlier).
+
+Since both the receiving email (LaserAway reports) and sending email (notifications) 
+are using debbie.tanudirjo@directagents.com, you can use the same App Password.
+
+============================================
+

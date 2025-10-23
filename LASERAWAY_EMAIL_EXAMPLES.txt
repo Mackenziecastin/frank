@@ -1,0 +1,206 @@
+================================================================================
+LaserAway Automation - Email Notification Examples
+================================================================================
+
+These are examples of what you'll receive in your email after the automation runs.
+
+================================================================================
+EXAMPLE 1: SUCCESS WITH PIXELS FIRED
+================================================================================
+
+From: your-email@gmail.com
+To: mackenzie.castin@directagents.com, debbie.tanudirjo@directagents.com
+Subject: LaserAway Automation - Success
+
+---
+
+LaserAway report processed successfully!
+
+Report: Affiliate Leads QA - Campaign Filter(23).xlsx
+Date Range: 2025-10-22 to 2025-10-22
+Timestamp: 2025-10-23 09:30:15
+
+==================================================
+PIXELS FIRED
+==================================================
+
+✅ Total Pixels Fired: 5 out of 5
+
+==================================================
+REVENUE DETAILS
+==================================================
+
+💰 Total Net Sales Processed: $15,750.00
+📊 Revenue Share Amount (Net Sales / 1.75): $9,000.00
+💵 Average Revenue per Pixel: $1,800.00
+
+==================================================
+
+Check the log file for detailed pixel firing results: laseraway_automation_20251023_093015.log
+
+---
+
+This means:
+- All 5 pixels fired successfully (100% success rate)
+- Total revenue from the sales: $15,750
+- Amount sent to pixel (after dividing by 1.75): $9,000
+- Each pixel averaged $1,800 in revenue share
+
+================================================================================
+EXAMPLE 2: SUCCESS BUT NO QUALIFYING SALES
+================================================================================
+
+From: your-email@gmail.com
+To: mackenzie.castin@directagents.com, debbie.tanudirjo@directagents.com
+Subject: LaserAway Automation - Success
+
+---
+
+LaserAway report processed successfully!
+
+Report: Affiliate Leads QA - Campaign Filter(24).xlsx
+Date Range: 2025-10-23 to 2025-10-23
+Timestamp: 2025-10-24 09:30:22
+
+==================================================
+PIXELS FIRED
+==================================================
+
+⚠️  No pixels fired - no qualifying sales found for the specified date range.
+
+==================================================
+
+Check the log file for detailed pixel firing results: laseraway_automation_20251024_093022.log
+
+---
+
+This means:
+- Report was downloaded successfully
+- No sales matched the criteria (affiliate_directagent_subid1 = 42865 + date range)
+- No action needed - this is normal on days with no qualifying sales
+
+================================================================================
+EXAMPLE 3: ERROR - NO REPORT EMAIL FOUND
+================================================================================
+
+From: your-email@gmail.com
+To: mackenzie.castin@directagents.com, debbie.tanudirjo@directagents.com
+Subject: LaserAway Automation - No Report Found
+
+---
+
+No LaserAway report email found for today
+
+Timestamp: 2025-10-25 09:30:45
+
+Please check if the report was sent.
+
+---
+
+This means:
+- Script ran successfully but couldn't find the report email
+- Possible causes:
+  1. Report email hasn't arrived yet (may be delayed)
+  2. Report email was deleted or moved
+  3. Subject line or sender changed
+- Action: Check your inbox manually, verify report arrived
+
+================================================================================
+EXAMPLE 4: ERROR - PROCESSING FAILED
+================================================================================
+
+From: your-email@gmail.com
+To: mackenzie.castin@directagents.com, debbie.tanudirjo@directagents.com
+Subject: LaserAway Automation Error - 2025-10-26
+
+---
+
+AUTOMATION FAILED: 'Purchased Date'
+
+Full traceback:
+Traceback (most recent call last):
+  File "laseraway_email_automation.py", line 271, in main
+    summary_data = process_laseraway_report(report_filepath, start_date, end_date)
+  File "laseraway_revshare_pixel_firing.py", line 233, in process_laseraway_report
+    filtered_df = clean_data(df, file_path, start_date, end_date)
+  File "laseraway_revshare_pixel_firing.py", line 112, in clean_data
+    KeyError: 'Purchased Date'
+
+============================================================
+Full Log:
+============================================================
+
+[Full log content showing the error details...]
+
+---
+
+This means:
+- Report was downloaded but processing failed
+- Error shown: Column 'Purchased Date' not found
+- Possible causes:
+  1. Column name changed in the report
+  2. File format changed
+  3. Corrupted file
+- Action: Check the log file and re-run manually to debug
+
+================================================================================
+WHAT TO DO WHEN YOU RECEIVE THESE EMAILS
+================================================================================
+
+✅ SUCCESS WITH PIXELS FIRED:
+   → Great! Everything worked. No action needed.
+   → Review the counts to confirm they look reasonable.
+
+⚠️  SUCCESS BUT NO SALES:
+   → Normal on some days. No action needed.
+   → If this happens multiple days in a row, verify:
+     - Reports are being sent correctly
+     - Filter criteria (affiliate_directagent_subid1 = 42865) is correct
+
+❌ ERROR - NO REPORT FOUND:
+   → Check your inbox for the report email
+   → If it arrived later, you can re-run manually:
+     python laseraway_email_automation.py
+   → If subject/sender changed, update .env file
+
+❌ ERROR - PROCESSING FAILED:
+   → Review the error in the email
+   → Check the log file for more details
+   → Common fixes:
+     1. Column name changed → update code
+     2. File corrupted → wait for next day's report
+     3. Credentials expired → update .env file
+   → Re-run manually once fixed:
+     python laseraway_email_automation.py
+
+================================================================================
+KEY METRICS TO MONITOR
+================================================================================
+
+1. **Total Pixels Fired**: Should match the number of qualifying sales
+   - If "X out of Y" where X < Y, some pixels failed to fire
+   - Check log file to see which ones failed and why
+
+2. **Total Net Sales**: Sum of all Net Sales values processed
+   - Sanity check: does this seem reasonable?
+   - Compare to the actual report if needed
+
+3. **Revenue Share Amount**: Net Sales / 1.75
+   - This is what gets sent in the pixel's p= parameter
+   - Should always be Total Net Sales ÷ 1.75
+
+4. **Average Revenue per Pixel**: Revenue Share ÷ Number of Pixels
+   - Useful for spotting anomalies
+   - Example: If normally $1,500-$2,000 but suddenly $50, something may be wrong
+
+================================================================================
+TIPS
+================================================================================
+
+✓ Keep these emails in a folder for tracking
+✓ If you see consistent patterns (e.g., always 0 sales on weekends), that's normal
+✓ Set up email filters to organize these notifications
+✓ The log files are kept in the frank/ directory for detailed debugging
+
+================================================================================
+

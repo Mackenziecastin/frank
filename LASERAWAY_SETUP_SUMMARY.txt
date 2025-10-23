@@ -1,0 +1,209 @@
+================================================================================
+LaserAway Email Automation - Setup Summary
+================================================================================
+
+CONFIGURED FOR:
+- Email: debbie.tanudirjo@directagents.com (Gmail)
+- Report From: @tombras.com domain
+- Subject: "Affiliate Leads QA - Campaign Filter Report"
+- Attachment: "Affiliate Leads QA - Campaign Filter(xx).xlsx"
+- Arrives: 8-9 AM EST
+- Automation Runs: 9:30 AM EST daily
+- Processes: Yesterday's sales (date from purchase)
+
+================================================================================
+STEP 1: Update .env File
+================================================================================
+
+Open your .env file in Notepad and ADD these lines to the end:
+
+(See LASERAWAY_ENV_CONFIG.txt for the exact lines to copy/paste)
+
+IMPORTANT: 
+- Use the SAME App Password you're using for SENDER_PASSWORD
+- This is your Gmail App Password (16 characters, no spaces)
+- Both receiving and sending use debbie.tanudirjo@directagents.com
+
+================================================================================
+STEP 2: Test Email Connection
+================================================================================
+
+Run this test to verify email setup:
+
+    python test_laseraway_email.py
+
+This will:
+- Check if .env variables are loaded correctly
+- Test connection to Gmail IMAP
+- Show your recent emails
+- Identify which emails match the LaserAway pattern
+- Confirm if today's report can be found
+
+Expected output: "[SUCCESS] All tests passed!"
+
+If you get errors:
+- "Email credentials not configured" → Update .env file
+- "IMAP Authentication failed" → Check App Password
+- "No matching emails" → Verify the sender/subject patterns
+
+================================================================================
+STEP 3: Test Full Automation (Manual Run)
+================================================================================
+
+Once email test passes, test the full automation:
+
+    python laseraway_email_automation.py
+
+This will:
+1. Connect to Gmail
+2. Find today's LaserAway report email
+3. Download the attachment to laseraway_reports/ folder
+4. Process the report and fire pixels for yesterday's sales
+5. Send success/error notification email
+
+Expected output: "LASERAWAY AUTOMATION COMPLETED SUCCESSFULLY"
+
+Check:
+- Console output shows all steps
+- Log file: laseraway_automation_YYYYMMDD_HHMMSS.log
+- Email notification received
+- laseraway_reports/ folder has the downloaded file
+
+================================================================================
+STEP 4: Schedule in Task Scheduler
+================================================================================
+
+1. Open Task Scheduler (search in Start menu)
+
+2. Create Basic Task:
+   - Name: LaserAway Email Automation
+   - Description: Daily automation to download and process LaserAway reports
+
+3. Trigger:
+   - Trigger: Daily
+   - Start time: 9:30 AM
+   - Recur: Every 1 day
+
+4. Action:
+   - Program/script: C:\Users\dtanudirjo\AppData\Local\Programs\Python\Python312\python.exe
+   - Add arguments: laseraway_email_automation.py
+   - Start in: C:\Users\dtanudirjo\Documents\GitHub\frank
+
+5. Additional Settings (right-click task → Properties):
+   - General tab:
+     ☑ Run whether user is logged on or not
+     ☑ Run with highest privileges
+   - Settings tab:
+     ☑ Run task as soon as possible after a scheduled start is missed
+
+6. Test the task:
+   - Right-click → Run
+   - Check History tab for results
+   - Verify email notification received
+
+================================================================================
+WHAT HAPPENS DAILY
+================================================================================
+
+At 9:30 AM EST every day:
+
+1. Script wakes up and connects to Gmail
+2. Searches inbox for today's email from @tombras.com with subject 
+   "Affiliate Leads QA - Campaign Filter Report"
+3. Downloads the Excel attachment: "Affiliate Leads QA - Campaign Filter(xx).xlsx"
+4. Filters for affiliate_directagent_subid1 = 42865
+5. Processes YESTERDAY's sales (based on "Purchased Date" column)
+6. Calculates revenue share: Net Sales / 1.75
+7. Fires pixels to: https://trkstar.com/m.ashx
+8. Sends you an email with summary:
+   - How many pixels fired (successful vs. total)
+   - Total revenue processed (Net Sales and Revenue Share)
+   - Average revenue per pixel
+   - Link to log file
+
+If something fails:
+- You get an error email immediately
+- Log file shows exact error
+- You can re-run manually: python laseraway_email_automation.py
+
+================================================================================
+FILE STRUCTURE
+================================================================================
+
+frank/
+├── laseraway_email_automation.py          # Main automation script
+├── laseraway_revshare_pixel_firing.py     # Processing logic (existing)
+├── test_laseraway_email.py                # Email connection test
+├── .env                                    # Your credentials (DO NOT COMMIT!)
+├── laseraway_reports/                      # Downloaded reports (auto-created)
+│   └── Affiliate Leads QA - Campaign Filter(23).xlsx
+├── laseraway_automation_20251023_093015.log  # Daily log files
+├── LASERAWAY_AUTOMATION_SETUP.md           # Detailed setup guide
+├── LASERAWAY_ENV_CONFIG.txt                # .env configuration values
+└── QUICKSTART_LASERAWAY.md                 # Quick start guide
+
+================================================================================
+SECURITY NOTES
+================================================================================
+
+✓ .env file contains your Gmail App Password - NEVER commit to Git
+✓ Downloaded reports contain PII - automatically ignored by Git
+✓ Log files may contain transaction IDs - review before sharing
+✓ Always use Gmail App Passwords, not your regular Gmail password
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+Problem: "No LaserAway report email found for today"
+Solution: 
+- Check if email actually arrived (check your inbox manually)
+- Verify email arrived TODAY (script only searches today's emails)
+- Check sender domain matches @tombras.com
+- Check subject contains "Affiliate Leads QA - Campaign Filter Report"
+- Try running test_laseraway_email.py to see recent emails
+
+Problem: "No matching attachment found"
+Solution:
+- Verify attachment filename matches "Affiliate Leads QA - Campaign Filter*.xlsx"
+- Check if the email has an attachment at all
+
+Problem: Task doesn't run in Task Scheduler
+Solution:
+- Check Task Scheduler History tab for errors
+- Verify Python path is correct
+- Verify .env file is in the "Start in" directory
+- Try running manually first to confirm it works
+
+Problem: Authentication failed
+Solution:
+- Make sure you're using Gmail App Password (16 chars, no spaces)
+- Not your regular Gmail password
+- Enable IMAP in Gmail settings
+- Enable "Less secure app access" if needed
+
+================================================================================
+NEED HELP?
+================================================================================
+
+1. Check log file: laseraway_automation_YYYYMMDD_HHMMSS.log
+2. Run test: python test_laseraway_email.py
+3. Run manually: python laseraway_email_automation.py
+4. Check email for error notifications
+5. Review Task Scheduler History tab
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+1. ☐ Add LaserAway config to .env file (use LASERAWAY_ENV_CONFIG.txt)
+2. ☐ Test email connection: python test_laseraway_email.py
+3. ☐ Test full automation: python laseraway_email_automation.py
+4. ☐ Schedule in Task Scheduler (9:30 AM daily)
+5. ☐ Wait for tomorrow at 9:30 AM to confirm it runs automatically
+6. ☐ Check your email for success notification
+
+Once completed, you'll never need to manually upload LaserAway reports again!
+
+================================================================================
+
