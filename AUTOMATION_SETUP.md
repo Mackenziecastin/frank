@@ -60,12 +60,12 @@ Update the SMTP settings in your `.env` file according to your provider:
 
 2. **Edit the `.env` file** with your actual credentials:
    ```
-   # SFTP Configuration (already filled in)
-   SFTP_HOST=mfts.adt.com
-   SFTP_USERNAME=directagent
-   SFTP_PASSWORD=qM%1773M
+   # SFTP Configuration (update with your actual SFTP credentials)
+   SFTP_HOST=your-sftp-host
+   SFTP_USERNAME=your-sftp-username
+   SFTP_PASSWORD=your-sftp-password
    SFTP_PORT=22
-   SFTP_DIRECTORY=/Resi_New
+   SFTP_DIRECTORY=/your/directory
 
    # Email Configuration - UPDATE THESE
    SENDER_EMAIL=your-email@gmail.com
