@@ -230,6 +230,92 @@ def clean_data(df, file_path):
         logging.error(f"Error cleaning data: {str(e)}")
         raise
 
+def clean_health_data(df, file_path):
+    """
+    Clean and filter Health data according to requirements.
+    """
+    try:
+        # Extract date from filename
+        filename = os.path.basename(file_path)
+        report_date_str = filename.split('_')[-1].replace('.csv', '').replace('.xlsx', '')
+        report_date = datetime.strptime(report_date_str, '%Y%m%d').date()
+        yesterday = report_date - timedelta(days=1)
+        logging.info(f"\n=== HEALTH PIXEL FIRING ===")
+        logging.info(f"Report date: {report_date.strftime('%Y-%m-%d')}, Using yesterday: {yesterday.strftime('%Y-%m-%d')}")
+        
+        # Convert Sale_Date to datetime
+        df['Sale_Date'] = pd.to_datetime(df['Sale_Date'], errors='coerce')
+        df = df.dropna(subset=['Sale_Date'])
+        
+        # Print initial count
+        total_records = len(df)
+        logging.info(f"Starting with {total_records} total records for Health")
+        
+        # Filter for ONLY Health leads from Ln_of_Busn
+        df['Ln_of_Busn'] = df['Ln_of_Busn'].fillna('')
+        health_filter = df['Ln_of_Busn'].str.contains('Health', case=False, na=False)
+        df_health = df[health_filter]
+        logging.info(f"After filtering for Health in Ln_of_Busn: {len(df_health)} records")
+        
+        if len(df_health) == 0:
+            logging.info("No Health records found")
+            return pd.DataFrame()
+        
+        # Filter for 'BP' in Inquiry_Channel
+        df_health['Inquiry_Channel'] = df_health['Inquiry_Channel'].fillna('')
+        bp_filter = df_health['Inquiry_Channel'].str.contains('BP', case=False, na=False)
+        df_health_bp = df_health[bp_filter]
+        logging.info(f"After filtering for BP in Inquiry_Channel: {len(df_health_bp)} records")
+        
+        if len(df_health_bp) == 0:
+            logging.info("No Health BP records found")
+            return pd.DataFrame()
+        
+        # Filter for yesterday's date
+        yesterday_str = yesterday.strftime('%Y-%m-%d')
+        df_health_bp['Sale_Date_Str'] = df_health_bp['Sale_Date'].dt.strftime('%Y-%m-%d')
+        date_filter = (df_health_bp['Sale_Date_Str'] == yesterday_str)
+        df_health_yesterday = df_health_bp[date_filter]
+        logging.info(f"After filtering for yesterday ({yesterday_str}): {len(df_health_yesterday)} records")
+        
+        if len(df_health_yesterday) == 0:
+            logging.info(f"No Health records found for {yesterday_str}")
+            return pd.DataFrame()
+        
+        # Filter for 'New' and 'Resale' order types
+        df_health_yesterday['Ordr_Type'] = df_health_yesterday['Ordr_Type'].fillna('')
+        order_type_filter = df_health_yesterday['Ordr_Type'].isin(['New', 'Resale'])
+        df_health_filtered = df_health_yesterday[order_type_filter]
+        logging.info(f"After filtering for New/Resale order types: {len(df_health_filtered)} records")
+        
+        if len(df_health_filtered) == 0:
+            logging.info("No qualifying Health orders found")
+            return pd.DataFrame()
+        
+        # Clean up DNIS and Affiliate_Code for matching
+        df_health_filtered['Lead_DNIS'] = df_health_filtered['Lead_DNIS'].fillna('')
+        df_health_filtered['Affiliate_Code'] = df_health_filtered['Affiliate_Code'].fillna('')
+        
+        # Log unique DNIS values
+        unique_dnis = df_health_filtered['Lead_DNIS'].unique()
+        logging.info("\nUnique Lead_DNIS values in Health data:")
+        for dnis in unique_dnis:
+            count = len(df_health_filtered[df_health_filtered['Lead_DNIS'] == dnis])
+            logging.info(f"DNIS {dnis}: {count} records")
+        
+        # Log unique Affiliate_Code values
+        unique_affiliates = df_health_filtered['Affiliate_Code'].unique()
+        logging.info("\nUnique Affiliate_Code values in Health data:")
+        for aff in unique_affiliates:
+            count = len(df_health_filtered[df_health_filtered['Affiliate_Code'] == aff])
+            logging.info(f"Affiliate {aff}: {count} records")
+        
+        return df_health_filtered
+        
+    except Exception as e:
+        logging.error(f"Error cleaning Health data: {str(e)}")
+        raise
+
 # DNIS to pixel configuration mapping
 DNIS_PIXEL_CONFIG = {
     # Top10US DNIS codes
@@ -288,6 +374,85 @@ DNIS_PIXEL_CONFIG = {
         'org_id': '31729'
     }
 }
+
+# Health DNIS to pixel configuration mapping
+HEALTH_DNIS_PIXEL_CONFIG = {
+    # GoodRx Health
+    '8332389413': {
+        'url': 'https://trkfocus.com/m.ashx',
+        'campaign': '77664',
+        'partner': 'GoodRx',
+        'pubid': '42820',
+        'org_id': '31989',
+        'affiliate_code': '42820'
+    },
+    'HLTHDRA001_GoodRx': {  # HLTHDRA001 with Affiliate_Code 42820
+        'url': 'https://trkfocus.com/m.ashx',
+        'campaign': '77664',
+        'partner': 'GoodRx',
+        'pubid': '42820',
+        'org_id': '31989',
+        'affiliate_code': '42820'
+    },
+    # Schemathics Health
+    '8669466090': {
+        'url': 'https://trkfocus.com/m.ashx',
+        'campaign': '96664',
+        'partner': 'Schemathics',
+        'pubid': '42865',
+        'org_id': '31989',
+        'affiliate_code': '42865'
+    },
+    'HLTHDRA001_Schemathics': {  # HLTHDRA001 with Affiliate_Code 42865
+        'url': 'https://trkfocus.com/m.ashx',
+        'campaign': '96664',
+        'partner': 'Schemathics',
+        'pubid': '42865',
+        'org_id': '31989',
+        'affiliate_code': '42865'
+    }
+}
+
+def fire_health_pixel(transaction_id, sale_date, dnis_key):
+    """
+    Fire the Health pixel for a given transaction ID, sale date, and DNIS key
+    """
+    try:
+        # Get pixel configuration for this DNIS key
+        if dnis_key not in HEALTH_DNIS_PIXEL_CONFIG:
+            logging.error(f"Unknown Health DNIS key: {dnis_key}")
+            return False
+            
+        config = HEALTH_DNIS_PIXEL_CONFIG[dnis_key]
+        pixel_url = config['url']
+        partner = config.get('partner', 'Unknown')
+        campaign_id = config['campaign']
+        
+        # Set the time to noon on the sale date
+        pixel_datetime = sale_date.replace(hour=12, minute=0, second=0)
+        iso_datetime = pixel_datetime.strftime('%Y-%m-%dT%H:%M:%S+00:00')
+        
+        # Set up parameters with partner-specific values
+        params = {
+            'o': config['org_id'],
+            'e': '565',
+            'f': 'pb',
+            't': transaction_id,
+            'pubid': config['pubid'],
+            'campid': campaign_id,
+            'dt': iso_datetime
+        }
+        
+        # Make the request
+        response = requests.get(pixel_url, params=params)
+        response.raise_for_status()
+        
+        logging.info(f"Fired Health pixel for {partner} ({dnis_key}) successfully - Transaction ID: {transaction_id}")
+        return True
+        
+    except Exception as e:
+        logging.error(f"Failed to fire Health pixel for {partner} ({dnis_key}) - Transaction ID: {transaction_id} - Error: {str(e)}")
+        return False
 
 def fire_pixel(transaction_id, install_method, sale_date, dnis_code):
     """
@@ -446,8 +611,126 @@ def process_adt_report(file_path):
                 total_successful += difm_success + diy_success
                 total_processed += difm_total + diy_total
         
-        logging.info(f"\nTotal pixels fired: {total_successful}")
-        logging.info(f"Total records processed: {total_processed}")
+        logging.info(f"\nTotal Home Security pixels fired: {total_successful}")
+        logging.info(f"Total Home Security records processed: {total_processed}")
+        
+        # Build summary dictionary for email
+        summary_data = {
+            'home_security': {
+                'total_pixels': total_successful,
+                'total_records': total_processed,
+                'by_partner': {}
+            },
+            'health': {
+                'total_pixels': 0,
+                'total_records': 0,
+                'by_partner': {}
+            }
+        }
+        
+        # Add Home Security details by partner
+        for dnis_code in DNIS_PIXEL_CONFIG.keys():
+            config = DNIS_PIXEL_CONFIG[dnis_code]
+            difm_success = success_counters[dnis_code]['DIFM']
+            diy_success = success_counters[dnis_code]['DIY']
+            difm_total = total_counters[dnis_code]['DIFM']
+            diy_total = total_counters[dnis_code]['DIY']
+            
+            if difm_total > 0 or diy_total > 0:
+                partner = config.get('partner', 'Unknown')
+                if partner not in summary_data['home_security']['by_partner']:
+                    summary_data['home_security']['by_partner'][partner] = {'DIFM': 0, 'DIY': 0}
+                summary_data['home_security']['by_partner'][partner]['DIFM'] += difm_success
+                summary_data['home_security']['by_partner'][partner]['DIY'] += diy_success
+        
+        # Now process Health data from the same file
+        try:
+            logging.info("\n" + "="*60)
+            health_df = clean_health_data(df.copy(), file_path)
+            
+            if len(health_df) > 0:
+                # Initialize Health counters
+                health_success_counters = {}
+                health_total_counters = {}
+                
+                for dnis_key in HEALTH_DNIS_PIXEL_CONFIG.keys():
+                    health_success_counters[dnis_key] = 0
+                    health_total_counters[dnis_key] = 0
+                
+                # Process each Health record
+                for _, row in health_df.iterrows():
+                    # Use Primary_Phone_Customer_ANI as the transaction ID
+                    phone_ani = str(row.get('Primary_Phone_Customer_ANI', '')).strip()
+                    if phone_ani:
+                        transaction_id = phone_ani
+                    else:
+                        transaction_id = f"ADT_HEALTH_{row['Sale_Date'].strftime('%Y%m%d')}_{uuid.uuid4().hex[:8]}"
+                    
+                    lead_dnis = str(row['Lead_DNIS']).strip()
+                    affiliate_code = str(row['Affiliate_Code']).strip()
+                    
+                    # Determine which partner this belongs to
+                    dnis_key = None
+                    
+                    # Check for GoodRx (42820)
+                    if lead_dnis == '8332389413':
+                        dnis_key = '8332389413'
+                    elif lead_dnis == 'HLTHDRA001' and '42820' in affiliate_code:
+                        dnis_key = 'HLTHDRA001_GoodRx'
+                    # Check for Schemathics (42865)
+                    elif lead_dnis == '8669466090':
+                        dnis_key = '8669466090'
+                    elif lead_dnis == 'HLTHDRA001' and '42865' in affiliate_code:
+                        dnis_key = 'HLTHDRA001_Schemathics'
+                    
+                    if dnis_key:
+                        health_total_counters[dnis_key] += 1
+                        if fire_health_pixel(transaction_id, row['Sale_Date'], dnis_key):
+                            health_success_counters[dnis_key] += 1
+                    else:
+                        logging.warning(f"No matching Health DNIS configuration for Lead_DNIS={lead_dnis}, Affiliate_Code={affiliate_code}")
+                
+                # Log Health summary
+                logging.info("\n=== Health Summary ===")
+                total_health_successful = 0
+                total_health_processed = 0
+                
+                for dnis_key in HEALTH_DNIS_PIXEL_CONFIG.keys():
+                    config = HEALTH_DNIS_PIXEL_CONFIG[dnis_key]
+                    success = health_success_counters[dnis_key]
+                    total = health_total_counters[dnis_key]
+                    
+                    if total > 0:
+                        partner = config['partner']
+                        logging.info(f"\n{partner} ({dnis_key}):")
+                        logging.info(f"  Health pixels fired successfully: {success} out of {total}")
+                        total_health_successful += success
+                        total_health_processed += total
+                
+                logging.info(f"\nTotal Health pixels fired: {total_health_successful}")
+                logging.info(f"Total Health records processed: {total_health_processed}")
+                
+                # Add Health details to summary
+                summary_data['health']['total_pixels'] = total_health_successful
+                summary_data['health']['total_records'] = total_health_processed
+                
+                for dnis_key in HEALTH_DNIS_PIXEL_CONFIG.keys():
+                    config = HEALTH_DNIS_PIXEL_CONFIG[dnis_key]
+                    success = health_success_counters[dnis_key]
+                    
+                    if success > 0:
+                        partner = config['partner']
+                        if partner not in summary_data['health']['by_partner']:
+                            summary_data['health']['by_partner'][partner] = 0
+                        summary_data['health']['by_partner'][partner] += success
+            else:
+                logging.info("No qualifying Health records found")
+                
+        except Exception as e:
+            logging.error(f"Error processing Health data: {str(e)}")
+            # Don't raise - we still want to report success for Home Security
+        
+        return summary_data
         
     except Exception as e:
         logging.error(f"Error processing ADT report: {str(e)}")

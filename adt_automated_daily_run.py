@@ -280,7 +280,7 @@ def main():
         
         # Step 2: Process the report and fire pixels
         logging.info("[Step 2/2] Processing report and firing pixels...")
-        process_adt_report(report_filepath)
+        summary_data = process_adt_report(report_filepath)
         logging.info("✓ Report processed successfully\n")
         
         # Success!
@@ -288,9 +288,50 @@ def main():
         logging.info("ADT DAILY AUTOMATION COMPLETED SUCCESSFULLY")
         logging.info("="*60)
         
+        # Build detailed summary for email
+        summary_text = f"Report: {os.path.basename(report_filepath)}\n\n"
+        
+        # Home Security Summary
+        summary_text += "="*50 + "\n"
+        summary_text += "HOME SECURITY PIXELS FIRED\n"
+        summary_text += "="*50 + "\n\n"
+        
+        if summary_data['home_security']['total_pixels'] > 0:
+            for partner, counts in summary_data['home_security']['by_partner'].items():
+                difm = counts['DIFM']
+                diy = counts['DIY']
+                total = difm + diy
+                summary_text += f"📊 {partner}:\n"
+                if difm > 0:
+                    summary_text += f"   - DIFM: {difm} pixels\n"
+                if diy > 0:
+                    summary_text += f"   - DIY: {diy} pixels\n"
+                summary_text += f"   - Total: {total} pixels\n\n"
+            
+            summary_text += f"✅ Total Home Security: {summary_data['home_security']['total_pixels']} pixels fired\n\n"
+        else:
+            summary_text += "No Home Security pixels fired today.\n\n"
+        
+        # Health Summary
+        summary_text += "="*50 + "\n"
+        summary_text += "HEALTH PIXELS FIRED\n"
+        summary_text += "="*50 + "\n\n"
+        
+        if summary_data['health']['total_pixels'] > 0:
+            for partner, count in summary_data['health']['by_partner'].items():
+                summary_text += f"📊 {partner}: {count} pixels\n"
+            summary_text += f"\n✅ Total Health: {summary_data['health']['total_pixels']} pixels fired\n\n"
+        else:
+            summary_text += "No Health pixels fired today.\n\n"
+        
+        # Grand Total
+        grand_total = summary_data['home_security']['total_pixels'] + summary_data['health']['total_pixels']
+        summary_text += "="*50 + "\n"
+        summary_text += f"🎯 GRAND TOTAL: {grand_total} pixels fired\n"
+        summary_text += "="*50 + "\n"
+        
         # Send success notification
-        summary = f"Report: {os.path.basename(report_filepath)}\nCheck log file for detailed pixel firing results."
-        send_success_email(os.path.basename(report_filepath), summary)
+        send_success_email(os.path.basename(report_filepath), summary_text)
         
         return True
         
